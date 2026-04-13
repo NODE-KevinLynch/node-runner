@@ -1,0 +1,6 @@
+firstName,productionBand,primaryBottleneck,urgencyLevel,country,tags
+John,Production-12,lead_engine,high,Canada,AI-Assessment-Complete;SOLO_LEAD_ENGINE
+Sarah,Production-25,foundation,medium,Canada,AI-Assessment-Complete;SOLO_FOUNDATION
+Mike,Emerging,pipeline_repair,high,Canada,AI-Assessment-Complete;SOLO_PIPELINE_REPAIR
+Lisa,Emerging,scale_25,medium,Canada,AI-Assessment-Complete;SOLO_SCALE_25
+Noah,Emerging,,low,Canada,
