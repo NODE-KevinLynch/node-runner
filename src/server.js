@@ -196,11 +196,11 @@ app.get("/api/history/:agentId", async (req, res) => {
 });
 
 // Top-level stats
-app.get("/api/stats", (req, res) => {
+app.get("/api/stats", async (req, res) => {
   try {
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    const totalAgents = db
+    const totalAgents = await db
       .prepare(
         `
       SELECT COUNT(*) AS n
@@ -209,7 +209,7 @@ app.get("/api/stats", (req, res) => {
       )
       .get().n;
 
-    const activeAgents = db
+    const activeAgents = await db
       .prepare(
         `
       SELECT COUNT(*) AS n
@@ -219,7 +219,7 @@ app.get("/api/stats", (req, res) => {
       )
       .get().n;
 
-    const avgScore = db
+    const avgScore = await db
       .prepare(
         `
       SELECT ROUND(COALESCE(AVG(engagement_score), 0), 1) AS avg
