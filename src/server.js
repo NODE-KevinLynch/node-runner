@@ -144,9 +144,9 @@ app.get("/api/agents/:id", (req, res) => {
 });
 
 // Phase distribution summary
-app.get("/api/phases", (req, res) => {
+app.get("/api/phases", async (req, res) => {
   try {
-    const rows = db
+    const rows = await db
       .prepare(
         `
       SELECT
@@ -166,9 +166,9 @@ app.get("/api/phases", (req, res) => {
 });
 
 // Phase history for one agent
-app.get("/api/history/:agentId", (req, res) => {
+app.get("/api/history/:agentId", async (req, res) => {
   try {
-    const rows = db
+    const rows = await db
       .prepare(
         `
       SELECT
