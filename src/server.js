@@ -26,9 +26,9 @@ app.get("/api/health", async (req, res) => {
 });
 
 // All agents with lifecycle state
-app.get("/api/agents", (req, res) => {
+app.get("/api/agents", async (req, res) => {
   try {
-    const rows = db
+    const rows = await db
       .prepare(
         `
       SELECT
