@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Node Runner — Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --border: #2a2d3a;
+        --text: #e8eaf0;
+        --muted: #7b7f96;
+        --accent: #6c63ff;
+        --green: #22c55e;
+        --amber: #f59e0b;
+        --red: #ef4444;
+        --blue: #3b82f6;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+      header {
+        padding: 20px 32px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      header h1 {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .subtitle {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      #last-updated {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .refresh-btn {
+        margin-left: 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 5px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .refresh-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      main {
+        padding: 28px 32px;
+        max-width: 1280px;
+      }
+      .section-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 14px;
+      }
+      .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 32px;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 32px;
+      }
+      @media (max-width: 900px) {
+        .grid-4 {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px 20px;
+      }
+      .metric-label {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 6px;
+      }
+      .metric-value {
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -1px;
+      }
+      .metric-sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .green {
+        color: var(--green);
+      }
+      .amber {
+        color: var(--amber);
+      }
+      .red {
+        color: var(--red);
+      }
+      .blue {
+        color: var(--blue);
+      }
+      .accent {
+        color: var(--accent);
+      }
+      .funnel-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .funnel-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .funnel-label {
+        width: 130px;
+        font-size: 12px;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .funnel-track {
+        flex: 1;
+        height: 8px;
+        background: var(--border);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .funnel-fill {
+        height: 100%;
+        border-radius: 99px;
+        transition: width 0.6s ease;
+      }
+      .funnel-count {
+        width: 28px;
+        text-align: right;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .chart-wrap {
+        position: relative;
+        height: 180px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .badge-sent {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--green);
+      }
+      .badge-mock {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--amber);
+      }
+      .badge-failed {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--red);
+      }
+      .badge-blocked {
+        background: rgba(107, 114, 128, 0.15);
+        color: var(--muted);
+      }
+      .campaign-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .badge-pre {
+        background: rgba(59, 130, 246, 0.15);
+        color: var(--blue);
+      }
+      .badge-post {
+        background: rgba(108, 99, 255, 0.15);
+        color: var(--accent);
+      }
+      .badge-life {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--green);
+      }
+      .empty {
+        color: var(--muted);
+        font-style: italic;
+        font-size: 13px;
+        padding: 12px 10px;
+      }
+      .loading {
+        color: var(--muted);
+        font-size: 13px;
+        padding: 20px 0;
+        text-align: center;
+      }
+      .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Node Runner <span style="color: var(--accent)">Admin</span></h1>
+        <div class="subtitle">
+          OpenClaw Ops — Agent Activation & Campaign Dashboard
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <span id="last-updated">Loading...</span>
+        <button class="refresh-btn" onclick="loadAll()">Refresh</button>
+      </div>
+    </header>
+    <main>
+      <div class="section-title">System Overview</div>
+      <div class="grid-4">
+        <div class="card">
+          <div class="metric-label">Total Agents</div>
+          <div class="metric-value accent" id="kpi-total">—</div>
+          <div class="metric-sub">in database</div>
+        </div>
+        <div class="card">
+          <div class="metric-label">Analysis Complete</div>
+          <div class="metric-value green" id="kpi-analysis">—</div>
+          <div class="metric-sub">have assessment</div>
+        </div>
+        <div class="card">
+          <div class="metric-label">Coaching Ready</div>
+          <div class="metric-value blue" id="kpi-coaching">—</div>
+          <div class="metric-sub">outputs generated</div>
+        </div>
+        <div class="card">
+          <div class="metric-label">Emails — 7 Days</div>
+          <div class="metric-value amber" id="kpi-emails7d">—</div>
+          <div class="metric-sub">live sends</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title">Campaign Funnel</div>
+          <div class="funnel-bar" id="funnel-bars">
+            <div class="loading">Loading...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">24h Send Activity</div>
+          <div class="chart-wrap"><canvas id="sends-chart"></canvas></div>
+          <div id="chart-empty" class="empty" style="display: none">
+            No sends in last 24h.
+          </div>
+        </div>
+      </div>
+      <div class="section-title">Latest Dispatches</div>
+      <div class="card" style="margin-bottom: 32px">
+        <div id="dispatches-wrap"><div class="loading">Loading...</div></div>
+      </div>
+      <div class="section-title">At-Risk Agents</div>
+      <div class="card" style="margin-bottom: 32px">
+        <div id="atrisk-wrap"><div class="loading">Loading...</div></div>
+      </div>
+      <div class="section-title">Agent Coaching Readiness</div>
+      <div class="card">
+        <div id="agents-wrap"><div class="loading">Loading...</div></div>
+      </div>
+    </main>
+    <script>
+      let sendsChart=null;
+      function fmt(dt){if(!dt)return'—';const d=new Date(dt);return d.toLocaleDateString('en-CA')+' '+d.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'})}
+      function statusBadge(s){const m={sent:'badge-sent',mock:'badge-mock',failed:'badge-failed',blocked:'badge-blocked'};return'<span class="badge '+(m[s]||'badge-blocked')+'">'+s+'</span>'}
+      function campaignBadge(s){const m={pre_activation:'badge-pre',post_analysis:'badge-post',lifecycle:'badge-life'};const l={pre_activation:'Pre-Activation',post_analysis:'Post-Analysis',lifecycle:'Lifecycle'};return'<span class="campaign-badge '+(m[s]||'')+'">'+( l[s]||s||'none')+'</span>'}
+      async function loadAll(){
+      document.getElementById('last-updated').textContent='Refreshing...';
+      try{
+      const[report,agents]=await Promise.all([fetch('/api/report').then(r=>r.json()),fetch('/api/agents').then(r=>r.json())]);
+      document.getElementById('kpi-total').textContent=report.totalAgents??'—';
+      document.getElementById('kpi-analysis').textContent=report.analysisComplete??'—';
+      document.getElementById('kpi-emails7d').textContent=report.emails7d??'—';
+      const stateMap={};(report.states||[]).forEach(s=>{stateMap[s.campaign_state]=s.n});
+      const total=report.totalAgents||1;
+      const fd=[{key:'pre_activation',label:'Pre-Activation',color:'var(--blue)'},{key:'post_analysis',label:'Post-Analysis',color:'var(--accent)'},{key:'lifecycle',label:'Lifecycle',color:'var(--green)'},{key:'none',label:'Unassigned',color:'var(--muted)'}];
+      document.getElementById('funnel-bars').innerHTML=fd.map(f=>{const n=stateMap[f.key]||0;const p=Math.round((n/total)*100);return'<div class="funnel-row"><div class="funnel-label"><span class="dot" style="background:'+f.color+'"></span>'+f.label+'</div><div class="funnel-track"><div class="funnel-fill" style="width:'+p+'%;background:'+f.color+'"></div></div><div class="funnel-count">'+n+'</div></div>'}).join('');
+      const s24={};(report.emails24h||[]).forEach(e=>{s24[e.send_status]=e.n});
+      const cl=['sent','mock','failed','blocked'];const cd=cl.map(l=>s24[l]||0);
+      const cc=['rgba(34,197,94,.8)','rgba(245,158,11,.8)','rgba(239,68,68,.8)','rgba(107,114,128,.5)'];
+      if(cd.some(v=>v>0)){document.getElementById('chart-empty').style.display='none';if(sendsChart)sendsChart.destroy();sendsChart=new Chart(document.getElementById('sends-chart'),{type:'doughnut',data:{labels:cl,datasets:[{data:cd,backgroundColor:cc,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7b7f96',font:{size:12},boxWidth:12,padding:16}}},cutout:'65%'}})}else{document.getElementById('sends-chart').style.display='none';document.getElementById('chart-empty').style.display='block'}
+      const logs=report.recentLogs||[];
+      document.getElementById('dispatches-wrap').innerHTML=logs.length?'<table><thead><tr><th>Agent ID</th><th>Campaign</th><th>Step</th><th>Subject</th><th>Status</th><th>Sent At</th></tr></thead><tbody>'+logs.map(l=>'<tr><td>'+l.agent_id+'</td><td>'+campaignBadge(l.campaign_type)+'</td><td style="text-align:center">'+( l.campaign_step??'—')+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(l.subject||'—')+'</td><td>'+statusBadge(l.send_status)+'</td><td style="color:var(--muted)">'+fmt(l.sent_at)+'</td></tr>').join('')+'</tbody></table>':'<div class="empty">No dispatches yet.</div>';
+      const ar=report.atRisk||[];
+      document.getElementById('atrisk-wrap').innerHTML=ar.length?'<table><thead><tr><th>Agent</th><th>Email</th><th>State</th><th>Last Engaged</th><th>Score</th></tr></thead><tbody>'+ar.map(a=>'<tr><td>'+a.first_name+' '+a.last_name+'</td><td style="color:var(--muted)">'+a.email+'</td><td>'+campaignBadge(a.campaign_state)+'</td><td style="color:var(--muted)">'+fmt(a.last_engaged_at)+'</td><td style="color:var(--red)">'+(a.engagement_score??0)+'</td></tr>').join('')+'</tbody></table>':'<div class="empty">No at-risk agents.</div>';
+      const agentList=agents.agents||[];
+      const details=await Promise.all(agentList.map(a=>fetch('/api/agents/'+a.id).then(r=>r.json())));
+      document.getElementById('kpi-coaching').textContent=details.filter(d=>d.coaching).length;
+      document.getElementById('agents-wrap').innerHTML='<table><thead><tr><th>Agent</th><th>Email</th><th>Assessment</th><th>Bottleneck</th><th>Coaching</th><th>Phase</th></tr></thead><tbody>'+details.map(d=>'<tr>'<td><a href="/portal/'+d.agent.id+'" style="color:#00ffcc;text-decoration:none">'+d.agent.first_name+' '+d.agent.last_name+'</a></td><td style="color:var(--muted)">'+d.agent.email+'</td><td>'+(d.assessment?'<span class="badge badge-sent">yes</span>':'<span class="badge badge-blocked">no</span>')+'</td><td>'+(d.diagnosis?'<span class="badge badge-sent">'+d.diagnosis.primary_bottleneck+'</span>':'<span class="badge badge-blocked">none</span>')+'</td><td>'+(d.coaching?'<span class="badge badge-post">'+(d.coaching.focus||'').slice(0,28)+'...</span>':'<span class="badge badge-blocked">not generated</span>')+'</td><td style="color:var(--muted)">'+(d.agent.current_phase||'—')+'</td></tr>').join('')+'</tbody></table>';
+      document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString();
+      }catch(err){document.getElementById('last-updated').textContent='Error: '+err.message;console.error(err)}
+      }
+      loadAll();
+    </script>
+  </body>
+</html>

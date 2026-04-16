@@ -1,0 +1,346 @@
+const express = require("express");
+const path = require("path");
+const db = require("./db/db");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Serve the dashboard from the root-level public folder
+app.use(express.static(path.join(__dirname, "..", "public")));
+
+// Health check
+app.get("/api/health", (req, res) => {
+  try {
+    db.prepare("SELECT 1").get();
+    res.json({
+      status: "ok",
+      db: "shared-db",
+      ts: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
+});
+
+// All agents with lifecycle state
+app.get("/api/agents", (req, res) => {
+  try {
+    const rows = db
+      .prepare(
+        `
+      SELECT
+        a.id,
+        a.first_name,
+        a.last_name,
+        a.email,
+        a.phone,
+        a.source,
+        a.created_at,
+        al.current_phase,
+        al.phase_entered_at,
+        al.last_engaged_at,
+        al.last_sync_at,
+        al.engagement_score,
+        al.status
+      FROM agents a
+      LEFT JOIN agent_lifecycle al
+        ON al.agent_id = a.id
+      ORDER BY COALESCE(al.engagement_score, 0) DESC, a.created_at DESC
+    `,
+      )
+      .all();
+
+    res.json({
+      agents: rows,
+      count: rows.length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Single agent detail
+app.get("/api/agents/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const agent = db
+      .prepare(
+        `
+      SELECT
+        a.id,
+        a.first_name,
+        a.last_name,
+        a.email,
+        a.phone,
+        a.source,
+        a.created_at,
+        al.current_phase,
+        al.phase_entered_at,
+        al.last_engaged_at,
+        al.last_sync_at,
+        al.engagement_score,
+        al.status
+      FROM agents a
+      LEFT JOIN agent_lifecycle al
+        ON al.agent_id = a.id
+      WHERE a.id = ?
+    `,
+      )
+      .get(id);
+
+    if (!agent) {
+      return res.status(404).json({ error: "Agent not found" });
+    }
+
+    const diagnosis = db
+      .prepare(
+        `
+      SELECT *
+      FROM diagnoses
+      WHERE agent_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+      )
+      .get(id);
+
+    const coaching = db
+      .prepare(
+        `
+      SELECT *
+      FROM coaching_outputs
+      WHERE agent_id = ?
+      ORDER BY generated_at DESC
+      LIMIT 1
+    `,
+      )
+      .get(id);
+
+    const assessment = db
+      .prepare(
+        `
+      SELECT *
+      FROM assessments
+      WHERE agent_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+      )
+      .get(id);
+
+    res.json({
+      agent,
+      diagnosis: diagnosis || null,
+      coaching: coaching || null,
+      assessment: assessment || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Phase distribution summary
+app.get("/api/phases", (req, res) => {
+  try {
+    const rows = db
+      .prepare(
+        `
+      SELECT
+        current_phase,
+        COUNT(*) AS agent_count
+      FROM agent_lifecycle
+      GROUP BY current_phase
+      ORDER BY agent_count DESC
+    `,
+      )
+      .all();
+
+    res.json({ phases: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Phase history for one agent
+app.get("/api/history/:agentId", (req, res) => {
+  try {
+    const rows = db
+      .prepare(
+        `
+      SELECT
+        id,
+        agent_id,
+        from_phase,
+        to_phase,
+        changed_at,
+        reason
+      FROM phase_history
+      WHERE agent_id = ?
+      ORDER BY changed_at DESC
+      LIMIT 50
+    `,
+      )
+      .all(req.params.agentId);
+
+    res.json({
+      history: rows,
+      count: rows.length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Top-level stats
+app.get("/api/stats", (req, res) => {
+  try {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const totalAgents = db
+      .prepare(
+        `
+      SELECT COUNT(*) AS n
+      FROM agents
+    `,
+      )
+      .get().n;
+
+    const activeAgents = db
+      .prepare(
+        `
+      SELECT COUNT(*) AS n
+      FROM agent_lifecycle
+      WHERE status = 'active'
+    `,
+      )
+      .get().n;
+
+    const avgScore = db
+      .prepare(
+        `
+      SELECT ROUND(COALESCE(AVG(engagement_score), 0), 1) AS avg
+      FROM agent_lifecycle
+    `,
+      )
+      .get().avg;
+
+    const recentPromotions = db
+      .prepare(
+        `
+      SELECT COUNT(*) AS n
+      FROM phase_history
+      WHERE changed_at >= ?
+    `,
+      )
+      .get(cutoff).n;
+
+    res.json({
+      totalAgents,
+      activeAgents,
+      avgScore,
+      recentPromotions,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// ── GET /api/report ───────────────────────────────────────────────────────────
+// Executive pulse — aggregated stats for the dashboard
+app.get("/api/report", (req, res) => {
+  try {
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const since7d = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    const totalAgents = db.prepare("SELECT COUNT(*) as n FROM agents").get().n;
+
+    const states = db
+      .prepare(
+        `
+      SELECT campaign_state, COUNT(*) as n
+      FROM agent_lifecycle
+      GROUP BY campaign_state
+    `,
+      )
+      .all();
+
+    const emails24h = db
+      .prepare(
+        `
+      SELECT send_status, COUNT(*) as n
+      FROM campaign_send_log
+      WHERE sent_at >= ?
+      GROUP BY send_status
+    `,
+      )
+      .all(since24h);
+
+    const emails7d = db
+      .prepare(
+        `
+      SELECT COUNT(*) as n FROM campaign_send_log
+      WHERE sent_at >= ? AND send_status = 'sent'
+    `,
+      )
+      .get(since7d).n;
+
+    const analysisComplete = db
+      .prepare("SELECT COUNT(DISTINCT agent_id) as n FROM assessments")
+      .get().n;
+
+    const atRisk = db
+      .prepare(
+        `
+      SELECT a.id, a.first_name, a.last_name, a.email,
+             al.campaign_state, al.last_engaged_at, al.engagement_score
+      FROM agents a
+      JOIN agent_lifecycle al ON al.agent_id = a.id
+      WHERE al.campaign_state = 'post_analysis'
+        AND (al.last_engaged_at IS NULL OR al.last_engaged_at < ?)
+      ORDER BY al.engagement_score ASC
+      LIMIT 10
+    `,
+      )
+      .all(since7d);
+
+    const recentLogs = db
+      .prepare(
+        `
+      SELECT * FROM campaign_send_log
+      ORDER BY sent_at DESC LIMIT 10
+    `,
+      )
+      .all();
+
+    const promotions24h = db
+      .prepare(
+        `
+      SELECT COUNT(*) as n FROM phase_history WHERE changed_at >= ?
+    `,
+      )
+      .get(since24h).n;
+
+    res.json({
+      totalAgents,
+      analysisComplete,
+      states,
+      emails24h,
+      emails7d,
+      atRisk,
+      recentLogs,
+      promotions24h,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.listen(PORT, () => {
+  console.log(`OpenClaw Ops API running on port ${PORT}`);
+  console.log(`Dashboard: http://localhost:${PORT}`);
+  console.log(`Health:    http://localhost:${PORT}/api/health`);
+});

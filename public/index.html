@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Node Runner — Executive Pulse</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0a0a0f;
+        --bg2: #111118;
+        --bg3: #1a1a24;
+        --border: #ffffff12;
+        --border2: #ffffff20;
+        --text: #f0f0f5;
+        --muted: #888899;
+        --dim: #555566;
+        --purple: #8b7ff7;
+        --teal: #2dd4aa;
+        --amber: #f5a623;
+        --red: #e05555;
+        --blue: #5badff;
+        --green: #4ade80;
+        --font: "Inter", system-ui, sans-serif;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 14px;
+        min-height: 100vh;
+      }
+      a {
+        color: var(--purple);
+        text-decoration: none;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 32px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg2);
+      }
+      .logo {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        color: var(--text);
+      }
+      .logo span {
+        color: var(--purple);
+      }
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .pulse {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--teal);
+      }
+      .dot.error {
+        background: var(--red);
+      }
+      .refresh-btn {
+        background: none;
+        border: 1px solid var(--border2);
+        border-radius: 6px;
+        padding: 5px 12px;
+        color: var(--muted);
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: var(--font);
+      }
+      .refresh-btn:hover {
+        border-color: var(--purple);
+        color: var(--purple);
+      }
+      #last-updated {
+        font-size: 11px;
+        color: var(--dim);
+      }
+
+      main {
+        padding: 28px 32px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .section-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 14px;
+      }
+
+      /* ── Stat cards ── */
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+      .stat {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 22px;
+        position: relative;
+        overflow: hidden;
+      }
+      .stat-accent {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 10px;
+      }
+      .stat-value {
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1;
+      }
+      .stat-sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .stat-value.purple {
+        color: var(--purple);
+      }
+      .stat-value.teal {
+        color: var(--teal);
+      }
+      .stat-value.amber {
+        color: var(--amber);
+      }
+      .stat-value.blue {
+        color: var(--blue);
+      }
+
+      /* ── Middle row ── */
+      .mid-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+      .card {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 22px 24px;
+      }
+      .card-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 18px;
+      }
+
+      /* ── Funnel ── */
+      .funnel-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .funnel-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .funnel-label {
+        font-size: 12px;
+        color: var(--muted);
+        width: 110px;
+        flex-shrink: 0;
+      }
+      .funnel-bar-wrap {
+        flex: 1;
+        background: var(--bg3);
+        border-radius: 4px;
+        height: 28px;
+        overflow: hidden;
+      }
+      .funnel-bar {
+        height: 100%;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        padding-left: 10px;
+        font-size: 12px;
+        font-weight: 500;
+        transition: width 0.6s ease;
+        min-width: 32px;
+      }
+      .funnel-count {
+        font-size: 12px;
+        color: var(--muted);
+        width: 40px;
+        text-align: right;
+        flex-shrink: 0;
+      }
+
+      /* ── At risk ── */
+      .risk-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 240px;
+        overflow-y: auto;
+      }
+      .risk-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        background: var(--bg3);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+      .risk-name {
+        font-size: 13px;
+        color: var(--text);
+      }
+      .risk-email {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .risk-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 20px;
+        background: rgba(224, 85, 85, 0.15);
+        color: var(--red);
+        white-space: nowrap;
+      }
+      .empty-state {
+        font-size: 13px;
+        color: var(--dim);
+        padding: 20px 0;
+        text-align: center;
+      }
+
+      /* ── Activity feed ── */
+      .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .activity-item:last-child {
+        border-bottom: none;
+      }
+      .activity-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .activity-dot.sent {
+        background: var(--teal);
+      }
+      .activity-dot.blocked {
+        background: var(--amber);
+      }
+      .activity-dot.failed {
+        background: var(--red);
+      }
+      .activity-text {
+        flex: 1;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .activity-text strong {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .activity-time {
+        font-size: 11px;
+        color: var(--dim);
+        white-space: nowrap;
+      }
+      .activity-step {
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 10px;
+        background: var(--bg3);
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      /* ── Chart container ── */
+      .chart-wrap {
+        position: relative;
+        height: 200px;
+      }
+
+      @media (max-width: 900px) {
+        .stats-row {
+          grid-template-columns: 1fr 1fr;
+        }
+        .mid-row {
+          grid-template-columns: 1fr;
+        }
+        main {
+          padding: 20px 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo"><span>Node</span>Runner — Executive Pulse</div>
+      <div class="header-right">
+        <div class="pulse">
+          <div class="dot" id="pulse-dot"></div>
+          <span id="pulse-text">connecting</span>
+        </div>
+        <span id="last-updated"></span>
+        <button class="refresh-btn" onclick="load()">↻ Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="section-label">System Overview</div>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-accent" style="background: var(--purple)"></div>
+          <div class="stat-label">Total Agents</div>
+          <div class="stat-value purple" id="s-total">—</div>
+          <div class="stat-sub" id="s-total-sub">in system</div>
+        </div>
+        <div class="stat">
+          <div class="stat-accent" style="background: var(--teal)"></div>
+          <div class="stat-label">Emails Sent (7d)</div>
+          <div class="stat-value teal" id="s-emails">—</div>
+          <div class="stat-sub" id="s-emails-sub">campaign sends</div>
+        </div>
+        <div class="stat">
+          <div class="stat-accent" style="background: var(--amber)"></div>
+          <div class="stat-label">Analysis Complete</div>
+          <div class="stat-value amber" id="s-analysis">—</div>
+          <div class="stat-sub" id="s-analysis-sub">agents assessed</div>
+        </div>
+        <div class="stat">
+          <div class="stat-accent" style="background: var(--blue)"></div>
+          <div class="stat-label">Promotions (24h)</div>
+          <div class="stat-value blue" id="s-promos">—</div>
+          <div class="stat-sub">phase advances</div>
+        </div>
+      </div>
+
+      <div class="mid-row">
+        <div class="card">
+          <div class="card-title">Agent funnel</div>
+          <div class="funnel-row" id="funnel"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Email volume — last 7 days</div>
+          <div class="chart-wrap"><canvas id="emailChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="mid-row">
+        <div class="card">
+          <div class="card-title">
+            At-risk agents
+            <span style="font-size: 11px; color: var(--muted); font-weight: 400"
+              >(post-analysis, no engagement 7d)</span
+            >
+          </div>
+          <div class="risk-list" id="risk-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Live activity feed</div>
+          <div class="activity-list" id="activity-list"></div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const FUNNEL_CONFIG = [
+        { key: "pre_activation", label: "Cold / imported", color: "#5badff" },
+        { key: "post_analysis", label: "Analysis done", color: "#8b7ff7" },
+        { key: "lifecycle", label: "Active lifecycle", color: "#2dd4aa" },
+        { key: "none", label: "Unassigned", color: "#555566" },
+      ];
+
+      let emailChart = null;
+
+      function fmt(ts) {
+        if (!ts) return "—";
+        const d = new Date(ts);
+        const diff = Date.now() - d;
+        if (diff < 60000) return "just now";
+        if (diff < 3600000) return Math.floor(diff / 60000) + "m ago";
+        if (diff < 86400000) return Math.floor(diff / 3600000) + "h ago";
+        return Math.floor(diff / 86400000) + "d ago";
+      }
+
+      function setStatus(ok) {
+        document.getElementById("pulse-dot").className =
+          "dot" + (ok ? "" : " error");
+        document.getElementById("pulse-text").textContent = ok
+          ? "live"
+          : "offline";
+      }
+
+      async function load() {
+        try {
+          const r = await fetch("/api/report");
+          const d = await r.json();
+
+          setStatus(true);
+          document.getElementById("last-updated").textContent =
+            "Updated " + new Date().toLocaleTimeString();
+
+          document.getElementById("s-total").textContent = d.totalAgents ?? "—";
+          document.getElementById("s-emails").textContent = d.emails7d ?? "—";
+          document.getElementById("s-analysis").textContent =
+            d.analysisComplete ?? "—";
+          document.getElementById("s-promos").textContent =
+            d.promotions24h ?? "—";
+
+          const pct = d.totalAgents
+            ? Math.round((d.analysisComplete / d.totalAgents) * 100)
+            : 0;
+          document.getElementById("s-analysis-sub").textContent =
+            pct + "% of total";
+
+          const sent24 =
+            (d.emails24h.find((e) => e.send_status === "sent") || {}).n || 0;
+          const blocked24 =
+            (d.emails24h.find((e) => e.send_status === "blocked") || {}).n || 0;
+          document.getElementById("s-emails-sub").textContent =
+            sent24 + " sent · " + blocked24 + " blocked today";
+
+          // Funnel
+          const stateMap = {};
+          (d.states || []).forEach(
+            (s) => (stateMap[s.campaign_state || "none"] = s.n),
+          );
+          const maxN = Math.max(1, ...Object.values(stateMap));
+          document.getElementById("funnel").innerHTML = FUNNEL_CONFIG.map(
+            (f) => {
+              const n = stateMap[f.key] || 0;
+              const pct = Math.round((n / maxN) * 100);
+              return `<div class="funnel-item">
+        <div class="funnel-label">${f.label}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${Math.max(pct, 8)}%;background:${f.color};color:#0a0a0f">${n}</div>
+        </div>
+        <div class="funnel-count">${n}</div>
+      </div>`;
+            },
+          ).join("");
+
+          // Email chart
+          const last7 = [];
+          for (let i = 6; i >= 0; i--) {
+            const d2 = new Date();
+            d2.setDate(d2.getDate() - i);
+            last7.push(d2.toLocaleDateString("en", { weekday: "short" }));
+          }
+          const sentByDay = new Array(7).fill(0);
+          (d.recentLogs || []).forEach((l) => {
+            if (l.send_status !== "sent") return;
+            const daysAgo = Math.floor(
+              (Date.now() - new Date(l.sent_at)) / 86400000,
+            );
+            if (daysAgo < 7) sentByDay[6 - daysAgo]++;
+          });
+
+          if (emailChart) emailChart.destroy();
+          emailChart = new Chart(document.getElementById("emailChart"), {
+            type: "bar",
+            data: {
+              labels: last7,
+              datasets: [
+                {
+                  data: sentByDay,
+                  backgroundColor: "#8b7ff730",
+                  borderColor: "#8b7ff7",
+                  borderWidth: 1.5,
+                  borderRadius: 4,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: {
+                  grid: { color: "#ffffff08" },
+                  ticks: { color: "#888899", font: { size: 11 } },
+                },
+                y: {
+                  grid: { color: "#ffffff08" },
+                  ticks: { color: "#888899", font: { size: 11 }, stepSize: 1 },
+                  beginAtZero: true,
+                },
+              },
+            },
+          });
+
+          // At risk
+          const riskEl = document.getElementById("risk-list");
+          if (!d.atRisk || !d.atRisk.length) {
+            riskEl.innerHTML =
+              '<div class="empty-state">No at-risk agents — system healthy</div>';
+          } else {
+            riskEl.innerHTML = d.atRisk
+              .map(
+                (a) => `
+        <div class="risk-item">
+          <div>
+            <div class="risk-name">${a.first_name || ""} ${a.last_name || ""}</div>
+            <div class="risk-email">${a.email || "—"}</div>
+          </div>
+          <div class="risk-badge">No activity ${fmt(a.last_engaged_at)}</div>
+        </div>`,
+              )
+              .join("");
+          }
+
+          // Activity feed
+          const actEl = document.getElementById("activity-list");
+          if (!d.recentLogs || !d.recentLogs.length) {
+            actEl.innerHTML = '<div class="empty-state">No activity yet</div>';
+          } else {
+            actEl.innerHTML = d.recentLogs
+              .map(
+                (l) => `
+        <div class="activity-item">
+          <div class="activity-dot ${l.send_status}"></div>
+          <div class="activity-text">
+            <strong>${l.agent_id.slice(-8)}</strong> · ${l.campaign_type} · ${l.subject ? l.subject.slice(0, 40) + "…" : "—"}
+          </div>
+          <div class="activity-step">step ${l.campaign_step}</div>
+          <div class="activity-time">${fmt(l.sent_at)}</div>
+        </div>`,
+              )
+              .join("");
+          }
+        } catch (e) {
+          setStatus(false);
+          console.error(e);
+        }
+      }
+
+      load();
+      setInterval(load, 30000);
+    </script>
+  </body>
+</html>

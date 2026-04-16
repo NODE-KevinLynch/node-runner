@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Coaching Roadmap</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0f1115;
+        --surface: #16191f;
+        --card: #1c2028;
+        --border: #2a2d3a;
+        --text: #e8eaf0;
+        --muted: #7b7f96;
+        --accent: #00ffcc;
+        --gold: #f0a500;
+        --green: #22c55e;
+        --soft: #a8b4c8;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 15px;
+        line-height: 1.7;
+        min-height: 100vh;
+      }
+
+      /* HEADER */
+      .header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 28px 40px;
+      }
+      .header-inner {
+        max-width: 960px;
+        margin: 0 auto;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .header-brand {
+        font-size: 11px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .header-name {
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.5px;
+      }
+      .header-sub {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .header-badges {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 14px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .badge-phase {
+        background: rgba(0, 255, 204, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(0, 255, 204, 0.2);
+      }
+      .badge-char {
+        background: rgba(240, 165, 0, 0.1);
+        color: var(--gold);
+        border: 1px solid rgba(240, 165, 0, 0.2);
+      }
+
+      /* MAIN */
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 36px 24px 80px;
+      }
+
+      /* SECTION LABEL */
+      .section-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      /* CARDS */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+      }
+
+      /* TRUTH CARD */
+      .truth-card {
+        background: var(--surface);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        padding: 28px 32px;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+      .truth-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--accent);
+      }
+      .truth-text {
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--text);
+        padding-left: 16px;
+      }
+
+      /* STRATEGY CARD */
+      .strategy-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+      }
+      .strategy-text {
+        font-size: 15px;
+        line-height: 1.75;
+        color: var(--soft);
+      }
+
+      /* RPM BLOCK */
+      .rpm-block {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+      }
+      .rpm-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 14px;
+      }
+      .rpm-cell {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .rpm-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .rpm-label.action {
+        color: var(--accent);
+      }
+      .rpm-label.result {
+        color: var(--gold);
+      }
+      .rpm-label.purpose {
+        color: #a78bfa;
+      }
+      .rpm-text {
+        font-size: 13px;
+        line-height: 1.65;
+        color: var(--soft);
+      }
+      @media (max-width: 640px) {
+        .rpm-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* CONSTRAINT */
+      .constraint-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 28px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .constraint-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;

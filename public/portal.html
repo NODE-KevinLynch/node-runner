@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Coaching Roadmap</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0f1115;
+        --surface: #16191f;
+        --card: #1c2028;
+        --border: #2a2d3a;
+        --text: #e8eaf0;
+        --muted: #7b7f96;
+        --accent: #00ffcc;
+        --gold: #f0a500;
+        --green: #22c55e;
+        --soft: #a8b4c8;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 15px;
+        line-height: 1.7;
+        min-height: 100vh;
+      }
+
+      /* HEADER */
+      .header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 28px 40px;
+      }
+      .header-inner {
+        max-width: 960px;
+        margin: 0 auto;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .header-brand {
+        font-size: 11px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .header-name {
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.5px;
+      }
+      .header-sub {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .header-badges {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 14px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .badge-phase {
+        background: rgba(0, 255, 204, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(0, 255, 204, 0.2);
+      }
+      .badge-char {
+        background: rgba(240, 165, 0, 0.1);
+        color: var(--gold);
+        border: 1px solid rgba(240, 165, 0, 0.2);
+      }
+
+      /* MAIN */
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 36px 24px 80px;
+      }
+
+      /* SECTION LABEL */
+      .section-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      /* CARDS */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+      }
+
+      /* TRUTH CARD */
+      .truth-card {
+        background: var(--surface);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        padding: 28px 32px;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+      .truth-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--accent);
+      }
+      .truth-text {
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--text);
+        padding-left: 16px;
+      }
+
+      /* STRATEGY CARD */
+      .strategy-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+      }
+      .strategy-text {
+        font-size: 15px;
+        line-height: 1.75;
+        color: var(--soft);
+      }
+
+      /* RPM BLOCK */
+      .rpm-block {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+      }
+      .rpm-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 14px;
+      }
+      .rpm-cell {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .rpm-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .rpm-label.action {
+        color: var(--accent);
+      }
+      .rpm-label.result {
+        color: var(--gold);
+      }
+      .rpm-label.purpose {
+        color: #a78bfa;
+      }
+      .rpm-text {
+        font-size: 13px;
+        line-height: 1.65;
+        color: var(--soft);
+      }
+      @media (max-width: 640px) {
+        .rpm-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* CONSTRAINT */
+      .constraint-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 28px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .constraint-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--gold);
+        flex-shrink: 0;
+      }
+      .constraint-label {
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .constraint-value {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--gold);
+      }
+
+      /* DIRECTIVE */
+      .directive-card {
+        background: var(--card);
+        border-left: 3px solid var(--green);
+        border-radius: 0 12px 12px 0;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+      }
+      .directive-text {
+        font-size: 15px;
+        line-height: 1.7;
+        color: var(--text);
+      }
+
+      /* QUOTE */
+      .quote-card {
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 28px;
+        margin-bottom: 28px;
+        text-align: center;
+      }
+      .quote-text {
+        font-size: 15px;
+        font-style: italic;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      .quote-author {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 8px;
+        letter-spacing: 0.06em;
+      }
+
+      /* SUPPORTING ACTIONS */
+      .supporting-list {
+        list-style: none;
+        padding: 0;
+      }
+      .supporting-list li {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+        color: var(--soft);
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .supporting-list li:last-child {
+        border-bottom: none;
+      }
+      .supporting-list li::before {
+        content: "→";
+        color: var(--accent);
+        flex-shrink: 0;
+      }
+
+      /* TABLE */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        padding: 10px;
+        border-bottom: 1px solid var(--border);
+        color: var(--soft);
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      /* FOOTER */
+      .footer {
+        text-align: center;
+        padding: 32px 24px;
+        font-size: 12px;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+        margin-top: 20px;
+      }
+      .footer strong {
+        color: var(--accent);
+      }
+
+      .divider {
+        margin: 8px 0 24px;
+        height: 1px;
+        background: var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-inner">
+        <div>
+          <div class="header-brand">Node Runner — Performance Coaching</div>
+          <div class="header-name">__AGENT_NAME__</div>
+          <div class="header-sub">
+            Personal Coaching Roadmap &nbsp;·&nbsp; __GENERATED_AT__
+          </div>
+        </div>
+        <div class="header-badges">
+          <span class="badge badge-phase">__PHASE__</span>
+          <span class="badge badge-char">__CHARACTER_TYPE__</span>
+        </div>
+      </div>
+    </div>
+
+    <main>
+      <!-- SECTION 2: THE TRUTH -->
+      <div class="section-label">The Truth</div>
+      <div class="truth-card">
+        <div class="truth-text">__TRUTH__</div>
+      </div>
+
+      <!-- SECTION 3: THE STRATEGY -->
+      <div class="section-label">The Strategy</div>
+      <div class="strategy-card">
+        <div class="strategy-text">__STRATEGY__</div>
+      </div>
+
+      <!-- SECTION 4: THIS WEEK — RPM FORMAT -->
+      <div class="section-label">This Week — Your RPM Plan</div>
+      <div class="rpm-block">
+        <div class="rpm-grid">
+          <div class="rpm-cell">
+            <div class="rpm-label action">Action</div>
+            <div class="rpm-text">__RPM_ACTION__</div>
+          </div>
+          <div class="rpm-cell">
+            <div class="rpm-label result">Result</div>
+            <div class="rpm-text">__RPM_RESULT__</div>
+          </div>
+          <div class="rpm-cell">
+            <div class="rpm-label purpose">Purpose</div>
+            <div class="rpm-text">__RPM_PURPOSE__</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 5: PRIMARY CONSTRAINT -->
+      <div class="section-label">Primary Constraint</div>
+      <div class="constraint-card">
+        <div class="constraint-dot"></div>
+        <div>
+          <div class="constraint-label">Current Bottleneck</div>
+          <div class="constraint-value">__CONSTRAINT__</div>
+        </div>
+      </div>
+
+      <!-- SECTION 6: COACHING DIRECTIVE -->
+      <div class="section-label">Coaching Directive</div>
+      <div class="directive-card">
+        <div class="directive-text">__DIRECTIVE__</div>
+      </div>
+
+      <!-- SECTION 7: QUOTE -->
+      <div class="quote-card">
+        <div class="quote-text">__QUOTE__</div>
+        <div class="quote-author">__QUOTE_AUTHOR__</div>
+      </div>
+
+      <!-- SUPPORTING ACTIONS -->
+      <div class="section-label">Supporting Actions</div>
+      <div class="card">
+        <ul class="supporting-list">
+          __SUPPORTING_ITEMS__
+        </ul>
+      </div>
+
+      <!-- SECTION 8: RECENT ACTIVITY -->
+      <div class="section-label">Recent Coaching Activity</div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Campaign</th>
+              <th style="text-align: center">Step</th>
+              <th>Subject</th>
+              <th style="text-align: center">Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            __EMAIL_ROWS__
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <div class="footer">
+      <strong>Kevin Lynch</strong> &nbsp;·&nbsp; Performance Architect
+      &nbsp;·&nbsp; National Coach, Sutton Group Canada<br />
+      <span style="margin-top: 4px; display: block"
+        >This roadmap was generated specifically for __AGENT_NAME__ based on
+        your business analysis.</span
+      >
+    </div>
+  </body>
+</html>
