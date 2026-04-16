@@ -250,16 +250,18 @@ app.get("/api/stats", async (req, res) => {
 });
 // ── GET /api/report ───────────────────────────────────────────────────────────
 // Executive pulse — aggregated stats for the dashboard
-app.get("/api/report", (req, res) => {
+app.get("/api/report", async (req, res) => {
   try {
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const since7d = new Date(
       Date.now() - 7 * 24 * 60 * 60 * 1000,
     ).toISOString();
 
-    const totalAgents = db.prepare("SELECT COUNT(*) as n FROM agents").get().n;
+    const totalAgents = (
+      await db.prepare("SELECT COUNT(*) as n FROM agents").get()
+    ).n;
 
-    const states = db
+    const states = await db
       .prepare(
         `
       SELECT campaign_state, COUNT(*) as n
