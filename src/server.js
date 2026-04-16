@@ -271,7 +271,7 @@ app.get("/api/report", async (req, res) => {
       )
       .all();
 
-    const emails24h = db
+    const emails24h = await db
       .prepare(
         `
       SELECT send_status, COUNT(*) as n
@@ -282,7 +282,7 @@ app.get("/api/report", async (req, res) => {
       )
       .all(since24h);
 
-    const emails7d = db
+    const emails7d = await db
       .prepare(
         `
       SELECT COUNT(*) as n FROM campaign_send_log
