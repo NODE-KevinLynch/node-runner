@@ -9,9 +9,9 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 // Health check
-app.get("/api/health", (req, res) => {
+app.get("/api/health", async (req, res) => {
   try {
-    db.prepare("SELECT 1").get();
+    await db.prepare("SELECT 1").get();
     res.json({
       status: "ok",
       db: "shared-db",
