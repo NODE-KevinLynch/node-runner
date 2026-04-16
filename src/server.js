@@ -291,11 +291,11 @@ app.get("/api/report", async (req, res) => {
       )
       .get(since7d).n;
 
-    const analysisComplete = db
+    const analysisComplete = await db
       .prepare("SELECT COUNT(DISTINCT agent_id) as n FROM assessments")
       .get().n;
 
-    const atRisk = db
+    const atRisk = await db
       .prepare(
         `
       SELECT a.id, a.first_name, a.last_name, a.email,
@@ -310,7 +310,7 @@ app.get("/api/report", async (req, res) => {
       )
       .all(since7d);
 
-    const recentLogs = db
+    const recentLogs = await db
       .prepare(
         `
       SELECT * FROM campaign_send_log
@@ -319,7 +319,7 @@ app.get("/api/report", async (req, res) => {
       )
       .all();
 
-    const promotions24h = db
+    const promotions24h = await db
       .prepare(
         `
       SELECT COUNT(*) as n FROM phase_history WHERE changed_at >= ?
