@@ -343,7 +343,7 @@ app.get("/api/report", async (req, res) => {
 
     const atRisk = await db
       .prepare(
-        "SELECT a.first_name, a.last_name, a.email, al.last_engaged_at FROM agents a JOIN agent_lifecycle al ON a.id = al.agent_id WHERE al.campaign_state = 'post_analysis' AND (al.last_engaged_at IS NULL OR al.last_engaged_at <= $1)",
+        "SELECT a.name, a.last_name, a.email, al.updated_at as last_engaged_at FROM agents a JOIN agent_lifecycle al ON a.id = al.agent_id WHERE al.campaign_state = 'post_analysis' AND (al.updated_at IS NULL OR al.updated_at <= $1)",
       )
       .all(since7d);
 
