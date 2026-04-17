@@ -53,7 +53,26 @@ app.get("/api/schema", async (req, res) => {
         "SELECT column_name FROM information_schema.columns WHERE table_name = 'phase_history' ORDER BY ordinal_position",
       )
       .all();
-    res.json({ agents, lifecycle, sendlog, diagnoses, phasehistory });
+    const coaching = await db
+      .prepare(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'coaching_outputs' ORDER BY ordinal_position",
+      )
+      .all();
+    const assessments = await db
+      .prepare(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'assessments' ORDER BY ordinal_position",
+      )
+      .all();
+
+    res.json({
+      agents,
+      lifecycle,
+      sendlog,
+      diagnoses,
+      phasehistory,
+      coaching,
+      assessments,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
