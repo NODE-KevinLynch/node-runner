@@ -253,101 +253,64 @@ app.get("/api/stats", async (req, res) => {
 app.get("/api/report", async (req, res) => {
   try {
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const since7d = new Date(
-      Date.now() - 7 * 24 * 60 * 60 * 1000,
-    ).toISOString();
 
-    const totalAgents = (
-      await db.prepare("SELECT COUNT(*) as n FROM agents").get()
-    ).n;
-
-    const states = await db
-      .prepare(
-        `
-      SELECT campaign_state, COUNT(*) as n
-      FROM agent_lifecycle
-      GROUP BY campaign_state
-    `,
-      )
-      .all();
-
-    const emails24h = await db
-      .prepare(
-        `
-      SELECT send_status, COUNT(*) as n
-      FROM campaign_send_log
-      WHERE sent_at >= ?
-      GROUP BY send_status
-    `,
-      )
-      .all(since24h);
-
-    const emails7d = (
+    // TEST 1 — states
+    try {
       await db
         .prepare(
           `
-      SELECT COUNT(*) as n FROM campaign_send_log
-      WHERE sent_at >= ? AND send_status = 'sent'
-    `,
+        SELECT campaign_state, COUNT(*) as n
+        FROM agent_lifecycle
+        GROUP BY campaign_state
+      `,
         )
-        .get(since7d)
-    ).n;
+        .all();
+      console.log("states ✅");
+    } catch (e) {
+      console.error("states ❌", e.message);
+      throw new Error("states failed");
+    }
 
-    const analysisComplete = (
-      await db
-        .prepare("SELECT COUNT(DISTINCT agent_id) as n FROM assessments")
-        .get()
-    ).n;
-
-    const atRisk = await db
-      .prepare(
-        `
-      SELECT a.id, a.first_name, a.last_name, a.email,
-             al.campaign_state, al.last_engaged_at, al.engagement_score
-      FROM agents a
-      JOIN agent_lifecycle al ON al.agent_id = a.id
-      WHERE al.campaign_state = 'post_analysis'
-        AND (al.last_engaged_at IS NULL OR al.last_engaged_at < ?)
-      ORDER BY al.engagement_score ASC
-      LIMIT 10
-    `,
-      )
-      .all(since7d);
-
-    const recentLogs = await db
-      .prepare(
-        `
-      SELECT * FROM campaign_send_log
-      ORDER BY sent_at DESC LIMIT 10
-    `,
-      )
-      .all();
-
-    const promotions24h = (
+    // TEST 2 — emails24h
+    try {
       await db
         .prepare(
           `
-          SELECT COUNT(*) as n FROM phase_history WHERE changed_at >= ?
-          `,
+        SELECT send_status, COUNT(*) as n
+        FROM campaign_send_log
+        WHERE sent_at >= ?
+        GROUP BY send_status
+      `,
         )
-        .get(since24h)
-    ).n;
+        .all(since24h);
+      console.log("emails24h ✅");
+    } catch (e) {
+      console.error("emails24h ❌", e.message);
+      throw new Error("emails24h failed");
+    }
 
-    res.json({
-      totalAgents,
-      analysisComplete,
-      states,
-      emails24h,
-      emails7d,
-      atRisk,
-      recentLogs,
-      promotions24h,
-    });
+    // TEST 3 — emails7d
+    try {
+      await db
+        .prepare(
+          `
+        SELECT COUNT(*) as n
+        FROM campaign_send_log
+        WHERE sent_at >= ? AND send_status = 'sent'
+      `,
+        )
+        .get(since24h);
+      console.log("emails7d ✅");
+    } catch (e) {
+      console.error("emails7d ❌", e.message);
+      throw new Error("emails7d failed");
+    }
+
+    res.json({ status: "all queries passed" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 app.listen(PORT, () => {
   // ── GET /portal/:agentId ─────────────────────────────────────────────────────
   app.get("/portal/:agentId", (req, res) => {
