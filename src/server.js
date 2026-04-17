@@ -25,7 +25,7 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-// Temporary diagnostic — delete later
+// Schema diagnostic
 app.get("/api/schema", async (req, res) => {
   try {
     const agents = await db
@@ -63,7 +63,6 @@ app.get("/api/schema", async (req, res) => {
         "SELECT column_name FROM information_schema.columns WHERE table_name = 'assessments' ORDER BY ordinal_position",
       )
       .all();
-
     res.json({
       agents,
       lifecycle,
@@ -114,6 +113,9 @@ app.get("/api/agents", async (req, res) => {
 });
 
 // Single agent detail
+// coaching_outputs: id, agent_id, the_truth, the_strategy, rpm_plan, primary_constraint, coaching_directive, quote_of_the_day, engagement_score, created_at, updated_at
+// assessments: id, agent_id, question_key, answer, score, created_at (row-per-question, not JSON blob)
+// diagnoses: id, agent_id, bottleneck, profile, signals, created_at
 app.get("/api/agents/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -163,29 +165,28 @@ app.get("/api/agents/:id", async (req, res) => {
       SELECT *
       FROM coaching_outputs
       WHERE agent_id = $1
-      ORDER BY generated_at DESC
-      LIMIT 1
-    `,
-      )
-      .get(id);
-
-    const assessment = await db
-      .prepare(
-        `
-      SELECT *
-      FROM assessments
-      WHERE agent_id = $1
       ORDER BY created_at DESC
       LIMIT 1
     `,
       )
       .get(id);
 
+    const assessmentRows = await db
+      .prepare(
+        `
+      SELECT question_key, answer, score
+      FROM assessments
+      WHERE agent_id = $1
+      ORDER BY created_at DESC
+    `,
+      )
+      .all(id);
+
     res.json({
       agent,
       diagnosis: diagnosis || null,
       coaching: coaching || null,
-      assessment: assessment || null,
+      assessment: assessmentRows.length ? assessmentRows : null,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -365,6 +366,10 @@ app.get("/api/report", async (req, res) => {
 
 app.listen(PORT, () => {
   // ── GET /portal/:agentId ─────────────────────────────────────────────────────
+  // Real coaching_outputs columns: id, agent_id, the_truth, the_strategy, rpm_plan,
+  //   primary_constraint, coaching_directive, quote_of_the_day, engagement_score, created_at, updated_at
+  // Real diagnoses columns: id, agent_id, bottleneck, profile, signals, created_at
+  // Real assessments columns: id, agent_id, question_key, answer, score, created_at
   app.get("/portal/:agentId", async (req, res) => {
     const { agentId } = req.params;
     try {
@@ -387,7 +392,7 @@ app.listen(PORT, () => {
           `
         SELECT * FROM coaching_outputs
         WHERE agent_id = $1
-        ORDER BY generated_at DESC LIMIT 1
+        ORDER BY created_at DESC LIMIT 1
       `,
         )
         .get(agentId);
@@ -413,9 +418,8 @@ app.listen(PORT, () => {
         )
         .all(agentId);
 
-      const supporting = coaching
-        ? JSON.parse(coaching.supporting_actions_json || "[]")
-        : [];
+      // No supporting_actions_json column exists — use empty array
+      const supporting = [];
 
       const emailRows = recentEmails.length
         ? recentEmails
@@ -432,15 +436,30 @@ app.listen(PORT, () => {
             .join("")
         : "<tr><td colspan='5' style='text-align:center;color:#888'>No emails sent yet</td></tr>";
 
-      const supportingItems = supporting.length
-        ? supporting.map((a) => `<li>${a}</li>`).join("")
-        : "<li>Coaching actions will appear here</li>";
+      const supportingItems = "<li>Coaching actions will appear here</li>";
 
       const fs = require("fs");
       let html = fs.readFileSync(
         require("path").join(__dirname, "..", "public", "portal.html"),
         "utf8",
       );
+
+      // Parse rpm_plan JSON if it exists
+      let rpmAction = "Complete your top 3 priority actions before noon.";
+      let rpmResult = "Secure measurable progress this week.";
+      let rpmPurpose =
+        "So your business moves forward by design, not by chance.";
+      if (coaching?.rpm_plan) {
+        try {
+          const rpm = JSON.parse(coaching.rpm_plan);
+          rpmAction = rpm.action || rpm.massive_action || rpmAction;
+          rpmResult = rpm.result || rpmResult;
+          rpmPurpose = rpm.purpose || rpmPurpose;
+        } catch (e) {
+          // rpm_plan might be plain text
+          rpmAction = coaching.rpm_plan;
+        }
+      }
 
       html = html
         .replace(
@@ -449,61 +468,53 @@ app.listen(PORT, () => {
         )
         .replace(/__AGENT_ID__/g, agent.id)
         .replace(/__PHASE__/g, agent.stage || "Discovery")
-        .replace(
-          /__CHARACTER_TYPE__/g,
-          coaching?.character_type || "The Professional",
-        )
+        .replace(/__CHARACTER_TYPE__/g, "The Professional")
         .replace(
           /__FOCUS__/g,
-          coaching?.focus || "Business Performance & Growth",
+          coaching?.primary_constraint || "Business Performance & Growth",
         )
-        .replace(/__VERSION__/g, coaching?.version || "v1.0")
+        .replace(/__VERSION__/g, "v1.0")
         .replace(/__BOTTLENECK__/g, diagnosis?.bottleneck || "—")
         .replace(/__CONFIDENCE__/g, "—")
         .replace(
           /__TRUTH__/g,
-          (coaching?.message || "")
-            .replace(/[\s\S]*?THE TRUTH[\s\S]*?\n\n/i, "")
-            .replace(/\n\nTHE STRATEGY[\s\S]*/i, "")
-            .trim()
-            .replace(/\n/g, "<br>") ||
-            coaching?.message?.replace(/\n/g, "<br>") ||
-            "Your roadmap is being prepared.",
-        )
-        .replace(/__STRATEGY__/g, coaching?.focus || "")
-        .replace(
-          /__RPM_ACTION__/g,
-          coaching?.top_action ||
-            "Complete your top 3 priority actions before noon.",
+          coaching?.the_truth
+            ? coaching.the_truth.replace(/\n/g, "<br>")
+            : "Your roadmap is being prepared.",
         )
         .replace(
-          /__RPM_RESULT__/g,
-          coaching?.weekly_target || "Secure measurable progress this week.",
+          /__STRATEGY__/g,
+          coaching?.the_strategy
+            ? coaching.the_strategy.replace(/\n/g, "<br>")
+            : "",
         )
+        .replace(/__RPM_ACTION__/g, rpmAction)
+        .replace(/__RPM_RESULT__/g, rpmResult)
+        .replace(/__RPM_PURPOSE__/g, rpmPurpose)
         .replace(
-          /__RPM_PURPOSE__/g,
-          "So your business moves forward by design, not by chance.",
+          /__CONSTRAINT__/g,
+          coaching?.primary_constraint || "Performance Foundation",
         )
-        .replace(/__CONSTRAINT__/g, coaching?.focus || "Performance Foundation")
         .replace(
           /__DIRECTIVE__/g,
-          coaching?.top_action ||
+          coaching?.coaching_directive ||
             "Execute your #1 priority action before anything else today.",
         )
         .replace(
           /__QUOTE__/g,
-          "It is not what we do once in a while that shapes our lives. It is what we do consistently.",
+          coaching?.quote_of_the_day ||
+            "It is not what we do once in a while that shapes our lives. It is what we do consistently.",
         )
         .replace(/__QUOTE_AUTHOR__/g, "— Tony Robbins")
-        .replace(/__TOP_ACTION__/g, coaching?.top_action || "—")
-        .replace(/__DAILY_RITUAL__/g, coaching?.daily_ritual || "—")
-        .replace(/__WEEKLY_TARGET__/g, coaching?.weekly_target || "—")
+        .replace(/__TOP_ACTION__/g, coaching?.coaching_directive || "—")
+        .replace(/__DAILY_RITUAL__/g, "—")
+        .replace(/__WEEKLY_TARGET__/g, "—")
         .replace(/__SUPPORTING_ITEMS__/g, supportingItems)
         .replace(/__EMAIL_ROWS__/g, emailRows)
         .replace(
           /__GENERATED_AT__/g,
-          coaching?.generated_at
-            ? new Date(coaching.generated_at).toLocaleDateString("en-CA")
+          coaching?.created_at
+            ? new Date(coaching.created_at).toLocaleDateString("en-CA")
             : "—",
         );
 
