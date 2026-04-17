@@ -87,7 +87,7 @@ app.get("/api/agents/:id", (req, res) => {
       FROM agents a
       LEFT JOIN agent_lifecycle al
         ON al.agent_id = a.id
-      WHERE a.id = ?
+      WHERE a.id = $1
     `,
       )
       .get(id);
@@ -101,7 +101,7 @@ app.get("/api/agents/:id", (req, res) => {
         `
       SELECT *
       FROM diagnoses
-      WHERE agent_id = ?
+      WHERE agent_id = $1
       ORDER BY created_at DESC
       LIMIT 1
     `,
@@ -113,7 +113,7 @@ app.get("/api/agents/:id", (req, res) => {
         `
       SELECT *
       FROM coaching_outputs
-      WHERE agent_id = ?
+      WHERE agent_id = $1
       ORDER BY generated_at DESC
       LIMIT 1
     `,
@@ -125,7 +125,7 @@ app.get("/api/agents/:id", (req, res) => {
         `
       SELECT *
       FROM assessments
-      WHERE agent_id = ?
+      WHERE agent_id = $1
       ORDER BY created_at DESC
       LIMIT 1
     `,
@@ -179,7 +179,7 @@ app.get("/api/history/:agentId", async (req, res) => {
         changed_at,
         reason
       FROM phase_history
-      WHERE agent_id = ?
+      WHERE agent_id = $1
       ORDER BY changed_at DESC
       LIMIT 50
     `,
@@ -200,40 +200,46 @@ app.get("/api/stats", async (req, res) => {
   try {
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    const totalAgents = await db
-      .prepare(
-        `
+    const totalAgents = (
+      await db
+        .prepare(
+          `
       SELECT COUNT(*) AS n
       FROM agents
     `,
-      )
-      .get().n;
+        )
+        .get()
+    ).n;
 
-    const activeAgents = await db
-      .prepare(
-        `
+    const activeAgents = (
+      await db
+        .prepare(
+          `
       SELECT COUNT(*) AS n
       FROM agent_lifecycle
       WHERE status = 'active'
     `,
-      )
-      .get().n;
+        )
+        .get()
+    ).n;
 
-    const avgScore = await db
-      .prepare(
-        `
+    const avgScore = (
+      await db
+        .prepare(
+          `
       SELECT ROUND(COALESCE(AVG(engagement_score), 0), 1) AS avg
       FROM agent_lifecycle
     `,
-      )
-      .get().avg;
+        )
+        .get()
+    ).avg;
 
     const recentPromotions = db
       .prepare(
         `
       SELECT COUNT(*) AS n
       FROM phase_history
-      WHERE changed_at >= ?
+      WHERE changed_at >= $1
     `,
       )
       .get(cutoff).n;
@@ -267,20 +273,16 @@ app.get("/api/report", async (req, res) => {
         .all();
       console.log("states ✅");
     } catch (e) {
-      console.error("states ❌", e.message);
-      throw new Error("states failed");
+      console.error("emails24h ❌", e.message);
+      return res.status(500).json({ error: e.message });
     }
 
+    // TEST 2 — emails24h
     // TEST 2 — emails24h
     try {
       await db
         .prepare(
-          `
-        SELECT send_status, COUNT(*) as n
-        FROM campaign_send_log
-        WHERE sent_at >= ?
-        GROUP BY send_status
-      `,
+          "SELECT send_status, COUNT(*) as n FROM campaign_send_log WHERE sent_at >= $1 GROUP BY send_status",
         )
         .all(since24h);
       console.log("emails24h ✅");
@@ -296,7 +298,7 @@ app.get("/api/report", async (req, res) => {
           `
         SELECT COUNT(*) as n
         FROM campaign_send_log
-        WHERE sent_at >= ? AND send_status = 'sent'
+        WHERE sent_at >= $1 AND send_status = 'sent'
       `,
         )
         .get(since24h);
@@ -323,7 +325,7 @@ app.listen(PORT, () => {
                al.current_phase, al.engagement_score, al.campaign_state
         FROM agents a
         LEFT JOIN agent_lifecycle al ON a.id = al.agent_id
-        WHERE a.id = ?
+        WHERE a.id = $1
       `,
         )
         .get(agentId);
@@ -334,7 +336,7 @@ app.listen(PORT, () => {
         .prepare(
           `
         SELECT * FROM coaching_outputs
-        WHERE agent_id = ?
+        WHERE agent_id = $1
         ORDER BY generated_at DESC LIMIT 1
       `,
         )
@@ -344,7 +346,7 @@ app.listen(PORT, () => {
         .prepare(
           `
         SELECT primary_bottleneck, confidence_score
-        FROM diagnoses WHERE agent_id = ?
+        FROM diagnoses WHERE agent_id = $1
         ORDER BY created_at DESC LIMIT 1
       `,
         )
@@ -355,7 +357,7 @@ app.listen(PORT, () => {
           `
         SELECT campaign_type, campaign_step, subject, send_status, sent_at
         FROM campaign_send_log
-        WHERE agent_id = ?
+        WHERE agent_id = 
         ORDER BY sent_at DESC LIMIT 5
       `,
         )
