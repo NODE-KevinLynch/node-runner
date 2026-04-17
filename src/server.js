@@ -58,6 +58,7 @@ app.get("/api/schema", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // All agents with lifecycle state
 app.get("/api/agents", async (req, res) => {
   try {
@@ -66,18 +67,16 @@ app.get("/api/agents", async (req, res) => {
         `
       SELECT
         a.id,
-        a.first_name,
+        a.name,
         a.last_name,
         a.email,
         a.phone,
         a.source,
         a.created_at,
-        al.current_phase,
-        al.phase_entered_at,
-        al.last_engaged_at,
-        al.last_sync_at,
+        al.stage,
         al.engagement_score,
-        al.status
+        al.campaign_state,
+        al.updated_at
       FROM agents a
       LEFT JOIN agent_lifecycle al
         ON al.agent_id = a.id
@@ -96,27 +95,25 @@ app.get("/api/agents", async (req, res) => {
 });
 
 // Single agent detail
-app.get("/api/agents/:id", (req, res) => {
+app.get("/api/agents/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const agent = db
+    const agent = await db
       .prepare(
         `
       SELECT
         a.id,
-        a.first_name,
+        a.name,
         a.last_name,
         a.email,
         a.phone,
         a.source,
         a.created_at,
-        al.current_phase,
-        al.phase_entered_at,
-        al.last_engaged_at,
-        al.last_sync_at,
+        al.stage,
         al.engagement_score,
-        al.status
+        al.campaign_state,
+        al.updated_at
       FROM agents a
       LEFT JOIN agent_lifecycle al
         ON al.agent_id = a.id
@@ -129,7 +126,7 @@ app.get("/api/agents/:id", (req, res) => {
       return res.status(404).json({ error: "Agent not found" });
     }
 
-    const diagnosis = db
+    const diagnosis = await db
       .prepare(
         `
       SELECT *
@@ -141,7 +138,7 @@ app.get("/api/agents/:id", (req, res) => {
       )
       .get(id);
 
-    const coaching = db
+    const coaching = await db
       .prepare(
         `
       SELECT *
@@ -153,7 +150,7 @@ app.get("/api/agents/:id", (req, res) => {
       )
       .get(id);
 
-    const assessment = db
+    const assessment = await db
       .prepare(
         `
       SELECT *
@@ -183,10 +180,10 @@ app.get("/api/phases", async (req, res) => {
       .prepare(
         `
       SELECT
-        current_phase,
+        stage,
         COUNT(*) AS agent_count
       FROM agent_lifecycle
-      GROUP BY current_phase
+      GROUP BY stage
       ORDER BY agent_count DESC
     `,
       )
@@ -234,24 +231,13 @@ app.get("/api/stats", async (req, res) => {
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const totalAgents = (
-      await db
-        .prepare(
-          `
-      SELECT COUNT(*) AS n
-      FROM agents
-    `,
-        )
-        .get()
+      await db.prepare("SELECT COUNT(*) AS n FROM agents").get()
     ).n;
 
     const activeAgents = (
       await db
         .prepare(
-          `
-      SELECT COUNT(*) AS n
-      FROM agent_lifecycle
-      WHERE status = 'active'
-    `,
+          "SELECT COUNT(*) AS n FROM agent_lifecycle WHERE engagement_score > 0",
         )
         .get()
     ).n;
@@ -259,23 +245,18 @@ app.get("/api/stats", async (req, res) => {
     const avgScore = (
       await db
         .prepare(
-          `
-      SELECT ROUND(COALESCE(AVG(engagement_score), 0), 1) AS avg
-      FROM agent_lifecycle
-    `,
+          "SELECT ROUND(COALESCE(AVG(engagement_score), 0), 1) AS avg FROM agent_lifecycle",
         )
         .get()
     ).avg;
 
-    const recentPromotions = db
-      .prepare(
-        `
-      SELECT COUNT(*) AS n
-      FROM phase_history
-      WHERE changed_at >= $1
-    `,
-      )
-      .get(cutoff).n;
+    const recentPromotions = (
+      await db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM phase_history WHERE changed_at >= $1",
+        )
+        .get(cutoff)
+    ).n;
 
     res.json({
       totalAgents,
@@ -287,7 +268,7 @@ app.get("/api/stats", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// ── GET /api/report ───────────────────────────────────────────────────────────
+
 // ── GET /api/report ───────────────────────────────────────────────────────────
 // Executive pulse — aggregated stats for the dashboard
 app.get("/api/report", async (req, res) => {
@@ -362,16 +343,17 @@ app.get("/api/report", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 app.listen(PORT, () => {
   // ── GET /portal/:agentId ─────────────────────────────────────────────────────
-  app.get("/portal/:agentId", (req, res) => {
+  app.get("/portal/:agentId", async (req, res) => {
     const { agentId } = req.params;
     try {
-      const agent = db
+      const agent = await db
         .prepare(
           `
-        SELECT a.id, a.first_name, a.last_name, a.email,
-               al.current_phase, al.engagement_score, al.campaign_state
+        SELECT a.id, a.name, a.last_name, a.email,
+               al.stage, al.engagement_score, al.campaign_state
         FROM agents a
         LEFT JOIN agent_lifecycle al ON a.id = al.agent_id
         WHERE a.id = $1
@@ -381,7 +363,7 @@ app.listen(PORT, () => {
 
       if (!agent) return res.status(404).send("<h2>Agent not found</h2>");
 
-      const coaching = db
+      const coaching = await db
         .prepare(
           `
         SELECT * FROM coaching_outputs
@@ -391,22 +373,22 @@ app.listen(PORT, () => {
         )
         .get(agentId);
 
-      const diagnosis = db
+      const diagnosis = await db
         .prepare(
           `
-        SELECT primary_bottleneck, confidence_score
+        SELECT bottleneck, profile, signals
         FROM diagnoses WHERE agent_id = $1
         ORDER BY created_at DESC LIMIT 1
       `,
         )
         .get(agentId);
 
-      const recentEmails = db
+      const recentEmails = await db
         .prepare(
           `
         SELECT campaign_type, campaign_step, subject, send_status, sent_at
         FROM campaign_send_log
-        WHERE agent_id = 
+        WHERE agent_id = $1
         ORDER BY sent_at DESC LIMIT 5
       `,
         )
@@ -442,9 +424,12 @@ app.listen(PORT, () => {
       );
 
       html = html
-        .replace(/__AGENT_NAME__/g, `${agent.first_name} ${agent.last_name}`)
+        .replace(
+          /__AGENT_NAME__/g,
+          `${agent.name || ""} ${agent.last_name || ""}`.trim(),
+        )
         .replace(/__AGENT_ID__/g, agent.id)
-        .replace(/__PHASE__/g, agent.current_phase || "Discovery")
+        .replace(/__PHASE__/g, agent.stage || "Discovery")
         .replace(
           /__CHARACTER_TYPE__/g,
           coaching?.character_type || "The Professional",
@@ -454,13 +439,8 @@ app.listen(PORT, () => {
           coaching?.focus || "Business Performance & Growth",
         )
         .replace(/__VERSION__/g, coaching?.version || "v1.0")
-        .replace(/__BOTTLENECK__/g, diagnosis?.primary_bottleneck || "—")
-        .replace(
-          /__CONFIDENCE__/g,
-          diagnosis?.confidence_score
-            ? Math.round(diagnosis.confidence_score * 100) + "%"
-            : "—",
-        )
+        .replace(/__BOTTLENECK__/g, diagnosis?.bottleneck || "—")
+        .replace(/__CONFIDENCE__/g, "—")
         .replace(
           /__TRUTH__/g,
           (coaching?.message || "")
