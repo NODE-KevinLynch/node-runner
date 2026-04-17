@@ -25,6 +25,29 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
+// Temporary diagnostic — delete later
+app.get("/api/schema", async (req, res) => {
+  try {
+    const agents = await db
+      .prepare(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'agents' ORDER BY ordinal_position",
+      )
+      .all();
+    const lifecycle = await db
+      .prepare(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'agent_lifecycle' ORDER BY ordinal_position",
+      )
+      .all();
+    const sendlog = await db
+      .prepare(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'campaign_send_log' ORDER BY ordinal_position",
+      )
+      .all();
+    res.json({ agents, lifecycle, sendlog });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // All agents with lifecycle state
 app.get("/api/agents", async (req, res) => {
   try {
