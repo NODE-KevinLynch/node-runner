@@ -255,61 +255,77 @@ app.get("/api/stats", async (req, res) => {
   }
 });
 // ── GET /api/report ───────────────────────────────────────────────────────────
+// ── GET /api/report ───────────────────────────────────────────────────────────
 // Executive pulse — aggregated stats for the dashboard
 app.get("/api/report", async (req, res) => {
   try {
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const since7d = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
-    // TEST 1 — states
-    try {
+    const totalAgents = (
+      await db.prepare("SELECT COUNT(*) AS n FROM agents").get()
+    ).n;
+
+    const emails7d = (
       await db
         .prepare(
-          `
-        SELECT campaign_state, COUNT(*) as n
-        FROM agent_lifecycle
-        GROUP BY campaign_state
-      `,
+          "SELECT COUNT(*) AS n FROM campaign_send_log WHERE sent_at >= $1 AND send_status = 'sent'",
         )
-        .all();
-      console.log("states ✅");
-    } catch (e) {
-      console.error("emails24h ❌", e.message);
-      return res.status(500).json({ error: e.message });
-    }
+        .get(since7d)
+    ).n;
 
-    // TEST 2 — emails24h
-    // TEST 2 — emails24h
-    try {
+    const analysisComplete = (
+      await db
+        .prepare("SELECT COUNT(DISTINCT agent_id) AS n FROM diagnoses")
+        .get()
+    ).n;
+
+    const promotions24h = (
       await db
         .prepare(
-          "SELECT send_status, COUNT(*) as n FROM campaign_send_log WHERE sent_at >= $1 GROUP BY send_status",
+          "SELECT COUNT(*) AS n FROM phase_history WHERE changed_at >= $1",
         )
-        .all(since24h);
-      console.log("emails24h ✅");
-    } catch (e) {
-      console.error("emails24h ❌", e.message);
-      throw new Error("emails24h failed");
-    }
+        .get(since24h)
+    ).n;
 
-    // TEST 3 — emails7d
-    try {
-      await db
-        .prepare(
-          `
-        SELECT COUNT(*) as n
-        FROM campaign_send_log
-        WHERE sent_at >= $1 AND send_status = 'sent'
-      `,
-        )
-        .get(since24h);
-      console.log("emails7d ✅");
-    } catch (e) {
-      console.error("emails7d ❌", e.message);
-      throw new Error("emails7d failed");
-    }
+    const emails24h = await db
+      .prepare(
+        "SELECT send_status, COUNT(*) AS n FROM campaign_send_log WHERE sent_at >= $1 GROUP BY send_status",
+      )
+      .all(since24h);
 
-    res.json({ status: "all queries passed" });
+    const states = await db
+      .prepare(
+        "SELECT campaign_state, COUNT(*) AS n FROM agent_lifecycle GROUP BY campaign_state",
+      )
+      .all();
+
+    const recentLogs = await db
+      .prepare(
+        "SELECT agent_id, campaign_type, campaign_step, subject, send_status, sent_at FROM campaign_send_log ORDER BY sent_at DESC LIMIT 50",
+      )
+      .all();
+
+    const atRisk = await db
+      .prepare(
+        "SELECT a.first_name, a.last_name, a.email, al.last_engaged_at FROM agents a JOIN agent_lifecycle al ON a.id = al.agent_id WHERE al.campaign_state = 'post_analysis' AND (al.last_engaged_at IS NULL OR al.last_engaged_at <= $1)",
+      )
+      .all(since7d);
+
+    res.json({
+      totalAgents,
+      emails7d,
+      analysisComplete,
+      promotions24h,
+      emails24h,
+      states,
+      recentLogs,
+      atRisk,
+    });
   } catch (err) {
+    console.error("report error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
