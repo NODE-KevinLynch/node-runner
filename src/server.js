@@ -282,18 +282,22 @@ app.get("/api/report", async (req, res) => {
       )
       .all(since24h);
 
-    const emails7d = await db
-      .prepare(
-        `
+    const emails7d = (
+      await db
+        .prepare(
+          `
       SELECT COUNT(*) as n FROM campaign_send_log
       WHERE sent_at >= ? AND send_status = 'sent'
     `,
-      )
-      .get(since7d).n;
+        )
+        .get(since7d)
+    ).n;
 
-    const analysisComplete = await db
-      .prepare("SELECT COUNT(DISTINCT agent_id) as n FROM assessments")
-      .get().n;
+    const analysisComplete = (
+      await db
+        .prepare("SELECT COUNT(DISTINCT agent_id) as n FROM assessments")
+        .get()
+    ).n;
 
     const atRisk = await db
       .prepare(
@@ -319,13 +323,15 @@ app.get("/api/report", async (req, res) => {
       )
       .all();
 
-    const promotions24h = await db
-      .prepare(
-        `
-      SELECT COUNT(*) as n FROM phase_history WHERE changed_at >= ?
-    `,
-      )
-      .get(since24h).n;
+    const promotions24h = (
+      await db
+        .prepare(
+          `
+          SELECT COUNT(*) as n FROM phase_history WHERE changed_at >= ?
+          `,
+        )
+        .get(since24h)
+    ).n;
 
     res.json({
       totalAgents,
