@@ -18,7 +18,7 @@
  *       Node Runner is a coaching OS, not a reading list.
  */
 
-const generateId = () => Date.now() + Math.floor(Math.random() * 10000);
+const generateId = () => Math.floor(Math.random() * 2000000000) + 1;
 const { getMastersForBottleneck } = require("./coachingLibrary");
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
