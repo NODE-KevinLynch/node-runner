@@ -312,57 +312,23 @@ const ARCHITECT_STRATEGIES = {
 // ═════════════════════════════════════════════════════════════════════════════
 
 function buildMasterValidation(council) {
-  const primary = council[0];
-  const secondary = council[1];
-
-  const primaryWisdom = pick(primary.master.wisdomPoints);
-  const secondaryWisdom = secondary
-    ? pick(secondary.master.wisdomPoints)
-    : null;
-
-  const lines = [];
-  lines.push("── Supported by the Master Council ──");
-  lines.push("");
-  lines.push(
-    primary.master.name +
-      " (" +
-      primary.master.title +
-      ") reinforces this diagnosis: " +
-      primaryWisdom.text,
-  );
-
-  if (secondaryWisdom) {
-    lines.push("");
-    lines.push(
-      secondary.master.name +
-        " adds a critical dimension: " +
-        secondaryWisdom.text,
-    );
+  var primary = council[0];
+  var secondary = council[1];
+  var line = "Supported by the " + primary.master.name + " framework";
+  if (secondary) {
+    line = line + " and the " + secondary.master.name + " methodology";
   }
-
-  return lines.join("\n");
+  return line + ".";
 }
 
 function buildMasterStrategySupport(council) {
-  const primary = council[0];
-  const secondary = council[1];
-
-  const primaryStrat = pick(primary.master.strategyTemplates);
-  const secondaryStrat = secondary
-    ? pick(secondary.master.strategyTemplates)
-    : "";
-
-  const lines = [];
-  lines.push("── Master Framework Support ──");
-  lines.push("");
-  lines.push(primary.master.name + ": " + primaryStrat);
-
-  if (secondaryStrat) {
-    lines.push("");
-    lines.push(secondary.master.name + ": " + secondaryStrat);
+  var primary = council[0];
+  var secondary = council[1];
+  var line = "Informed by the " + primary.master.name + " framework";
+  if (secondary) {
+    line = line + " and " + secondary.master.name;
   }
-
-  return lines.join("\n");
+  return line + ".";
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
