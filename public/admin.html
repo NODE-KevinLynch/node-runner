@@ -329,36 +329,263 @@
       </div>
     </main>
     <script>
-      let sendsChart=null;
-      function fmt(dt){if(!dt)return'—';const d=new Date(dt);return d.toLocaleDateString('en-CA')+' '+d.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'})}
-      function statusBadge(s){const m={sent:'badge-sent',mock:'badge-mock',failed:'badge-failed',blocked:'badge-blocked'};return'<span class="badge '+(m[s]||'badge-blocked')+'">'+s+'</span>'}
-      function campaignBadge(s){const m={pre_activation:'badge-pre',post_analysis:'badge-post',lifecycle:'badge-life'};const l={pre_activation:'Pre-Activation',post_analysis:'Post-Analysis',lifecycle:'Lifecycle'};return'<span class="campaign-badge '+(m[s]||'')+'">'+( l[s]||s||'none')+'</span>'}
-      async function loadAll(){
-      document.getElementById('last-updated').textContent='Refreshing...';
-      try{
-      const[report,agents]=await Promise.all([fetch('/api/report').then(r=>r.json()),fetch('/api/agents').then(r=>r.json())]);
-      document.getElementById('kpi-total').textContent=report.totalAgents??'—';
-      document.getElementById('kpi-analysis').textContent=report.analysisComplete??'—';
-      document.getElementById('kpi-emails7d').textContent=report.emails7d??'—';
-      const stateMap={};(report.states||[]).forEach(s=>{stateMap[s.campaign_state]=s.n});
-      const total=report.totalAgents||1;
-      const fd=[{key:'pre_activation',label:'Pre-Activation',color:'var(--blue)'},{key:'post_analysis',label:'Post-Analysis',color:'var(--accent)'},{key:'lifecycle',label:'Lifecycle',color:'var(--green)'},{key:'none',label:'Unassigned',color:'var(--muted)'}];
-      document.getElementById('funnel-bars').innerHTML=fd.map(f=>{const n=stateMap[f.key]||0;const p=Math.round((n/total)*100);return'<div class="funnel-row"><div class="funnel-label"><span class="dot" style="background:'+f.color+'"></span>'+f.label+'</div><div class="funnel-track"><div class="funnel-fill" style="width:'+p+'%;background:'+f.color+'"></div></div><div class="funnel-count">'+n+'</div></div>'}).join('');
-      const s24={};(report.emails24h||[]).forEach(e=>{s24[e.send_status]=e.n});
-      const cl=['sent','mock','failed','blocked'];const cd=cl.map(l=>s24[l]||0);
-      const cc=['rgba(34,197,94,.8)','rgba(245,158,11,.8)','rgba(239,68,68,.8)','rgba(107,114,128,.5)'];
-      if(cd.some(v=>v>0)){document.getElementById('chart-empty').style.display='none';if(sendsChart)sendsChart.destroy();sendsChart=new Chart(document.getElementById('sends-chart'),{type:'doughnut',data:{labels:cl,datasets:[{data:cd,backgroundColor:cc,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7b7f96',font:{size:12},boxWidth:12,padding:16}}},cutout:'65%'}})}else{document.getElementById('sends-chart').style.display='none';document.getElementById('chart-empty').style.display='block'}
-      const logs=report.recentLogs||[];
-      document.getElementById('dispatches-wrap').innerHTML=logs.length?'<table><thead><tr><th>Agent ID</th><th>Campaign</th><th>Step</th><th>Subject</th><th>Status</th><th>Sent At</th></tr></thead><tbody>'+logs.map(l=>'<tr><td>'+l.agent_id+'</td><td>'+campaignBadge(l.campaign_type)+'</td><td style="text-align:center">'+( l.campaign_step??'—')+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(l.subject||'—')+'</td><td>'+statusBadge(l.send_status)+'</td><td style="color:var(--muted)">'+fmt(l.sent_at)+'</td></tr>').join('')+'</tbody></table>':'<div class="empty">No dispatches yet.</div>';
-      const ar=report.atRisk||[];
-      document.getElementById('atrisk-wrap').innerHTML=ar.length?'<table><thead><tr><th>Agent</th><th>Email</th><th>State</th><th>Last Engaged</th><th>Score</th></tr></thead><tbody>'+ar.map(a=>'<tr><td>'+a.first_name+' '+a.last_name+'</td><td style="color:var(--muted)">'+a.email+'</td><td>'+campaignBadge(a.campaign_state)+'</td><td style="color:var(--muted)">'+fmt(a.last_engaged_at)+'</td><td style="color:var(--red)">'+(a.engagement_score??0)+'</td></tr>').join('')+'</tbody></table>':'<div class="empty">No at-risk agents.</div>';
-      const agentList=agents.agents||[];
-      const details=await Promise.all(agentList.map(a=>fetch('/api/agents/'+a.id).then(r=>r.json())));
-      document.getElementById('kpi-coaching').textContent=details.filter(d=>d.coaching).length;
-      document.getElementById('agents-wrap').innerHTML='<table><thead><tr><th>Agent</th><th>Email</th><th>Assessment</th><th>Bottleneck</th><th>Coaching</th><th>Phase</th></tr></thead><tbody>'+details.map(d=>'<tr>'<td><a href="/portal/'+d.agent.id+'" style="color:#00ffcc;text-decoration:none">'+d.agent.first_name+' '+d.agent.last_name+'</a></td><td style="color:var(--muted)">'+d.agent.email+'</td><td>'+(d.assessment?'<span class="badge badge-sent">yes</span>':'<span class="badge badge-blocked">no</span>')+'</td><td>'+(d.diagnosis?'<span class="badge badge-sent">'+d.diagnosis.primary_bottleneck+'</span>':'<span class="badge badge-blocked">none</span>')+'</td><td>'+(d.coaching?'<span class="badge badge-post">'+(d.coaching.focus||'').slice(0,28)+'...</span>':'<span class="badge badge-blocked">not generated</span>')+'</td><td style="color:var(--muted)">'+(d.agent.current_phase||'—')+'</td></tr>').join('')+'</tbody></table>';
-      document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString();
-      }catch(err){document.getElementById('last-updated').textContent='Error: '+err.message;console.error(err)}
+      let sendsChart = null;
+
+      function fmt(dt) {
+        if (!dt) return "—";
+        const d = new Date(dt);
+        return (
+          d.toLocaleDateString("en-CA") +
+          " " +
+          d.toLocaleTimeString("en-CA", { hour: "2-digit", minute: "2-digit" })
+        );
       }
+
+      function statusBadge(s) {
+        const m = {
+          sent: "badge-sent",
+          mock: "badge-mock",
+          failed: "badge-failed",
+          blocked: "badge-blocked",
+        };
+        return (
+          '<span class="badge ' +
+          (m[s] || "badge-blocked") +
+          '">' +
+          s +
+          "</span>"
+        );
+      }
+
+      function campaignBadge(s) {
+        const m = {
+          pre_activation: "badge-pre",
+          post_analysis: "badge-post",
+          lifecycle: "badge-life",
+        };
+        const l = {
+          pre_activation: "Pre-Activation",
+          post_analysis: "Post-Analysis",
+          lifecycle: "Lifecycle",
+        };
+        return (
+          '<span class="campaign-badge ' +
+          (m[s] || "") +
+          '">' +
+          (l[s] || s || "none") +
+          "</span>"
+        );
+      }
+
+      async function loadAll() {
+        document.getElementById("last-updated").textContent = "Refreshing...";
+        try {
+          const [report, agents] = await Promise.all([
+            fetch("/api/report").then((r) => r.json()),
+            fetch("/api/agents").then((r) => r.json()),
+          ]);
+
+          // KPIs
+          document.getElementById("kpi-total").textContent =
+            report.totalAgents ?? "—";
+          document.getElementById("kpi-analysis").textContent =
+            report.analysisComplete ?? "—";
+          document.getElementById("kpi-emails7d").textContent =
+            report.emails7d ?? "—";
+
+          // Funnel
+          const stateMap = {};
+          (report.states || []).forEach((s) => {
+            stateMap[s.campaign_state || "none"] = s.n;
+          });
+          const total = report.totalAgents || 1;
+          const fd = [
+            {
+              key: "pre_activation",
+              label: "Pre-Activation",
+              color: "var(--blue)",
+            },
+            {
+              key: "post_analysis",
+              label: "Post-Analysis",
+              color: "var(--accent)",
+            },
+            { key: "lifecycle", label: "Lifecycle", color: "var(--green)" },
+            { key: "none", label: "Unassigned", color: "var(--muted)" },
+          ];
+          document.getElementById("funnel-bars").innerHTML = fd
+            .map((f) => {
+              const n = stateMap[f.key] || 0;
+              const p = Math.round((n / total) * 100);
+              return (
+                '<div class="funnel-row"><div class="funnel-label"><span class="dot" style="background:' +
+                f.color +
+                '"></span>' +
+                f.label +
+                '</div><div class="funnel-track"><div class="funnel-fill" style="width:' +
+                p +
+                "%;background:" +
+                f.color +
+                '"></div></div><div class="funnel-count">' +
+                n +
+                "</div></div>"
+              );
+            })
+            .join("");
+
+          // 24h chart
+          const s24 = {};
+          (report.emails24h || []).forEach((e) => {
+            s24[e.send_status] = e.n;
+          });
+          const cl = ["sent", "mock", "failed", "blocked"];
+          const cd = cl.map((l) => s24[l] || 0);
+          const cc = [
+            "rgba(34,197,94,.8)",
+            "rgba(245,158,11,.8)",
+            "rgba(239,68,68,.8)",
+            "rgba(107,114,128,.5)",
+          ];
+
+          if (cd.some((v) => v > 0)) {
+            document.getElementById("chart-empty").style.display = "none";
+            document.getElementById("sends-chart").style.display = "block";
+            if (sendsChart) sendsChart.destroy();
+            sendsChart = new Chart(document.getElementById("sends-chart"), {
+              type: "doughnut",
+              data: {
+                labels: cl,
+                datasets: [{ data: cd, backgroundColor: cc, borderWidth: 0 }],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: "right",
+                    labels: {
+                      color: "#7b7f96",
+                      font: { size: 12 },
+                      boxWidth: 12,
+                      padding: 16,
+                    },
+                  },
+                },
+                cutout: "65%",
+              },
+            });
+          } else {
+            document.getElementById("sends-chart").style.display = "none";
+            document.getElementById("chart-empty").style.display = "block";
+          }
+
+          // Dispatches
+          const logs = report.recentLogs || [];
+          document.getElementById("dispatches-wrap").innerHTML = logs.length
+            ? "<table><thead><tr><th>Agent ID</th><th>Campaign</th><th>Step</th><th>Subject</th><th>Status</th><th>Sent At</th></tr></thead><tbody>" +
+              logs
+                .map(
+                  (l) =>
+                    "<tr><td>" +
+                    l.agent_id +
+                    "</td><td>" +
+                    campaignBadge(l.campaign_type) +
+                    '</td><td style="text-align:center">' +
+                    (l.campaign_step ?? "—") +
+                    '</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+                    (l.subject || "—") +
+                    "</td><td>" +
+                    statusBadge(l.send_status) +
+                    '</td><td style="color:var(--muted)">' +
+                    fmt(l.sent_at) +
+                    "</td></tr>",
+                )
+                .join("") +
+              "</tbody></table>"
+            : '<div class="empty">No dispatches yet.</div>';
+
+          // At-risk
+          const ar = report.atRisk || [];
+          document.getElementById("atrisk-wrap").innerHTML = ar.length
+            ? "<table><thead><tr><th>Agent</th><th>Email</th><th>Last Engaged</th></tr></thead><tbody>" +
+              ar
+                .map(
+                  (a) =>
+                    "<tr><td>" +
+                    (a.name || "") +
+                    " " +
+                    (a.last_name || "") +
+                    '</td><td style="color:var(--muted)">' +
+                    (a.email || "—") +
+                    '</td><td style="color:var(--muted)">' +
+                    fmt(a.last_engaged_at) +
+                    "</td></tr>",
+                )
+                .join("") +
+              "</tbody></table>"
+            : '<div class="empty">No at-risk agents.</div>';
+
+          // Agent coaching readiness
+          const agentList = agents.agents || [];
+          const details = await Promise.all(
+            agentList.map((a) =>
+              fetch("/api/agents/" + a.id).then((r) => r.json()),
+            ),
+          );
+          document.getElementById("kpi-coaching").textContent = details.filter(
+            (d) => d.coaching,
+          ).length;
+
+          document.getElementById("agents-wrap").innerHTML =
+            "<table><thead><tr><th>Agent</th><th>Email</th><th>Assessment</th><th>Bottleneck</th><th>Coaching</th><th>Stage</th></tr></thead><tbody>" +
+            details
+              .map(
+                (d) =>
+                  '<tr><td><a href="/portal/' +
+                  d.agent.id +
+                  '" style="color:#00ffcc;text-decoration:none">' +
+                  (d.agent.name || "") +
+                  " " +
+                  (d.agent.last_name || "") +
+                  "</a></td>" +
+                  '<td style="color:var(--muted)">' +
+                  (d.agent.email || "—") +
+                  "</td>" +
+                  "<td>" +
+                  (d.assessment
+                    ? '<span class="badge badge-sent">yes</span>'
+                    : '<span class="badge badge-blocked">no</span>') +
+                  "</td>" +
+                  "<td>" +
+                  (d.diagnosis
+                    ? '<span class="badge badge-sent">' +
+                      (d.diagnosis.bottleneck || "—") +
+                      "</span>"
+                    : '<span class="badge badge-blocked">none</span>') +
+                  "</td>" +
+                  "<td>" +
+                  (d.coaching
+                    ? '<span class="badge badge-post">' +
+                      (d.coaching.primary_constraint || "").slice(0, 28) +
+                      "...</span>"
+                    : '<span class="badge badge-blocked">not generated</span>') +
+                  "</td>" +
+                  '<td style="color:var(--muted)">' +
+                  (d.agent.stage || "—") +
+                  "</td></tr>",
+              )
+              .join("") +
+            "</tbody></table>";
+
+          document.getElementById("last-updated").textContent =
+            "Updated " + new Date().toLocaleTimeString();
+        } catch (err) {
+          document.getElementById("last-updated").textContent =
+            "Error: " + err.message;
+          console.error(err);
+        }
+      }
+
       loadAll();
     </script>
   </body>
