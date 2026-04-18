@@ -532,3 +532,126 @@ app.listen(PORT, () => {
   console.log(`Dashboard: http://localhost:${PORT}`);
   console.log(`Health:    http://localhost:${PORT}/api/health`);
 });
+// ── GET /api/goals/:agentId ──
+app.get("/api/goals/:agentId", async (req, res) => {
+  try {
+    const goals = await db
+      .prepare(
+        "SELECT * FROM agent_goals WHERE agent_id = $1 AND goal_year = 2026",
+      )
+      .get(req.params.agentId);
+
+    const scorecards = await db
+      .prepare(
+        "SELECT * FROM daily_scorecard WHERE agent_id = $1 ORDER BY log_date DESC LIMIT 30",
+      )
+      .all(req.params.agentId);
+
+    const ytdClosed = await db
+      .prepare(
+        "SELECT COALESCE(SUM(list_sold), 0) AS n FROM daily_scorecard WHERE agent_id = $1",
+      )
+      .get(req.params.agentId);
+
+    res.json({
+      goals: goals || null,
+      scorecards,
+      ytdClosed: ytdClosed ? ytdClosed.n : 0,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/log-activity ──
+app.post("/api/log-activity", express.json(), async (req, res) => {
+  try {
+    const {
+      agent_id,
+      calls,
+      contacts,
+      appt_set,
+      appt_held,
+      list_taken,
+      list_sold,
+      commitments,
+    } = req.body;
+    if (!agent_id) return res.status(400).json({ error: "agent_id required" });
+
+    await db
+      .prepare(
+        `INSERT INTO daily_scorecard (agent_id, log_date, calls, contacts, appt_set, appt_held, list_taken, list_sold, commitments_json, points_earned)
+       VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (agent_id, log_date)
+       DO UPDATE SET calls=$2, contacts=$3, appt_set=$4, appt_held=$5, list_taken=$6, list_sold=$7, commitments_json=$8, points_earned=$9`,
+      )
+      .run(
+        agent_id,
+        calls || 0,
+        contacts || 0,
+        appt_set || 0,
+        appt_held || 0,
+        list_taken || 0,
+        list_sold || 0,
+        JSON.stringify(commitments || {}),
+        (calls || 0) +
+          (contacts || 0) * 2 +
+          (appt_set || 0) * 5 +
+          (appt_held || 0) * 5 +
+          (list_taken || 0) * 10 +
+          (list_sold || 0) * 10,
+      );
+
+    // Update engagement score
+    const total = await db
+      .prepare(
+        "SELECT COALESCE(SUM(points_earned), 0) AS pts FROM daily_scorecard WHERE agent_id = $1",
+      )
+      .get(agent_id);
+
+    await db
+      .prepare(
+        "UPDATE agent_lifecycle SET engagement_score = $1, updated_at = NOW() WHERE agent_id = $2",
+      )
+      .run(Math.min(total.pts, 100), agent_id);
+
+    res.json({ status: "logged", points: total.pts });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/goals ──
+app.post("/api/goals", express.json(), async (req, res) => {
+  try {
+    const {
+      agent_id,
+      gci_goal,
+      transaction_goal,
+      avg_commission,
+      close_rate,
+      appt_conversion_rate,
+    } = req.body;
+    if (!agent_id) return res.status(400).json({ error: "agent_id required" });
+
+    await db
+      .prepare(
+        `INSERT INTO agent_goals (agent_id, gci_goal, transaction_goal, avg_commission, close_rate, appt_conversion_rate, goal_year)
+       VALUES ($1, $2, $3, $4, $5, $6, 2026)
+       ON CONFLICT (agent_id, goal_year)
+       DO UPDATE SET gci_goal=$2, transaction_goal=$3, avg_commission=$4, close_rate=$5, appt_conversion_rate=$6, updated_at=NOW()`,
+      )
+      .run(
+        agent_id,
+        gci_goal || 0,
+        transaction_goal || 0,
+        avg_commission || 10000,
+        close_rate || 0.5,
+        appt_conversion_rate || 0.1,
+      );
+
+    res.json({ status: "saved" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
