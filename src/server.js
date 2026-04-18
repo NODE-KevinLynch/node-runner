@@ -506,7 +506,7 @@ app.listen(PORT, () => {
           coaching?.quote_of_the_day ||
             "It is not what we do once in a while that shapes our lives. It is what we do consistently.",
         )
-        .replace(/__QUOTE_AUTHOR__/g, "— Tony Robbins")
+        .replace(/__QUOTE_AUTHOR__/g, "")
         .replace(/__TOP_ACTION__/g, coaching?.coaching_directive || "—")
         .replace(/__DAILY_RITUAL__/g, "—")
         .replace(/__WEEKLY_TARGET__/g, "—")

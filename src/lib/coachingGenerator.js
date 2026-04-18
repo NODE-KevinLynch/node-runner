@@ -314,7 +314,19 @@ const ARCHITECT_STRATEGIES = {
 function buildMasterValidation(council) {
   var primary = council[0];
   var secondary = council[1];
-  var line = "Supported by the " + primary.master.name + " framework";
+  var credits = [
+    "Supported by",
+    "Informed by",
+    "As per",
+    "Drawing from",
+    "Rooted in",
+    "Anchored by",
+    "Built on",
+    "Guided by",
+    "Grounded in",
+    "Aligned with",
+  ];
+  var line = pick(credits) + " the " + primary.master.name + " framework";
   if (secondary) {
     line = line + " and the " + secondary.master.name + " methodology";
   }
@@ -381,13 +393,7 @@ function generateCoachingOutput({
   const architectStrategy = pick(architectStrategies);
   const masterStrategySupport = buildMasterStrategySupport(council);
 
-  const the_strategy = [
-    "── Your Action Plan ──",
-    "",
-    architectStrategy,
-    "",
-    masterStrategySupport,
-  ]
+  const the_strategy = ["── Your Action Plan ──", "", architectStrategy]
     .filter(Boolean)
     .join("\n");
 
