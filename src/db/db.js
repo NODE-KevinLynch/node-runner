@@ -4,6 +4,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
+
 // ── Auto-create new tables if they don't exist ──
 (async () => {
   try {
@@ -31,7 +32,19 @@ const pool = new Pool({
         contacts INTEGER DEFAULT 0,
         appt_set INTEGER DEFAULT 0,
         appt_held INTEGER DEFAULT 0,
-        list_taken
+        list_taken INTEGER DEFAULT 0,
+        list_sold INTEGER DEFAULT 0,
+        commitments_json TEXT,
+        points_earned INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(agent_id, log_date)
+      );
+    `);
+    console.log("✓ agent_goals + daily_scorecard tables ready");
+  } catch (err) {
+    console.error("Table auto-create error:", err.message);
+  }
+})();
 
 module.exports = {
   query: (text, params) => pool.query(text, params),
