@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const db = require("./db/db");
 
+const generateRoutes = require("./routes/generate");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -526,6 +527,7 @@ app.listen(PORT, () => {
   app.get("/admin", (req, res) => {
     res.sendFile(path.join(__dirname, "..", "public", "admin.html"));
   });
+  generateRoutes(app, db);
   console.log(`OpenClaw Ops API running on port ${PORT}`);
   console.log(`Dashboard: http://localhost:${PORT}`);
   console.log(`Health:    http://localhost:${PORT}/api/health`);
