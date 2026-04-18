@@ -364,10 +364,12 @@ function generateCoachingOutput({
     throw new Error("No master mapping found for bottleneck: " + bottleneck);
   }
 
-  // ── The Architect's Truth (70%) ──
+  // ── The Architect's Truth (70%) — Two paragraphs ──
   const architectTruths =
     ARCHITECT_TRUTHS[bottleneck] || ARCHITECT_TRUTHS.pipeline_volume;
-  const architectTruth = pick(architectTruths);
+  const selectedTruths = pickN(architectTruths, 2);
+  const architectTruth1 = selectedTruths[0];
+  const architectTruth2 = selectedTruths[1] || selectedTruths[0];
   const profileLine = profile
     ? "Your diagnostic profile: " + profile + "."
     : "";
@@ -380,7 +382,9 @@ function generateCoachingOutput({
     "",
     "── The Architect's Truth ──",
     "",
-    architectTruth,
+    architectTruth1,
+    "",
+    architectTruth2,
     "",
     masterValidation,
   ]
