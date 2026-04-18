@@ -485,6 +485,9 @@ function generateCoachingOutput({
 
 async function writeCoachingOutput(db, output) {
   await db
+    .prepare("DELETE FROM coaching_outputs WHERE agent_id = $1")
+    .run(output.agent_id);
+  await db
     .prepare(
       "INSERT INTO coaching_outputs (id, agent_id, the_truth, the_strategy, rpm_plan, primary_constraint, coaching_directive, quote_of_the_day, engagement_score, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     )
