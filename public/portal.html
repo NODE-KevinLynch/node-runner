@@ -894,6 +894,127 @@
           >
             <div
               style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+              "
+            >
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 700;
+                  letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                  color: var(--muted);
+                "
+              >
+                Monthly Target
+              </div>
+              <div
+                style="
+                  font-size: 11px;
+                  color: var(--muted);
+                  padding: 4px 12px;
+                  border: 1px solid var(--border);
+                  border-radius: 99px;
+                "
+                id="month-label"
+              ></div>
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
+              class="goal-cards"
+            >
+              <div>
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 11px;
+                    margin-bottom: 4px;
+                  "
+                >
+                  <span style="color: var(--muted)">GCI this month</span>
+                  <span style="color: var(--text)" id="month-gci">—</span>
+                </div>
+                <div
+                  style="
+                    height: 4px;
+                    background: var(--border);
+                    border-radius: 2px;
+                    overflow: hidden;
+                  "
+                >
+                  <div
+                    id="month-gci-bar"
+                    style="
+                      height: 100%;
+                      width: 0%;
+                      background: var(--gold);
+                      border-radius: 2px;
+                      transition: width 1s ease;
+                    "
+                  ></div>
+                </div>
+                <div
+                  style="font-size: 10px; color: var(--muted); margin-top: 4px"
+                  id="month-gci-target"
+                >
+                  —
+                </div>
+              </div>
+              <div>
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 11px;
+                    margin-bottom: 4px;
+                  "
+                >
+                  <span style="color: var(--muted)">Sides this month</span>
+                  <span style="color: var(--text)" id="month-txn">—</span>
+                </div>
+                <div
+                  style="
+                    height: 4px;
+                    background: var(--border);
+                    border-radius: 2px;
+                    overflow: hidden;
+                  "
+                >
+                  <div
+                    id="month-txn-bar"
+                    style="
+                      height: 100%;
+                      width: 0%;
+                      background: var(--gold);
+                      border-radius: 2px;
+                      transition: width 1s ease;
+                    "
+                  ></div>
+                </div>
+                <div
+                  style="font-size: 10px; color: var(--muted); margin-top: 4px"
+                  id="month-txn-target"
+                >
+                  —
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              background: var(--bg);
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 16px;
+              margin-bottom: 12px;
+            "
+          >
+            <div
+              style="
                 font-size: 10px;
                 font-weight: 700;
                 letter-spacing: 0.1em;
@@ -1738,6 +1859,80 @@
             );
           })
           .catch(function () {});
+        // ── Monthly Goal Tracker ──
+        var monthNames = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        var currentMonth = now.getMonth();
+        var currentYear = now.getFullYear();
+        var monthEl = document.getElementById("month-label");
+        if (monthEl)
+          monthEl.textContent = monthNames[currentMonth] + " " + currentYear;
+        if (data.goals) {
+          var mg = data.goals;
+          var mTxnGoal = Math.ceil((parseInt(mg.transaction_goal) || 24) / 12);
+          var mGciGoal = Math.round((parseFloat(mg.gci_goal) || 250000) / 12);
+          var mAvgComm =
+            parseFloat(mg.avg_commission) ||
+            parseFloat(mg.gci_goal) / parseInt(mg.transaction_goal) ||
+            10000;
+          var mScCards = data.scorecards || [];
+          var mListSold = 0;
+          mScCards.forEach(function (sc) {
+            var d = new Date(sc.log_date || sc.created_at);
+            if (
+              d.getMonth() === currentMonth &&
+              d.getFullYear() === currentYear
+            ) {
+              mListSold += parseInt(sc.list_sold) || 0;
+            }
+          });
+          var mGciEarned = mListSold * mAvgComm;
+          var dayOfMonth = now.getDate();
+          var daysInMonth = new Date(
+            currentYear,
+            currentMonth + 1,
+            0,
+          ).getDate();
+          var mGciPct = Math.round((mGciEarned / mGciGoal) * 100);
+          var mTxnPct = Math.round((mListSold / mTxnGoal) * 100);
+          document.getElementById("month-gci").textContent =
+            "$" +
+            mGciEarned.toLocaleString() +
+            " (" +
+            Math.min(mGciPct, 100) +
+            "%)";
+          document.getElementById("month-gci-bar").style.width =
+            Math.min(mGciPct, 100) + "%";
+          document.getElementById("month-gci-target").textContent =
+            "Monthly target: $" + mGciGoal.toLocaleString();
+          document.getElementById("month-txn").textContent =
+            mListSold + " of " + mTxnGoal;
+          document.getElementById("month-txn-bar").style.width =
+            Math.min(mTxnPct, 100) + "%";
+          var mPaceTxn = (mTxnGoal / daysInMonth) * dayOfMonth;
+          var mTxnDiff = mListSold - mPaceTxn;
+          document.getElementById("month-txn-target").innerHTML =
+            "Need " +
+            Math.max(mTxnGoal - mListSold, 0) +
+            " more this month" +
+            (mTxnDiff >= 0
+              ? " — <span style='color:var(--green)'>on pace</span>"
+              : " — <span style='color:var(--gold)'>" +
+                Math.abs(mTxnDiff).toFixed(1) +
+                " behind pace</span>");
+        }
 
         // ── Scorecard logic ──
         var vals = {
