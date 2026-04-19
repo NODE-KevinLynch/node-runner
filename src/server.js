@@ -3,13 +3,14 @@ const path = require("path");
 const db = require("./db/db");
 
 const generateRoutes = require("./routes/generate");
+const onboardingRoutes = require("./routes/onboarding");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Serve the dashboard from the root-level public folder
 app.use(express.static(path.join(__dirname, "..", "public")));
 app.use(express.json());
-
+onboardingRoutes(app, db);
 // Health check
 app.get("/api/health", async (req, res) => {
   try {
