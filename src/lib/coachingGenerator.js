@@ -364,7 +364,7 @@ function generateCoachingOutput({
     throw new Error("No master mapping found for bottleneck: " + bottleneck);
   }
 
-  // ── The Architect's Truth (70%) — Two paragraphs ──
+  // ── Kevin's Straight Talk (70%) — Two paragraphs ──
   const architectTruths =
     ARCHITECT_TRUTHS[bottleneck] || ARCHITECT_TRUTHS.pipeline_volume;
   const selectedTruths = pickN(architectTruths, 2);
@@ -379,22 +379,20 @@ function generateCoachingOutput({
 
   const the_truth = [
     profileLine,
-    "",
-    "── The Architect's Truth ──",
-    "",
+    "── Kevin's Straight Talk ──",
     architectTruth1,
-    "",
     architectTruth2,
-    "",
     masterValidation,
   ]
     .filter(Boolean)
-    .join("\n");
+    .join("\n\n");
 
   // ── The Strategy (70% Architect + 30% Master) ──
   const architectStrategies =
     ARCHITECT_STRATEGIES[bottleneck] || ARCHITECT_STRATEGIES.pipeline_volume;
-  const architectStrategy = pick(architectStrategies);
+  const truthIndex = architectTruths.indexOf(architectTruth1);
+  const architectStrategy =
+    architectStrategies[truthIndex] || pick(architectStrategies);
   const masterStrategySupport = buildMasterStrategySupport(council);
 
   const the_strategy = ["── Your Action Plan ──", "", architectStrategy]
