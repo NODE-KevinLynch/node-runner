@@ -1857,82 +1857,87 @@
               txnGoal - ytdClosed,
               0,
             );
+            // ── Monthly Goal Tracker ──
+            var monthNames = [
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "May",
+              "Jun",
+              "Jul",
+              "Aug",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Dec",
+            ];
+            var currentMonth = now.getMonth();
+            var currentYear = now.getFullYear();
+            var monthEl = document.getElementById("month-label");
+            if (monthEl)
+              monthEl.textContent =
+                monthNames[currentMonth] + " " + currentYear;
+            if (data.goals) {
+              var mg = data.goals;
+              var mTxnGoal = Math.ceil(
+                (parseInt(mg.transaction_goal) || 24) / 12,
+              );
+              var mGciGoal = Math.round(
+                (parseFloat(mg.gci_goal) || 250000) / 12,
+              );
+              var mAvgComm =
+                parseFloat(mg.avg_commission) ||
+                parseFloat(mg.gci_goal) / parseInt(mg.transaction_goal) ||
+                10000;
+              var mScCards = data.scorecards || [];
+              var mListSold = 0;
+              mScCards.forEach(function (sc) {
+                var d = new Date(sc.log_date || sc.created_at);
+                if (
+                  d.getMonth() === currentMonth &&
+                  d.getFullYear() === currentYear
+                ) {
+                  mListSold += parseInt(sc.list_sold) || 0;
+                }
+              });
+              var mGciEarned = mListSold * mAvgComm;
+              var dayOfMonth = now.getDate();
+              var daysInMonth = new Date(
+                currentYear,
+                currentMonth + 1,
+                0,
+              ).getDate();
+              var mGciPct = Math.round((mGciEarned / mGciGoal) * 100);
+              var mTxnPct = Math.round((mListSold / mTxnGoal) * 100);
+              document.getElementById("month-gci").textContent =
+                "$" +
+                mGciEarned.toLocaleString() +
+                " (" +
+                Math.min(mGciPct, 100) +
+                "%)";
+              document.getElementById("month-gci-bar").style.width =
+                Math.min(mGciPct, 100) + "%";
+              document.getElementById("month-gci-target").textContent =
+                "Monthly target: $" + mGciGoal.toLocaleString();
+              document.getElementById("month-txn").textContent =
+                mListSold + " of " + mTxnGoal;
+              document.getElementById("month-txn-bar").style.width =
+                Math.min(mTxnPct, 100) + "%";
+              var mPaceTxn = (mTxnGoal / daysInMonth) * dayOfMonth;
+              var mTxnDiff = mListSold - mPaceTxn;
+              document.getElementById("month-txn-target").innerHTML =
+                "Need " +
+                Math.max(mTxnGoal - mListSold, 0) +
+                " more this month" +
+                (mTxnDiff >= 0
+                  ? " — <span style='color:var(--green)'>on pace</span>"
+                  : " — <span style='color:var(--gold)'>" +
+                    Math.abs(mTxnDiff).toFixed(1) +
+                    " behind pace</span>");
+            }
           })
           .catch(function () {});
-        // ── Monthly Goal Tracker ──
-        var monthNames = [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "May",
-          "Jun",
-          "Jul",
-          "Aug",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dec",
-        ];
-        var currentMonth = now.getMonth();
-        var currentYear = now.getFullYear();
-        var monthEl = document.getElementById("month-label");
-        if (monthEl)
-          monthEl.textContent = monthNames[currentMonth] + " " + currentYear;
-        if (data.goals) {
-          var mg = data.goals;
-          var mTxnGoal = Math.ceil((parseInt(mg.transaction_goal) || 24) / 12);
-          var mGciGoal = Math.round((parseFloat(mg.gci_goal) || 250000) / 12);
-          var mAvgComm =
-            parseFloat(mg.avg_commission) ||
-            parseFloat(mg.gci_goal) / parseInt(mg.transaction_goal) ||
-            10000;
-          var mScCards = data.scorecards || [];
-          var mListSold = 0;
-          mScCards.forEach(function (sc) {
-            var d = new Date(sc.log_date || sc.created_at);
-            if (
-              d.getMonth() === currentMonth &&
-              d.getFullYear() === currentYear
-            ) {
-              mListSold += parseInt(sc.list_sold) || 0;
-            }
-          });
-          var mGciEarned = mListSold * mAvgComm;
-          var dayOfMonth = now.getDate();
-          var daysInMonth = new Date(
-            currentYear,
-            currentMonth + 1,
-            0,
-          ).getDate();
-          var mGciPct = Math.round((mGciEarned / mGciGoal) * 100);
-          var mTxnPct = Math.round((mListSold / mTxnGoal) * 100);
-          document.getElementById("month-gci").textContent =
-            "$" +
-            mGciEarned.toLocaleString() +
-            " (" +
-            Math.min(mGciPct, 100) +
-            "%)";
-          document.getElementById("month-gci-bar").style.width =
-            Math.min(mGciPct, 100) + "%";
-          document.getElementById("month-gci-target").textContent =
-            "Monthly target: $" + mGciGoal.toLocaleString();
-          document.getElementById("month-txn").textContent =
-            mListSold + " of " + mTxnGoal;
-          document.getElementById("month-txn-bar").style.width =
-            Math.min(mTxnPct, 100) + "%";
-          var mPaceTxn = (mTxnGoal / daysInMonth) * dayOfMonth;
-          var mTxnDiff = mListSold - mPaceTxn;
-          document.getElementById("month-txn-target").innerHTML =
-            "Need " +
-            Math.max(mTxnGoal - mListSold, 0) +
-            " more this month" +
-            (mTxnDiff >= 0
-              ? " — <span style='color:var(--green)'>on pace</span>"
-              : " — <span style='color:var(--gold)'>" +
-                Math.abs(mTxnDiff).toFixed(1) +
-                " behind pace</span>");
-        }
 
         // ── Scorecard logic ──
         var vals = {
