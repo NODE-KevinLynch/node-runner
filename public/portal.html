@@ -21,6 +21,7 @@
         --gold: #f0a500;
         --green: #22c55e;
         --soft: #a8b4c8;
+        --purple: #a78bfa;
       }
       body {
         background: var(--bg);
@@ -30,8 +31,6 @@
         line-height: 1.7;
         min-height: 100vh;
       }
-
-      /* HEADER */
       .header {
         background: var(--surface);
         border-bottom: 1px solid var(--border);
@@ -89,15 +88,11 @@
         color: var(--gold);
         border: 1px solid rgba(240, 165, 0, 0.2);
       }
-
-      /* MAIN */
       main {
         max-width: 960px;
         margin: 0 auto;
         padding: 36px 24px 80px;
       }
-
-      /* SECTION LABEL */
       .section-label {
         font-size: 10px;
         font-weight: 700;
@@ -106,8 +101,6 @@
         color: var(--muted);
         margin-bottom: 10px;
       }
-
-      /* CARDS */
       .card {
         background: var(--card);
         border: 1px solid var(--border);
@@ -115,8 +108,6 @@
         padding: 24px 28px;
         margin-bottom: 20px;
       }
-
-      /* TRUTH CARD */
       .truth-card {
         background: var(--surface);
         border: 1px solid var(--accent);
@@ -141,8 +132,6 @@
         color: var(--text);
         padding-left: 16px;
       }
-
-      /* STRATEGY CARD */
       .strategy-card {
         background: var(--card);
         border: 1px solid var(--border);
@@ -155,8 +144,6 @@
         line-height: 1.75;
         color: var(--soft);
       }
-
-      /* RPM BLOCK */
       .rpm-block {
         background: var(--card);
         border: 1px solid var(--border);
@@ -190,7 +177,7 @@
         color: var(--gold);
       }
       .rpm-label.purpose {
-        color: #a78bfa;
+        color: var(--purple);
       }
       .rpm-text {
         font-size: 13px;
@@ -201,9 +188,25 @@
         .rpm-grid {
           grid-template-columns: 1fr;
         }
+        .ep-top {
+          grid-template-columns: 1fr !important;
+        }
+        .sc-grid {
+          grid-template-columns: 1fr !important;
+        }
+        .stat-row {
+          grid-template-columns: 1fr !important;
+        }
+        .goal-cards {
+          grid-template-columns: 1fr !important;
+        }
+        .funnel-row {
+          flex-direction: column;
+        }
+        .funnel-arrow {
+          display: none;
+        }
       }
-
-      /* CONSTRAINT */
       .constraint-card {
         background: var(--card);
         border: 1px solid var(--border);
@@ -232,8 +235,6 @@
         font-weight: 600;
         color: var(--gold);
       }
-
-      /* DIRECTIVE */
       .directive-card {
         background: var(--card);
         border-left: 3px solid var(--green);
@@ -246,8 +247,6 @@
         line-height: 1.7;
         color: var(--text);
       }
-
-      /* QUOTE */
       .quote-card {
         background: transparent;
         border: 1px solid var(--border);
@@ -268,8 +267,6 @@
         margin-top: 8px;
         letter-spacing: 0.06em;
       }
-
-      /* SUPPORTING ACTIONS */
       .supporting-list {
         list-style: none;
         padding: 0;
@@ -291,8 +288,6 @@
         color: var(--accent);
         flex-shrink: 0;
       }
-
-      /* TABLE */
       table {
         width: 100%;
         border-collapse: collapse;
@@ -319,8 +314,6 @@
       tr:hover td {
         background: rgba(255, 255, 255, 0.02);
       }
-
-      /* FOOTER */
       .footer {
         text-align: center;
         padding: 32px 24px;
@@ -332,11 +325,98 @@
       .footer strong {
         color: var(--accent);
       }
-
-      .divider {
-        margin: 8px 0 24px;
-        height: 1px;
+      .ep-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+      }
+      .ep-lbl {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .sc-row {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+      }
+      .sc-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
         background: var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        user-select: none;
+        font-size: 16px;
+        color: var(--muted);
+        border: none;
+        transition: background 0.15s;
+      }
+      .sc-btn:hover {
+        background: #3a3d4a;
+      }
+      .sc-val {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text);
+        min-width: 32px;
+        text-align: center;
+      }
+      .commit-label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        padding: 10px 14px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+      }
+      .commit-check {
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--border);
+        border-radius: 4px;
+        cursor: pointer;
+        flex-shrink: 0;
+        background: transparent;
+        transition: all 0.2s;
+      }
+      .commit-check:checked {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .log-btn {
+        padding: 8px 20px;
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        cursor: default;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
       }
     </style>
   </head>
@@ -358,19 +438,1107 @@
     </div>
 
     <main>
-      <!-- SECTION 2: THE TRUTH -->
-      <div class="section-label">The Truth</div>
-      <div class="truth-card">
-        <div class="truth-text">__TRUTH__</div>
+      <!-- ═══ ENGAGEMENT & PROGRESS ═══ -->
+      <div class="section-label">Engagement & Progress</div>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        "
+        class="ep-top"
+      >
+        <div class="ep-card">
+          <div class="ep-lbl">Engagement Score</div>
+          <div
+            style="
+              position: relative;
+              width: 100px;
+              height: 100px;
+              margin: 0 auto;
+            "
+          >
+            <svg viewBox="0 0 100 100" style="transform: rotate(-90deg)">
+              <circle
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke="var(--border)"
+                stroke-width="8"
+              />
+              <circle
+                id="score-arc"
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke="var(--accent)"
+                stroke-width="8"
+                stroke-linecap="round"
+                stroke-dasharray="0 264"
+                style="transition: stroke-dasharray 1.2s ease"
+              />
+            </svg>
+            <div
+              style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--accent);
+              "
+              id="score-num"
+            >
+              0
+            </div>
+          </div>
+          <div
+            style="font-size: 11px; color: var(--muted); margin-top: 10px"
+            id="score-rank"
+          ></div>
+        </div>
+        <div class="ep-card">
+          <div class="ep-lbl">Current Phase</div>
+          <div
+            style="
+              font-size: 18px;
+              font-weight: 600;
+              color: var(--gold);
+              margin-top: 16px;
+            "
+          >
+            __PHASE__
+          </div>
+          <div style="font-size: 12px; color: var(--muted); margin-top: 6px">
+            Bottleneck: __BOTTLENECK__
+          </div>
+          <div
+            style="font-size: 11px; color: var(--green); margin-top: 8px"
+            id="days-in-phase"
+          ></div>
+        </div>
       </div>
 
-      <!-- SECTION 3: THE STRATEGY -->
+      <!-- Journey Timeline -->
+      <div class="card" style="padding: 20px 28px">
+        <div class="ep-lbl" style="margin-bottom: 16px">
+          Your Coaching Journey
+        </div>
+        <div style="display: flex; align-items: center; position: relative">
+          <div
+            style="
+              position: absolute;
+              top: 15px;
+              left: 24px;
+              right: 24px;
+              height: 2px;
+              background: var(--border);
+            "
+          ></div>
+          <div
+            id="journey-progress"
+            style="
+              position: absolute;
+              top: 15px;
+              left: 24px;
+              width: 0%;
+              height: 2px;
+              background: var(--accent);
+              transition: width 1s ease;
+            "
+          ></div>
+          <div
+            style="flex: 1; text-align: center; position: relative; z-index: 1"
+            class="j-step"
+            data-step="assessed"
+          >
+            <div class="j-dot j-done" id="jd-0"></div>
+            <div
+              style="font-size: 10px; margin-top: 6px; font-weight: 600"
+              class="j-label"
+            >
+              Assessed
+            </div>
+          </div>
+          <div
+            style="flex: 1; text-align: center; position: relative; z-index: 1"
+            class="j-step"
+            data-step="diagnosed"
+          >
+            <div class="j-dot j-done" id="jd-1"></div>
+            <div
+              style="font-size: 10px; margin-top: 6px; font-weight: 600"
+              class="j-label"
+            >
+              Diagnosed
+            </div>
+          </div>
+          <div
+            style="flex: 1; text-align: center; position: relative; z-index: 1"
+            class="j-step"
+            data-step="coaching"
+          >
+            <div class="j-dot j-current" id="jd-2"></div>
+            <div
+              style="
+                font-size: 10px;
+                margin-top: 6px;
+                font-weight: 600;
+                color: var(--accent);
+              "
+              class="j-label"
+            >
+              Coaching
+            </div>
+            <div style="font-size: 9px; color: var(--text); margin-top: 2px">
+              You are here
+            </div>
+          </div>
+          <div
+            style="flex: 1; text-align: center; position: relative; z-index: 1"
+            class="j-step"
+            data-step="momentum"
+          >
+            <div class="j-dot j-future" id="jd-3"></div>
+            <div
+              style="font-size: 10px; margin-top: 6px; color: var(--muted)"
+              class="j-label"
+            >
+              Momentum
+            </div>
+          </div>
+          <div
+            style="flex: 1; text-align: center; position: relative; z-index: 1"
+            class="j-step"
+            data-step="mastery"
+          >
+            <div class="j-dot j-future" id="jd-4"></div>
+            <div
+              style="font-size: 10px; margin-top: 6px; color: var(--muted)"
+              class="j-label"
+            >
+              Mastery
+            </div>
+          </div>
+        </div>
+      </div>
+      <style>
+        .j-dot {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          margin: 0 auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .j-done {
+          background: var(--accent);
+        }
+        .j-done::after {
+          content: "";
+          display: block;
+          width: 10px;
+          height: 6px;
+          border-left: 2px solid var(--bg);
+          border-bottom: 2px solid var(--bg);
+          transform: rotate(-45deg) translateY(-1px);
+        }
+        .j-current {
+          background: var(--accent);
+          border: 2px solid var(--accent);
+        }
+        .j-current::after {
+          content: "";
+          display: block;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: var(--bg);
+          border: 2px solid var(--accent);
+        }
+        .j-future {
+          background: var(--border);
+        }
+        .j-future::after {
+          content: "";
+          display: block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--muted);
+        }
+      </style>
+
+      <!-- ═══ YOUR GOALS ═══ -->
+      <div class="section-label">Your Goals</div>
+      <div
+        style="
+          background: var(--surface);
+          border: 1px solid var(--purple);
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 16px;
+          position: relative;
+          overflow: hidden;
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--purple);
+          "
+        ></div>
+        <div style="padding-left: 16px">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 16px;
+            "
+          >
+            <div>
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 700;
+                  letter-spacing: 0.12em;
+                  text-transform: uppercase;
+                  color: var(--purple);
+                "
+              >
+                Annual Targets
+              </div>
+              <div
+                style="font-size: 12px; color: var(--muted); margin-top: 4px"
+              >
+                Set once. Track forever. The math does not lie.
+              </div>
+            </div>
+            <div
+              style="
+                font-size: 11px;
+                color: var(--muted);
+                padding: 4px 12px;
+                border: 1px solid var(--border);
+                border-radius: 99px;
+              "
+            >
+              2026
+            </div>
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+              margin-bottom: 16px;
+            "
+            class="goal-cards"
+          >
+            <div
+              style="
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 16px;
+              "
+            >
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 700;
+                  letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                  color: var(--muted);
+                  margin-bottom: 8px;
+                "
+              >
+                GCI Goal
+              </div>
+              <div
+                style="font-size: 24px; font-weight: 700; color: var(--purple)"
+                id="gci-goal"
+              >
+                $__GCI_GOAL__
+              </div>
+              <div style="margin-top: 10px">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 11px;
+                    margin-bottom: 4px;
+                  "
+                >
+                  <span style="color: var(--muted)">Year to date</span>
+                  <span style="color: var(--text)" id="gci-ytd">—</span>
+                </div>
+                <div
+                  style="
+                    height: 4px;
+                    background: var(--border);
+                    border-radius: 2px;
+                    overflow: hidden;
+                  "
+                >
+                  <div
+                    id="gci-bar"
+                    style="
+                      height: 100%;
+                      width: 0%;
+                      background: var(--purple);
+                      border-radius: 2px;
+                      transition: width 1s ease;
+                    "
+                  ></div>
+                </div>
+                <div
+                  style="font-size: 10px; color: var(--muted); margin-top: 6px"
+                  id="gci-pace"
+                >
+                  —
+                </div>
+              </div>
+            </div>
+            <div
+              style="
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 16px;
+              "
+            >
+              <div
+                style="
+                  font-size: 10px;
+                  font-weight: 700;
+                  letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                  color: var(--muted);
+                  margin-bottom: 8px;
+                "
+              >
+                Transactions Goal
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 4px">
+                <div
+                  style="
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: var(--purple);
+                  "
+                  id="txn-goal"
+                >
+                  __TXN_GOAL__
+                </div>
+                <div style="font-size: 13px; color: var(--muted)">sides</div>
+              </div>
+              <div style="margin-top: 10px">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 11px;
+                    margin-bottom: 4px;
+                  "
+                >
+                  <span style="color: var(--muted)">Year to date</span>
+                  <span style="color: var(--text)" id="txn-ytd">—</span>
+                </div>
+                <div
+                  style="
+                    height: 4px;
+                    background: var(--border);
+                    border-radius: 2px;
+                    overflow: hidden;
+                  "
+                >
+                  <div
+                    id="txn-bar"
+                    style="
+                      height: 100%;
+                      width: 0%;
+                      background: var(--purple);
+                      border-radius: 2px;
+                      transition: width 1s ease;
+                    "
+                  ></div>
+                </div>
+                <div
+                  style="font-size: 10px; color: var(--muted); margin-top: 6px"
+                  id="txn-pace"
+                >
+                  —
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              background: var(--bg);
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 16px;
+              margin-bottom: 12px;
+            "
+          >
+            <div
+              style="
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 12px;
+              "
+            >
+              Reverse-Engineered Daily Math
+            </div>
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                align-items: center;
+              "
+              class="funnel-row"
+            >
+              <div
+                style="
+                  flex: 1;
+                  min-width: 80px;
+                  text-align: center;
+                  padding: 10px 6px;
+                  background: var(--surface);
+                  border-radius: 6px;
+                "
+              >
+                <div
+                  style="font-size: 18px; font-weight: 700; color: var(--text)"
+                  id="funnel-sides"
+                >
+                  —
+                </div>
+                <div
+                  style="font-size: 10px; color: var(--muted); margin-top: 2px"
+                >
+                  Sides needed
+                </div>
+              </div>
+              <div
+                style="color: var(--border); font-size: 14px"
+                class="funnel-arrow"
+              >
+                →
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  min-width: 80px;
+                  text-align: center;
+                  padding: 10px 6px;
+                  background: var(--surface);
+                  border-radius: 6px;
+                "
+              >
+                <div
+                  style="font-size: 18px; font-weight: 700; color: var(--text)"
+                  id="funnel-appts"
+                >
+                  —
+                </div>
+                <div
+                  style="font-size: 10px; color: var(--muted); margin-top: 2px"
+                >
+                  Appointments
+                </div>
+              </div>
+              <div
+                style="color: var(--border); font-size: 14px"
+                class="funnel-arrow"
+              >
+                →
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  min-width: 80px;
+                  text-align: center;
+                  padding: 10px 6px;
+                  background: var(--surface);
+                  border-radius: 6px;
+                "
+              >
+                <div
+                  style="font-size: 18px; font-weight: 700; color: var(--text)"
+                  id="funnel-convos"
+                >
+                  —
+                </div>
+                <div
+                  style="font-size: 10px; color: var(--muted); margin-top: 2px"
+                >
+                  Conversations
+                </div>
+              </div>
+              <div
+                style="color: var(--border); font-size: 14px"
+                class="funnel-arrow"
+              >
+                →
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  min-width: 80px;
+                  text-align: center;
+                  padding: 10px 6px;
+                  background: var(--surface);
+                  border-radius: 6px;
+                "
+              >
+                <div
+                  style="font-size: 18px; font-weight: 700; color: var(--gold)"
+                  id="funnel-daily"
+                >
+                  —
+                </div>
+                <div
+                  style="font-size: 10px; color: var(--muted); margin-top: 2px"
+                >
+                  Contacts/day
+                </div>
+              </div>
+            </div>
+            <div
+              style="
+                font-size: 11px;
+                color: var(--muted);
+                margin-top: 10px;
+                text-align: center;
+              "
+              id="funnel-assumptions"
+            >
+              —
+            </div>
+          </div>
+          <div
+            style="
+              background: var(--bg);
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 14px 16px;
+            "
+          >
+            <div
+              style="
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 10px;
+              "
+            >
+              Pipeline Snapshot
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                text-align: center;
+              "
+              class="stat-row"
+            >
+              <div>
+                <div
+                  style="font-size: 20px; font-weight: 700; color: var(--text)"
+                  id="pipe-active"
+                >
+                  —
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Active listings
+                </div>
+              </div>
+              <div>
+                <div
+                  style="font-size: 20px; font-weight: 700; color: var(--text)"
+                  id="pipe-pending"
+                >
+                  —
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">Pending</div>
+              </div>
+              <div>
+                <div
+                  style="font-size: 20px; font-weight: 700; color: var(--green)"
+                  id="pipe-closed"
+                >
+                  —
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Closed YTD
+                </div>
+              </div>
+              <div>
+                <div
+                  style="font-size: 20px; font-weight: 700; color: var(--gold)"
+                  id="pipe-remaining"
+                >
+                  —
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Remaining
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ DAILY SCORECARD ═══ -->
+      <div class="section-label">Daily Scorecard</div>
+      <div
+        style="
+          background: var(--surface);
+          border: 1px solid var(--gold);
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 16px;
+          position: relative;
+          overflow: hidden;
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--gold);
+          "
+        ></div>
+        <div style="padding-left: 16px">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 14px;
+            "
+          >
+            <div style="font-size: 12px; color: var(--muted)">
+              Log your numbers. The scoreboard does not lie.
+            </div>
+            <div
+              style="
+                font-size: 11px;
+                color: var(--muted);
+                padding: 4px 12px;
+                border: 1px solid var(--border);
+                border-radius: 99px;
+              "
+              id="sc-date"
+            ></div>
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 14px;
+            "
+            class="sc-grid"
+          >
+            <div class="sc-row" id="r-calls">
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  Calls made
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Target: 25
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px">
+                <button class="sc-btn" onclick="adj('calls',-1)">−</button>
+                <div class="sc-val" id="v-calls">0</div>
+                <button class="sc-btn" onclick="adj('calls',1)">+</button>
+              </div>
+            </div>
+            <div class="sc-row" id="r-contacts">
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  Contacts reached
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Target: 10
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px">
+                <button class="sc-btn" onclick="adj('contacts',-1)">−</button>
+                <div class="sc-val" id="v-contacts">0</div>
+                <button class="sc-btn" onclick="adj('contacts',1)">+</button>
+              </div>
+            </div>
+            <div class="sc-row" id="r-apptSet">
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  Appointments set
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Target: 2
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px">
+                <button class="sc-btn" onclick="adj('apptSet',-1)">−</button>
+                <div class="sc-val" id="v-apptSet">0</div>
+                <button class="sc-btn" onclick="adj('apptSet',1)">+</button>
+              </div>
+            </div>
+            <div class="sc-row" id="r-apptHeld">
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  Appointments held
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Target: 2
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px">
+                <button class="sc-btn" onclick="adj('apptHeld',-1)">−</button>
+                <div class="sc-val" id="v-apptHeld">0</div>
+                <button class="sc-btn" onclick="adj('apptHeld',1)">+</button>
+              </div>
+            </div>
+            <div class="sc-row" id="r-listTaken">
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  Listings taken
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Weekly: 1
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px">
+                <button class="sc-btn" onclick="adj('listTaken',-1)">−</button>
+                <div class="sc-val" id="v-listTaken">0</div>
+                <button class="sc-btn" onclick="adj('listTaken',1)">+</button>
+              </div>
+            </div>
+            <div class="sc-row" id="r-listSold">
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  Listings sold
+                </div>
+                <div style="font-size: 10px; color: var(--muted)">
+                  Weekly: 1
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px">
+                <button class="sc-btn" onclick="adj('listSold',-1)">−</button>
+                <div class="sc-val" id="v-listSold">0</div>
+                <button class="sc-btn" onclick="adj('listSold',1)">+</button>
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              background: var(--bg);
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 12px 16px;
+              margin-bottom: 14px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 6px;
+              "
+            >
+              <div style="font-size: 11px; color: var(--muted)">
+                Daily target progress
+              </div>
+              <div
+                style="font-size: 13px; font-weight: 700; color: var(--text)"
+                id="pct-label"
+              >
+                0%
+              </div>
+            </div>
+            <div
+              style="
+                height: 6px;
+                background: var(--border);
+                border-radius: 3px;
+                overflow: hidden;
+              "
+            >
+              <div
+                id="pct-bar"
+                style="
+                  height: 100%;
+                  width: 0%;
+                  background: var(--border);
+                  border-radius: 3px;
+                  transition:
+                    width 0.5s ease,
+                    background 0.3s;
+                "
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TODAY'S COMMITMENT ═══ -->
+      <div class="section-label">Today's Commitment</div>
+      <div
+        style="
+          background: var(--surface);
+          border: 1px solid var(--accent);
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 16px;
+          position: relative;
+          overflow: hidden;
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent);
+          "
+        ></div>
+        <div style="padding-left: 16px">
+          <div
+            style="display: flex; flex-direction: column; gap: 10px"
+            id="commitments"
+          >
+            <label class="commit-label" id="c1-label"
+              ><input
+                type="checkbox"
+                class="commit-check"
+                id="c1"
+                data-pts="5"
+              />
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  Morning prospecting block completed
+                </div>
+                <div
+                  style="font-size: 11px; color: var(--muted); margin-top: 2px"
+                >
+                  +5 points
+                </div>
+              </div></label
+            >
+            <label class="commit-label" id="c2-label"
+              ><input
+                type="checkbox"
+                class="commit-check"
+                id="c2"
+                data-pts="3"
+              />
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  5 handwritten notes sent
+                </div>
+                <div
+                  style="font-size: 11px; color: var(--muted); margin-top: 2px"
+                >
+                  +3 points
+                </div>
+              </div></label
+            >
+            <label class="commit-label" id="c3-label"
+              ><input
+                type="checkbox"
+                class="commit-check"
+                id="c3"
+                data-pts="5"
+              />
+              <div>
+                <div
+                  style="font-size: 13px; font-weight: 500; color: var(--text)"
+                >
+                  Coaching directive executed
+                </div>
+                <div
+                  style="font-size: 11px; color: var(--muted); margin-top: 2px"
+                >
+                  +5 points
+                </div>
+              </div></label
+            >
+          </div>
+          <div
+            style="
+              margin-top: 16px;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            "
+          >
+            <div>
+              <span style="font-size: 12px; color: var(--muted)"
+                >Today's points: </span
+              ><span
+                style="font-size: 16px; font-weight: 700; color: var(--accent)"
+                id="today-pts"
+                >0</span
+              ><span style="font-size: 12px; color: var(--muted)"> / 13</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log Button + Stats Row -->
+      <div style="text-align: right; margin-bottom: 16px">
+        <div style="font-size: 11px; color: var(--muted); margin-bottom: 8px">
+          Saved to your profile + Follow Up Boss
+        </div>
+        <div class="log-btn" id="log-btn" onclick="logToday()">Log Today</div>
+      </div>
+
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 12px;
+          margin-bottom: 16px;
+        "
+        class="stat-row"
+      >
+        <div class="ep-card">
+          <div
+            style="font-size: 22px; font-weight: 700; color: var(--text)"
+            id="stat-emails"
+          >
+            —
+          </div>
+          <div
+            style="
+              font-size: 10px;
+              color: var(--muted);
+              margin-top: 4px;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+            "
+          >
+            Coaching emails
+          </div>
+        </div>
+        <div class="ep-card">
+          <div
+            style="font-size: 22px; font-weight: 700; color: var(--text)"
+            id="stat-days"
+          >
+            —
+          </div>
+          <div
+            style="
+              font-size: 10px;
+              color: var(--muted);
+              margin-top: 4px;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+            "
+          >
+            Days active
+          </div>
+        </div>
+        <div class="ep-card">
+          <div
+            style="font-size: 22px; font-weight: 700; color: var(--green)"
+            id="stat-streak"
+          >
+            —
+          </div>
+          <div
+            style="
+              font-size: 10px;
+              color: var(--muted);
+              margin-top: 4px;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+            "
+          >
+            Current streak
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Bars -->
+      <div class="card" style="padding: 20px">
+        <div
+          style="
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 14px;
+          "
+        >
+          Coaching Activity — Last 7 Days
+        </div>
+        <div
+          id="activity-bars"
+          style="display: flex; align-items: flex-end; gap: 6px; height: 80px"
+        ></div>
+        <div
+          id="activity-labels"
+          style="display: flex; gap: 6px; margin-top: 6px"
+        ></div>
+      </div>
+
+      <!-- ═══ THE TRUTH ═══ -->
+      <div class="section-label">The Truth</div>
+      <div class="truth-card"><div class="truth-text">__TRUTH__</div></div>
+
+      <!-- ═══ THE STRATEGY ═══ -->
       <div class="section-label">The Strategy</div>
       <div class="strategy-card">
         <div class="strategy-text">__STRATEGY__</div>
       </div>
 
-      <!-- SECTION 4: THIS WEEK — RPM FORMAT -->
+      <!-- ═══ RPM PLAN ═══ -->
       <div class="section-label">This Week — Your RPM Plan</div>
       <div class="rpm-block">
         <div class="rpm-grid">
@@ -389,7 +1557,7 @@
         </div>
       </div>
 
-      <!-- SECTION 5: PRIMARY CONSTRAINT -->
+      <!-- ═══ PRIMARY CONSTRAINT ═══ -->
       <div class="section-label">Primary Constraint</div>
       <div class="constraint-card">
         <div class="constraint-dot"></div>
@@ -399,19 +1567,19 @@
         </div>
       </div>
 
-      <!-- SECTION 6: COACHING DIRECTIVE -->
+      <!-- ═══ COACHING DIRECTIVE ═══ -->
       <div class="section-label">Coaching Directive</div>
       <div class="directive-card">
         <div class="directive-text">__DIRECTIVE__</div>
       </div>
 
-      <!-- SECTION 7: QUOTE -->
+      <!-- ═══ QUOTE ═══ -->
       <div class="quote-card">
         <div class="quote-text">__QUOTE__</div>
         <div class="quote-author">__QUOTE_AUTHOR__</div>
       </div>
 
-      <!-- SUPPORTING ACTIONS -->
+      <!-- ═══ SUPPORTING ACTIONS ═══ -->
       <div class="section-label">Supporting Actions</div>
       <div class="card">
         <ul class="supporting-list">
@@ -419,7 +1587,7 @@
         </ul>
       </div>
 
-      <!-- SECTION 8: RECENT ACTIVITY -->
+      <!-- ═══ RECENT ACTIVITY ═══ -->
       <div class="section-label">Recent Coaching Activity</div>
       <div class="card">
         <table>
@@ -447,5 +1615,374 @@
         your business analysis.</span
       >
     </div>
+
+    <script>
+      (function () {
+        var AGENT_ID = "__AGENT_ID__";
+        var ENG_SCORE = parseInt("__ENGAGEMENT_SCORE__") || 0;
+        var CREATED = "__CREATED_AT__";
+        var circumference = 2 * Math.PI * 42;
+
+        // ── Date display ──
+        var now = new Date();
+        var dateStr = now.toLocaleDateString("en-CA", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        var el = document.getElementById("sc-date");
+        if (el) el.textContent = dateStr;
+
+        // ── Engagement ring ──
+        setTimeout(function () {
+          var pct = Math.min(ENG_SCORE / 100, 1);
+          document
+            .getElementById("score-arc")
+            .setAttribute(
+              "stroke-dasharray",
+              pct * circumference + " " + circumference,
+            );
+          document.getElementById("score-num").textContent = ENG_SCORE;
+          var rank = document.getElementById("score-rank");
+          if (ENG_SCORE >= 80) rank.textContent = "Top 10% of agents";
+          else if (ENG_SCORE >= 60) rank.textContent = "Top 30% of agents";
+          else if (ENG_SCORE >= 40) rank.textContent = "Top 50% of agents";
+          else rank.textContent = "Building momentum";
+        }, 300);
+
+        // ── Journey progress ──
+        setTimeout(function () {
+          document.getElementById("journey-progress").style.width = "45%";
+        }, 500);
+
+        // ── Days in phase ──
+        if (CREATED && CREATED !== "—") {
+          var created = new Date(CREATED);
+          var diff = Math.floor((now - created) / 86400000);
+          var dip = document.getElementById("days-in-phase");
+          if (dip) dip.textContent = diff + " days in phase";
+        }
+
+        // ── Activity bars from email table ──
+        var rows = document.querySelectorAll("table tbody tr");
+        var dayCounts = {};
+        for (var d = 6; d >= 0; d--) {
+          var dt = new Date(now);
+          dt.setDate(dt.getDate() - d);
+          dayCounts[dt.toISOString().slice(0, 10)] = 0;
+        }
+        var totalEmails = 0;
+        rows.forEach(function (row) {
+          totalEmails++;
+          var cells = row.querySelectorAll("td");
+          if (cells.length >= 5) {
+            var ds = cells[4].textContent.trim();
+            if (dayCounts.hasOwnProperty(ds)) dayCounts[ds]++;
+          }
+        });
+        var dates = Object.keys(dayCounts).sort();
+        var counts = dates.map(function (dd) {
+          return dayCounts[dd];
+        });
+        var maxC = Math.max.apply(null, counts.concat([1]));
+        var barsDiv = document.getElementById("activity-bars");
+        var labelsDiv = document.getElementById("activity-labels");
+        var dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        var streak = 0;
+        for (var i = dates.length - 1; i >= 0; i--) {
+          if (counts[i] > 0) streak++;
+          else break;
+        }
+        dates.forEach(function (dd, idx) {
+          var h = Math.max((counts[idx] / maxC) * 80, 4);
+          var isToday = idx === dates.length - 1;
+          var bar = document.createElement("div");
+          bar.style.cssText =
+            "flex:1;height:" +
+            h +
+            "px;border-radius:4px 4px 0 0;transition:height .8s ease;" +
+            "background:" +
+            (isToday ? "var(--gold)" : "var(--accent)") +
+            ";" +
+            "opacity:" +
+            (counts[idx] > 0 ? "1" : "0.25");
+          barsDiv.appendChild(bar);
+          var lbl = document.createElement("div");
+          lbl.style.cssText =
+            "flex:1;text-align:center;font-size:10px;color:" +
+            (isToday ? "var(--text)" : "var(--muted)") +
+            ";" +
+            (isToday ? "font-weight:600" : "");
+          var dayObj = new Date(dd + "T12:00:00");
+          lbl.textContent = isToday ? "Today" : dayNames[dayObj.getDay()];
+          labelsDiv.appendChild(lbl);
+        });
+
+        // ── Stats ──
+        document.getElementById("stat-emails").textContent = totalEmails;
+        if (CREATED && CREATED !== "—") {
+          document.getElementById("stat-days").textContent = Math.floor(
+            (now - new Date(CREATED)) / 86400000,
+          );
+        }
+        document.getElementById("stat-streak").textContent =
+          streak > 0 ? streak + " days" : "Start today";
+
+        // ── Goals (fetch from API) ──
+        fetch("/api/goals/" + AGENT_ID)
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            if (!data.goals) return;
+            var g = data.goals;
+            var txnGoal = parseInt(g.transaction_goal) || 24;
+            var gciGoal = parseFloat(g.gci_goal) || 250000;
+            var closeRate = parseFloat(g.close_rate) || 0.5;
+            var apptRate = parseFloat(g.appt_conversion_rate) || 0.1;
+            var ytdClosed = parseInt(data.ytdClosed) || 0;
+
+            // GCI
+            var avgComm = parseFloat(g.avg_commission) || gciGoal / txnGoal;
+            var gciYTD = ytdClosed * avgComm;
+            var dayOfYear = Math.floor(
+              (now - new Date(now.getFullYear(), 0, 1)) / 86400000,
+            );
+            var paceGCI = (gciGoal / 365) * dayOfYear;
+            var gciPct = Math.round((gciYTD / gciGoal) * 100);
+            document.getElementById("gci-ytd").textContent =
+              "$" + gciYTD.toLocaleString() + " (" + gciPct + "%)";
+            document.getElementById("gci-bar").style.width =
+              Math.min(gciPct, 100) + "%";
+            var gciDiff = gciYTD - paceGCI;
+            document.getElementById("gci-pace").innerHTML =
+              "On pace: $" +
+              Math.round(paceGCI).toLocaleString() +
+              " — <span style='color:" +
+              (gciDiff >= 0 ? "var(--green)" : "var(--gold)") +
+              "'>" +
+              (gciDiff >= 0 ? "ahead" : "behind") +
+              "</span>";
+
+            // Transactions
+            var paceTxn = (txnGoal / 365) * dayOfYear;
+            var txnPct = Math.round((ytdClosed / txnGoal) * 100);
+            document.getElementById("txn-ytd").textContent =
+              ytdClosed + " closed (" + txnPct + "%)";
+            document.getElementById("txn-bar").style.width =
+              Math.min(txnPct, 100) + "%";
+            var txnDiff = ytdClosed - paceTxn;
+            document.getElementById("txn-pace").innerHTML =
+              "On pace: " +
+              paceTxn.toFixed(1) +
+              " — <span style='color:" +
+              (txnDiff >= 0 ? "var(--green)" : "var(--gold)") +
+              "'>" +
+              (txnDiff >= 0
+                ? "ahead"
+                : Math.abs(txnDiff).toFixed(1) + " sides behind") +
+              "</span>";
+
+            // Funnel math
+            var appts = Math.round(txnGoal / closeRate);
+            var convos = Math.round(appts / apptRate);
+            var dailyContacts = Math.round(convos / 250);
+            document.getElementById("funnel-sides").textContent = txnGoal;
+            document.getElementById("funnel-appts").textContent = appts;
+            document.getElementById("funnel-convos").textContent = convos;
+            document.getElementById("funnel-daily").textContent =
+              dailyContacts + "/day";
+            document.getElementById("funnel-assumptions").textContent =
+              Math.round(closeRate * 100) +
+              "% close rate · " +
+              Math.round(apptRate * 100) +
+              "% appt conversion · 250 working days";
+
+            // Pipeline
+            var scCards = data.scorecards || [];
+            var totalListTaken = 0,
+              totalListSold = 0;
+            scCards.forEach(function (sc) {
+              totalListTaken += parseInt(sc.list_taken) || 0;
+              totalListSold += parseInt(sc.list_sold) || 0;
+            });
+            document.getElementById("pipe-active").textContent = Math.max(
+              totalListTaken - totalListSold,
+              0,
+            );
+            document.getElementById("pipe-pending").textContent = "—";
+            document.getElementById("pipe-closed").textContent = ytdClosed;
+            document.getElementById("pipe-remaining").textContent = Math.max(
+              txnGoal - ytdClosed,
+              0,
+            );
+          })
+          .catch(function () {});
+
+        // ── Scorecard logic ──
+        var vals = {
+          calls: 0,
+          contacts: 0,
+          apptSet: 0,
+          apptHeld: 0,
+          listTaken: 0,
+          listSold: 0,
+        };
+        var targets = {
+          calls: 25,
+          contacts: 10,
+          apptSet: 2,
+          apptHeld: 2,
+          listTaken: 1,
+          listSold: 1,
+        };
+
+        window.adj = function (key, delta) {
+          vals[key] = Math.max(0, vals[key] + delta);
+          document.getElementById("v-" + key).textContent = vals[key];
+          var row = document.getElementById("r-" + key);
+          if (vals[key] >= targets[key]) {
+            row.style.borderColor = "rgba(0,255,204,0.3)";
+            row.style.background = "rgba(0,255,204,0.04)";
+          } else if (vals[key] > 0) {
+            row.style.borderColor = "rgba(240,165,0,0.3)";
+            row.style.background = "rgba(240,165,0,0.04)";
+          } else {
+            row.style.borderColor = "var(--border)";
+            row.style.background = "var(--bg)";
+          }
+          updateProgress();
+        };
+
+        function updateProgress() {
+          var totalPct = 0;
+          var fields = Object.keys(targets);
+          fields.forEach(function (f) {
+            totalPct += Math.min(vals[f] / targets[f], 1) / fields.length;
+          });
+          var pctVal = Math.round(totalPct * 100);
+          document.getElementById("pct-label").textContent = pctVal + "%";
+          var bar = document.getElementById("pct-bar");
+          bar.style.width = pctVal + "%";
+          bar.style.background =
+            pctVal >= 80
+              ? "var(--accent)"
+              : pctVal >= 40
+                ? "var(--gold)"
+                : pctVal > 0
+                  ? "var(--muted)"
+                  : "var(--border)";
+
+          var commitTotal = 0;
+          document.querySelectorAll(".commit-check").forEach(function (cb) {
+            if (cb.checked) commitTotal += parseInt(cb.dataset.pts);
+          });
+          document.getElementById("today-pts").textContent = commitTotal;
+
+          var anyActivity =
+            Object.keys(vals).some(function (k) {
+              return vals[k] > 0;
+            }) || commitTotal > 0;
+          var btn = document.getElementById("log-btn");
+          if (anyActivity) {
+            btn.style.background = "var(--accent)";
+            btn.style.color = "var(--bg)";
+            btn.style.borderColor = "var(--accent)";
+            btn.style.cursor = "pointer";
+          } else {
+            btn.style.background = "transparent";
+            btn.style.color = "var(--muted)";
+            btn.style.borderColor = "var(--border)";
+            btn.style.cursor = "default";
+          }
+
+          // Update engagement ring live
+          var actPts =
+            (vals.calls || 0) +
+            (vals.contacts || 0) * 2 +
+            (vals.apptSet || 0) * 5 +
+            (vals.apptHeld || 0) * 5 +
+            (vals.listTaken || 0) * 10 +
+            (vals.listSold || 0) * 10;
+          var bonus = Math.min(actPts / 50, 20);
+          var liveScore = Math.min(
+            Math.round(ENG_SCORE + bonus + commitTotal),
+            100,
+          );
+          var livePct = liveScore / 100;
+          document
+            .getElementById("score-arc")
+            .setAttribute(
+              "stroke-dasharray",
+              livePct * circumference + " " + circumference,
+            );
+          document.getElementById("score-num").textContent = liveScore;
+        }
+
+        // Commitment checkboxes
+        document.querySelectorAll(".commit-check").forEach(function (cb) {
+          cb.addEventListener("change", function () {
+            var label = this.closest(".commit-label");
+            if (this.checked) {
+              label.style.borderColor = "rgba(0,255,204,0.3)";
+              label.style.background = "rgba(0,255,204,0.05)";
+            } else {
+              label.style.borderColor = "var(--border)";
+              label.style.background = "var(--bg)";
+            }
+            updateProgress();
+          });
+        });
+
+        // ── Log Today ──
+        window.logToday = function () {
+          var anyActivity = Object.keys(vals).some(function (k) {
+            return vals[k] > 0;
+          });
+          var commitTotal = 0;
+          var commitData = {};
+          document.querySelectorAll(".commit-check").forEach(function (cb) {
+            commitData[cb.id] = cb.checked;
+            if (cb.checked) commitTotal += parseInt(cb.dataset.pts);
+          });
+          if (!anyActivity && commitTotal === 0) return;
+
+          fetch("/api/log-activity", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agent_id: AGENT_ID,
+              calls: vals.calls,
+              contacts: vals.contacts,
+              appt_set: vals.apptSet,
+              appt_held: vals.apptHeld,
+              list_taken: vals.listTaken,
+              list_sold: vals.listSold,
+              commitments: commitData,
+            }),
+          })
+            .then(function (r) {
+              return r.json();
+            })
+            .then(function (data) {
+              var btn = document.getElementById("log-btn");
+              btn.textContent = "Logged!";
+              btn.style.background = "var(--green)";
+              btn.style.borderColor = "var(--green)";
+              setTimeout(function () {
+                btn.textContent = "Log Today";
+                updateProgress();
+              }, 2000);
+            })
+            .catch(function () {
+              var btn = document.getElementById("log-btn");
+              btn.textContent = "Error — try again";
+              setTimeout(function () {
+                btn.textContent = "Log Today";
+              }, 2000);
+            });
+        };
+      })();
+    </script>
   </body>
 </html>

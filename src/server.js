@@ -620,6 +620,14 @@ app.listen(PORT, () => {
             "It is not what we do once in a while that shapes our lives. It is what we do consistently.",
         )
         .replace(/__QUOTE_AUTHOR__/g, "")
+        .replace(/__ENGAGEMENT_SCORE__/g, agent.engagement_score || "0")
+        .replace(/__AGENT_ID__/g, agent.id)
+        .replace(
+          /__CREATED_AT__/g,
+          agent.created_at || coaching?.created_at || "—",
+        )
+        .replace(/__GCI_GOAL__/g, "0")
+        .replace(/__TXN_GOAL__/g, "0")
         .replace(/__TOP_ACTION__/g, coaching?.coaching_directive || "—")
         .replace(/__DAILY_RITUAL__/g, "—")
         .replace(/__WEEKLY_TARGET__/g, "—")
