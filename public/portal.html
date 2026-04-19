@@ -1318,9 +1318,10 @@
         </div>
       </div>
 
-      <!-- ═══ TODAY'S COMMITMENT ═══ -->
-      <div class="section-label">Today's Commitment</div>
+      <!-- ═══ THE DAILY WIN ═══ -->
+      <div class="section-label">The Daily Win</div>
       <div
+        id="daily-win-container"
         style="
           background: var(--surface);
           border: 1px solid var(--accent);
@@ -1341,93 +1342,12 @@
             background: var(--accent);
           "
         ></div>
-        <div style="padding-left: 16px">
-          <div
-            style="display: flex; flex-direction: column; gap: 10px"
-            id="commitments"
-          >
-            <label class="commit-label" id="c1-label"
-              ><input
-                type="checkbox"
-                class="commit-check"
-                id="c1"
-                data-pts="5"
-              />
-              <div>
-                <div
-                  style="font-size: 13px; font-weight: 500; color: var(--text)"
-                >
-                  Morning prospecting block completed
-                </div>
-                <div
-                  style="font-size: 11px; color: var(--muted); margin-top: 2px"
-                >
-                  +5 points
-                </div>
-              </div></label
-            >
-            <label class="commit-label" id="c2-label"
-              ><input
-                type="checkbox"
-                class="commit-check"
-                id="c2"
-                data-pts="3"
-              />
-              <div>
-                <div
-                  style="font-size: 13px; font-weight: 500; color: var(--text)"
-                >
-                  5 handwritten notes sent
-                </div>
-                <div
-                  style="font-size: 11px; color: var(--muted); margin-top: 2px"
-                >
-                  +3 points
-                </div>
-              </div></label
-            >
-            <label class="commit-label" id="c3-label"
-              ><input
-                type="checkbox"
-                class="commit-check"
-                id="c3"
-                data-pts="5"
-              />
-              <div>
-                <div
-                  style="font-size: 13px; font-weight: 500; color: var(--text)"
-                >
-                  Coaching directive executed
-                </div>
-                <div
-                  style="font-size: 11px; color: var(--muted); margin-top: 2px"
-                >
-                  +5 points
-                </div>
-              </div></label
-            >
-          </div>
-          <div
-            style="
-              margin-top: 16px;
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-            "
-          >
-            <div>
-              <span style="font-size: 12px; color: var(--muted)"
-                >Today's points: </span
-              ><span
-                style="font-size: 16px; font-weight: 700; color: var(--accent)"
-                id="today-pts"
-                >0</span
-              ><span style="font-size: 12px; color: var(--muted)"> / 13</span>
-            </div>
+        <div style="padding-left: 16px" id="daily-win-content">
+          <div style="text-align: center; padding: 20px; color: var(--muted)">
+            Loading your Daily Win...
           </div>
         </div>
       </div>
-
       <!-- Log Button + Stats Row -->
       <div style="text-align: right; margin-bottom: 16px">
         <div style="font-size: 11px; color: var(--muted); margin-bottom: 8px">
@@ -1934,6 +1854,159 @@
           });
         });
 
+        // ── Daily Win System ──
+        var dailyWinSelections = [];
+        fetch("/api/daily-wins/" + AGENT_ID)
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            var container = document.getElementById("daily-win-content");
+            if (data.status === "locked" && data.selections) {
+              dailyWinSelections = data.selections;
+              var totalPts = data.selections.reduce(function (sum, s) {
+                return sum + (s.pts || 0);
+              }, 0);
+              var html =
+                '<div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px">This Week\'s Daily Win <span style="font-size:9px;color:var(--muted);font-weight:400;text-transform:none;margin-left:8px">Resets Monday</span></div>';
+              data.selections.forEach(function (s, i) {
+                html +=
+                  '<label class="commit-label" id="dw' +
+                  i +
+                  '-label" style="margin-bottom:8px"><input type="checkbox" class="commit-check dw-check" id="dw' +
+                  i +
+                  '" data-pts="' +
+                  s.pts +
+                  '"><div><div style="font-size:13px;font-weight:500;color:var(--text)">' +
+                  s.text +
+                  '</div><div style="font-size:11px;color:var(--muted);margin-top:2px">+' +
+                  s.pts +
+                  " points</div></div></label>";
+              });
+              html +=
+                '<div style="margin-top:12px"><span style="font-size:12px;color:var(--muted)">Today\'s points: </span><span style="font-size:16px;font-weight:700;color:var(--accent)" id="today-pts">0</span><span style="font-size:12px;color:var(--muted)"> / ' +
+                totalPts +
+                "</span></div>";
+              container.innerHTML = html;
+              document.querySelectorAll(".dw-check").forEach(function (cb) {
+                cb.addEventListener("change", function () {
+                  var label = this.closest(".commit-label");
+                  if (this.checked) {
+                    label.style.borderColor = "rgba(0,255,204,0.3)";
+                    label.style.background = "rgba(0,255,204,0.05)";
+                  } else {
+                    label.style.borderColor = "var(--border)";
+                    label.style.background = "var(--bg)";
+                  }
+                  updateProgress();
+                });
+              });
+            } else if (data.status === "select" && data.options) {
+              var selected = [];
+              var html =
+                '<div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:4px">Select Your Top 3 Daily Wins</div>';
+              html +=
+                '<div style="font-size:12px;color:var(--muted);margin-bottom:16px">Pick the 3 actions that will move your business forward this week. Once locked, these become your daily accountability.</div>';
+              html +=
+                '<div id="dw-options" style="display:flex;flex-direction:column;gap:8px">';
+              data.options.forEach(function (opt, i) {
+                html +=
+                  '<div class="dw-option" data-id="' +
+                  opt.id +
+                  '" data-text="' +
+                  opt.text.replace(/"/g, "&quot;") +
+                  '" data-pts="' +
+                  opt.pts +
+                  '" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .2s,background .2s" onclick="toggleWinOption(this)">';
+                html +=
+                  '<div class="dw-check-box" style="width:20px;height:20px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s"></div>';
+                html +=
+                  '<div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--text)">' +
+                  opt.text +
+                  '</div><div style="font-size:11px;color:var(--muted);margin-top:2px">+' +
+                  opt.pts +
+                  " points</div></div></div>";
+              });
+              html += "</div>";
+              html +=
+                '<div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between"><div><span style="font-size:12px;color:var(--muted)" id="dw-count">0 of 3 selected</span></div><div id="dw-lock-btn" style="padding:8px 20px;background:transparent;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);cursor:default;transition:all .3s;text-transform:uppercase;letter-spacing:.08em;font-weight:600" onclick="lockDailyWins()">Lock In My Wins</div></div>';
+              container.innerHTML = html;
+            }
+          })
+          .catch(function () {
+            document.getElementById("daily-win-content").innerHTML =
+              '<div style="text-align:center;padding:20px;color:var(--muted)">Your daily wins will be configured during your next coaching session.</div>';
+          });
+
+        window.toggleWinOption = function (el) {
+          var isSelected = el.dataset.selected === "true";
+          var selectedCount = document.querySelectorAll(
+            '.dw-option[data-selected="true"]',
+          ).length;
+          if (!isSelected && selectedCount >= 3) return;
+          el.dataset.selected = isSelected ? "false" : "true";
+          var box = el.querySelector(".dw-check-box");
+          if (!isSelected) {
+            el.style.borderColor = "rgba(0,255,204,0.3)";
+            el.style.background = "rgba(0,255,204,0.05)";
+            box.style.background = "var(--accent)";
+            box.style.borderColor = "var(--accent)";
+            box.innerHTML =
+              '<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M3 7L6 10L11 4" stroke="var(--bg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          } else {
+            el.style.borderColor = "var(--border)";
+            el.style.background = "var(--bg)";
+            box.style.background = "transparent";
+            box.style.borderColor = "var(--border)";
+            box.innerHTML = "";
+          }
+          var newCount = document.querySelectorAll(
+            '.dw-option[data-selected="true"]',
+          ).length;
+          document.getElementById("dw-count").textContent =
+            newCount + " of 3 selected";
+          var lockBtn = document.getElementById("dw-lock-btn");
+          if (newCount === 3) {
+            lockBtn.style.background = "var(--accent)";
+            lockBtn.style.color = "var(--bg)";
+            lockBtn.style.borderColor = "var(--accent)";
+            lockBtn.style.cursor = "pointer";
+          } else {
+            lockBtn.style.background = "transparent";
+            lockBtn.style.color = "var(--muted)";
+            lockBtn.style.borderColor = "var(--border)";
+            lockBtn.style.cursor = "default";
+          }
+        };
+
+        window.lockDailyWins = function () {
+          var opts = document.querySelectorAll(
+            '.dw-option[data-selected="true"]',
+          );
+          if (opts.length !== 3) return;
+          var selections = [];
+          opts.forEach(function (el) {
+            selections.push({
+              id: el.dataset.id,
+              text: el.dataset.text,
+              pts: parseInt(el.dataset.pts),
+            });
+          });
+          fetch("/api/daily-wins", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agent_id: AGENT_ID,
+              selections: selections,
+            }),
+          })
+            .then(function (r) {
+              return r.json();
+            })
+            .then(function (data) {
+              if (data.status === "locked") location.reload();
+            });
+        };
         // ── Log Today ──
         window.logToday = function () {
           var anyActivity = Object.keys(vals).some(function (k) {

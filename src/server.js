@@ -478,6 +478,81 @@ app.post("/api/goals", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ── GET /api/daily-wins/:agentId ──
+app.get("/api/daily-wins/:agentId", async (req, res) => {
+  try {
+    var now = new Date();
+    var day = now.getDay();
+    var diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    var monday = new Date(new Date(now).setDate(diff));
+    var weekStart = monday.toISOString().slice(0, 10);
+    var existing = await db
+      .prepare(
+        "SELECT * FROM daily_wins WHERE agent_id = $1 AND week_start = $2",
+      )
+      .get(req.params.agentId, weekStart);
+    if (existing) {
+      return res.json({
+        status: "locked",
+        weekStart: weekStart,
+        selections: JSON.parse(existing.selections_json),
+      });
+    }
+    var diagnosis = await db
+      .prepare(
+        "SELECT bottleneck FROM diagnoses WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1",
+      )
+      .get(req.params.agentId);
+    var bottleneck = diagnosis ? diagnosis.bottleneck : "pipeline_volume";
+    var { getDailyWinOptions } = require("./lib/coachingGenerator");
+    var options = getDailyWinOptions(bottleneck);
+    res.json({
+      status: "select",
+      weekStart: weekStart,
+      bottleneck: bottleneck,
+      options: options,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/daily-wins ──
+app.post("/api/daily-wins", async (req, res) => {
+  try {
+    var { agent_id, selections } = req.body;
+    if (
+      !agent_id ||
+      !selections ||
+      !Array.isArray(selections) ||
+      selections.length !== 3
+    ) {
+      return res
+        .status(400)
+        .json({ error: "agent_id and exactly 3 selections required" });
+    }
+    var now = new Date();
+    var day = now.getDay();
+    var diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    var monday = new Date(new Date(now).setDate(diff));
+    var weekStart = monday.toISOString().slice(0, 10);
+    await db
+      .prepare(
+        `INSERT INTO daily_wins (agent_id, week_start, selections_json, locked)
+       VALUES ($1, $2, $3, true)
+       ON CONFLICT (agent_id, week_start)
+       DO UPDATE SET selections_json = $3, updated_at = NOW()`,
+      )
+      .run(agent_id, weekStart, JSON.stringify(selections));
+    res.json({
+      status: "locked",
+      weekStart: weekStart,
+      selections: selections,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.listen(PORT, () => {
   // ── GET /portal/:agentId ─────────────────────────────────────────────────────
   // Real coaching_outputs columns: id, agent_id, the_truth, the_strategy, rpm_plan,

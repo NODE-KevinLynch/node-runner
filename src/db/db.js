@@ -40,7 +40,19 @@ const pool = new Pool({
         UNIQUE(agent_id, log_date)
       );
     `);
-    console.log("✓ agent_goals + daily_scorecard tables ready");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS daily_wins (
+        id SERIAL PRIMARY KEY,
+        agent_id TEXT NOT NULL,
+        week_start DATE NOT NULL,
+        selections_json TEXT NOT NULL,
+        locked BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(agent_id, week_start)
+      );
+    `);
+    console.log("✓ agent_goals + daily_scorecard + daily_wins tables ready");
   } catch (err) {
     console.error("Table auto-create error:", err.message);
   }

@@ -535,10 +535,602 @@ async function runCoachingPipeline(db, agentId) {
 
   return { output: output, council: output._meta.council };
 }
+// ═════════════════════════════════════════════════════════════════════════════
+// DAILY WIN OPTIONS — 8 per bottleneck, agent picks top 3 weekly
+// ═════════════════════════════════════════════════════════════════════════════
 
+const DAILY_WIN_OPTIONS = {
+  pipeline_volume: [
+    { id: "pv1", text: "Complete 2-hour morning prospecting block", pts: 5 },
+    { id: "pv2", text: "Make 25 outbound calls", pts: 5 },
+    { id: "pv3", text: "Book 2 new appointments today", pts: 5 },
+    { id: "pv4", text: "Add 3 new contacts to active database", pts: 3 },
+    { id: "pv5", text: "Follow up on 5 pending leads", pts: 3 },
+    { id: "pv6", text: "Send 5 personalized video texts", pts: 3 },
+    { id: "pv7", text: "Review and update pipeline scorecard", pts: 2 },
+    { id: "pv8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  lead_volume: [
+    { id: "lv1", text: "Hit daily contact minimum (15 conversations)", pts: 5 },
+    { id: "lv2", text: "Prospect from 3 different lead sources", pts: 5 },
+    { id: "lv3", text: "Complete morning prospecting block", pts: 5 },
+    { id: "lv4", text: "Send 10 outreach messages before 10am", pts: 3 },
+    { id: "lv5", text: "Follow up on every lead from yesterday", pts: 3 },
+    { id: "lv6", text: "Book 1 appointment from cold outreach", pts: 5 },
+    { id: "lv7", text: "Add 5 new names to contact database", pts: 3 },
+    { id: "lv8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  prospecting_consistency: [
+    { id: "pc1", text: "Prospect at the same time as yesterday", pts: 5 },
+    {
+      id: "pc2",
+      text: "Complete prospecting block before checking email",
+      pts: 5,
+    },
+    {
+      id: "pc3",
+      text: "Make 10 calls within first 60 minutes of work",
+      pts: 5,
+    },
+    {
+      id: "pc4",
+      text: "Share daily numbers with accountability partner",
+      pts: 3,
+    },
+    { id: "pc5", text: "Track every dial on your scorecard", pts: 2 },
+    { id: "pc6", text: "Set tomorrow's call list before end of day", pts: 3 },
+    { id: "pc7", text: "Follow up on 3 leads from this week", pts: 3 },
+    { id: "pc8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  lead_conversion: [
+    { id: "lc1", text: "Respond to every new lead within 5 minutes", pts: 5 },
+    {
+      id: "lc2",
+      text: "Follow up on 5 unconverted leads from this week",
+      pts: 5,
+    },
+    { id: "lc3", text: "Send a personalized video text to 3 leads", pts: 3 },
+    { id: "lc4", text: "Schedule 2 buyer/seller consultations", pts: 5 },
+    { id: "lc5", text: "Review and advance every deal in pipeline", pts: 3 },
+    { id: "lc6", text: "Practice consultation scripts for 15 minutes", pts: 2 },
+    { id: "lc7", text: "Ask 1 past client for a referral", pts: 3 },
+    { id: "lc8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  digital_leads: [
+    {
+      id: "dl1",
+      text: "Respond to every online lead within 5 minutes",
+      pts: 5,
+    },
+    {
+      id: "dl2",
+      text: "Send 5 personalized video texts to digital leads",
+      pts: 5,
+    },
+    {
+      id: "dl3",
+      text: "Call + text + email every new lead (triple touch)",
+      pts: 5,
+    },
+    { id: "dl4", text: "Follow up on 3 digital leads past day 2", pts: 3 },
+    { id: "dl5", text: "Review online lead conversion rate this week", pts: 2 },
+    { id: "dl6", text: "Schedule 1 appointment from online source", pts: 5 },
+    { id: "dl7", text: "Update CRM notes on 10 active leads", pts: 3 },
+    { id: "dl8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  speed_to_lead: [
+    { id: "sl1", text: "Set up instant notifications on all devices", pts: 3 },
+    { id: "sl2", text: "Respond to every lead within 5 minutes today", pts: 5 },
+    { id: "sl3", text: "Prepare 3 response templates for quick reply", pts: 3 },
+    { id: "sl4", text: "Triple-confirm every appointment today", pts: 3 },
+    {
+      id: "sl5",
+      text: "Call back every missed inquiry from yesterday",
+      pts: 5,
+    },
+    {
+      id: "sl6",
+      text: "Send a video text within 2 minutes of new lead",
+      pts: 5,
+    },
+    { id: "sl7", text: "Track response times for every lead today", pts: 2 },
+    { id: "sl8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  follow_up: [
+    { id: "fu1", text: "Complete 10-touch sequence on 1 active lead", pts: 5 },
+    { id: "fu2", text: "Send final-touch message to 3 cold leads", pts: 3 },
+    { id: "fu3", text: "Follow up on every lead between touch 2-5", pts: 5 },
+    { id: "fu4", text: "Schedule 5 follow-up calls for tomorrow", pts: 3 },
+    { id: "fu5", text: "Send a check-in text to 5 past prospects", pts: 3 },
+    { id: "fu6", text: "Update CRM with next action for 10 leads", pts: 2 },
+    { id: "fu7", text: "Book 1 appointment from follow-up activity", pts: 5 },
+    { id: "fu8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  relationship_deficit: [
+    { id: "rd1", text: "Make 5 personal phone calls to sphere", pts: 5 },
+    { id: "rd2", text: "Schedule 2 coffee meetings this week", pts: 5 },
+    { id: "rd3", text: "Write 3 handwritten thank-you notes", pts: 3 },
+    {
+      id: "rd4",
+      text: "Send a genuine check-in text to 5 past clients",
+      pts: 3,
+    },
+    { id: "rd5", text: "Attend 1 community or networking event", pts: 5 },
+    { id: "rd6", text: "Call your top referral source today", pts: 3 },
+    { id: "rd7", text: "Add 3 people to your A-list nurture group", pts: 2 },
+    { id: "rd8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  referral_quality: [
+    { id: "rq1", text: "Ask 2 clients for a referral directly", pts: 5 },
+    { id: "rq2", text: "Send thank-you note to last referral source", pts: 3 },
+    { id: "rq3", text: "Provide update to someone who referred you", pts: 3 },
+    { id: "rq4", text: "Call your top lender about mutual referrals", pts: 5 },
+    { id: "rq5", text: "Identify 3 people to add to referral network", pts: 3 },
+    {
+      id: "rq6",
+      text: "Send a value piece to 5 past referral sources",
+      pts: 3,
+    },
+    { id: "rq7", text: "Schedule 1 strategic alliance meeting", pts: 5 },
+    { id: "rq8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  database_size: [
+    { id: "ds1", text: "Add 5 genuine new contacts to database", pts: 5 },
+    { id: "ds2", text: "Make 5 personal phone calls to sphere", pts: 5 },
+    { id: "ds3", text: "Schedule 2 face-to-face coffees this week", pts: 5 },
+    {
+      id: "ds4",
+      text: "Send a check-in message to 10 database contacts",
+      pts: 3,
+    },
+    { id: "ds5", text: "Segment 20 contacts into A/B/C tiers", pts: 3 },
+    {
+      id: "ds6",
+      text: "Call 3 people you haven't spoken to in 6 months",
+      pts: 3,
+    },
+    { id: "ds7", text: "Attend 1 networking event or community group", pts: 5 },
+    { id: "ds8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  sphere_awareness: [
+    {
+      id: "sa1",
+      text: "Post 1 valuable piece of content on social media",
+      pts: 3,
+    },
+    { id: "sa2", text: "Make 5 personal calls to sphere contacts", pts: 5 },
+    { id: "sa3", text: "Send a monthly touchpoint to top 20 contacts", pts: 5 },
+    {
+      id: "sa4",
+      text: "Schedule 1 face-to-face meeting with a sphere member",
+      pts: 5,
+    },
+    { id: "sa5", text: "Write 3 personal notes to past clients", pts: 3 },
+    { id: "sa6", text: "Check in with 5 people from your warm list", pts: 3 },
+    { id: "sa7", text: "Share a market update with 10 contacts", pts: 2 },
+    { id: "sa8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  retention: [
+    { id: "rt1", text: "Call 3 past clients for an annual check-in", pts: 5 },
+    { id: "rt2", text: "Send a home anniversary message to 5 clients", pts: 3 },
+    {
+      id: "rt3",
+      text: "Schedule 1 annual review call with a past client",
+      pts: 5,
+    },
+    {
+      id: "rt4",
+      text: "Send a personalized gift or note to a recent close",
+      pts: 3,
+    },
+    { id: "rt5", text: "Update CRM with life events for 10 clients", pts: 2 },
+    {
+      id: "rt6",
+      text: "Ask 2 past clients for a review or testimonial",
+      pts: 3,
+    },
+    { id: "rt7", text: "Invite 3 past clients to an upcoming event", pts: 3 },
+    { id: "rt8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  consistency_habits: [
+    { id: "ch1", text: "Complete all 5 non-negotiable daily actions", pts: 5 },
+    {
+      id: "ch2",
+      text: "Start prospecting within 30 minutes of waking",
+      pts: 5,
+    },
+    { id: "ch3", text: "Track every activity on your daily scorecard", pts: 3 },
+    { id: "ch4", text: "Do not check email before prospecting block", pts: 3 },
+    { id: "ch5", text: "Review tomorrow's plan before leaving today", pts: 2 },
+    { id: "ch6", text: "Complete one task you've been avoiding", pts: 5 },
+    { id: "ch7", text: "End work at your committed time — no drift", pts: 3 },
+    { id: "ch8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  discipline: [
+    {
+      id: "dp1",
+      text: "Follow your morning routine exactly as designed",
+      pts: 5,
+    },
+    {
+      id: "dp2",
+      text: "Complete prospecting block regardless of mood",
+      pts: 5,
+    },
+    { id: "dp3", text: "Say no to 1 distraction or low-value request", pts: 3 },
+    {
+      id: "dp4",
+      text: "Execute your #1 priority before anything else",
+      pts: 5,
+    },
+    { id: "dp5", text: "Track your time in 30-minute blocks today", pts: 3 },
+    { id: "dp6", text: "Do not browse social media during work hours", pts: 3 },
+    {
+      id: "dp7",
+      text: "Review your vision statement before starting work",
+      pts: 2,
+    },
+    { id: "dp8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  tracking: [
+    {
+      id: "tk1",
+      text: "Record every dial, contact, and appointment today",
+      pts: 5,
+    },
+    {
+      id: "tk2",
+      text: "Calculate your conversion rate at one pipeline stage",
+      pts: 5,
+    },
+    { id: "tk3", text: "Update your weekly scorecard by end of day", pts: 3 },
+    { id: "tk4", text: "Review last week's numbers for 10 minutes", pts: 3 },
+    { id: "tk5", text: "Set a specific numerical target for today", pts: 3 },
+    {
+      id: "tk6",
+      text: "Share your numbers with your accountability partner",
+      pts: 3,
+    },
+    { id: "tk7", text: "Compare this week's activity to last week", pts: 2 },
+    { id: "tk8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  momentum: [
+    {
+      id: "mm1",
+      text: "Execute your daily routine without modification",
+      pts: 5,
+    },
+    {
+      id: "mm2",
+      text: "Make your first call within 15 minutes of starting",
+      pts: 5,
+    },
+    {
+      id: "mm3",
+      text: "Complete 1 task immediately when you think of it",
+      pts: 3,
+    },
+    { id: "mm4", text: "Stack 3 productive activities back to back", pts: 3 },
+    { id: "mm5", text: "Celebrate 1 win from today — write it down", pts: 2 },
+    {
+      id: "mm6",
+      text: "Call someone who energizes you professionally",
+      pts: 3,
+    },
+    { id: "mm7", text: "Set tomorrow's top 3 before you finish today", pts: 3 },
+    { id: "mm8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  mindset_state: [
+    { id: "ms1", text: "Complete 10-minute morning state ritual", pts: 5 },
+    {
+      id: "ms2",
+      text: "Write 3 things you're grateful for before work",
+      pts: 3,
+    },
+    {
+      id: "ms3",
+      text: "Visualize your top 3 outcomes before first call",
+      pts: 3,
+    },
+    {
+      id: "ms4",
+      text: "Take 1 action from a peak state, not obligation",
+      pts: 5,
+    },
+    {
+      id: "ms5",
+      text: "Rewrite your business story in empowering language",
+      pts: 5,
+    },
+    {
+      id: "ms6",
+      text: "Move your body for 20 minutes before prospecting",
+      pts: 3,
+    },
+    {
+      id: "ms7",
+      text: "Disconnect from news/social for first 2 hours",
+      pts: 2,
+    },
+    { id: "ms8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  personal_vision: [
+    {
+      id: "vi1",
+      text: "Spend 15 minutes reviewing your 5-year vision",
+      pts: 5,
+    },
+    { id: "vi2", text: "Write your ideal week on paper", pts: 5 },
+    {
+      id: "vi3",
+      text: "Identify 1 daily action aligned with your vision",
+      pts: 3,
+    },
+    {
+      id: "vi4",
+      text: "Say no to 1 thing that doesn't serve your goal",
+      pts: 3,
+    },
+    { id: "vi5", text: "Share your goal with 1 person today", pts: 3 },
+    { id: "vi6", text: "Block personal time on this week's calendar", pts: 3 },
+    { id: "vi7", text: "Review your income goal and reverse the math", pts: 2 },
+    { id: "vi8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  overwhelm: [
+    {
+      id: "ow1",
+      text: "Identify your single most important task — do it first",
+      pts: 5,
+    },
+    {
+      id: "ow2",
+      text: "Audit today's calendar — cancel 1 low-value meeting",
+      pts: 5,
+    },
+    {
+      id: "ow3",
+      text: "Batch all email into 2 windows (11am and 3pm)",
+      pts: 3,
+    },
+    { id: "ow4", text: "Delegate or delete 1 task from your list", pts: 3 },
+    { id: "ow5", text: "Write tomorrow's top 3 priorities tonight", pts: 3 },
+    {
+      id: "ow6",
+      text: "Say no to 1 request that isn't revenue-generating",
+      pts: 3,
+    },
+    { id: "ow7", text: "Take a 15-minute reset between tasks", pts: 2 },
+    { id: "ow8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  high_stress: [
+    {
+      id: "hs1",
+      text: "Start the day with 10 genuine gratitude items",
+      pts: 5,
+    },
+    { id: "hs2", text: "Approach every call as service, not sales", pts: 5 },
+    {
+      id: "hs3",
+      text: "Take 3 deep breaths before each prospecting call",
+      pts: 2,
+    },
+    { id: "hs4", text: "Complete 20 minutes of movement before work", pts: 3 },
+    { id: "hs5", text: "End work at your committed time today", pts: 3 },
+    {
+      id: "hs6",
+      text: "Have 1 conversation purely to help, not to close",
+      pts: 3,
+    },
+    { id: "hs7", text: "Write down what went well at end of day", pts: 3 },
+    { id: "hs8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  time_management: [
+    {
+      id: "tm1",
+      text: "Block your peak hours (8-11am) for revenue activities",
+      pts: 5,
+    },
+    {
+      id: "tm2",
+      text: "Say no to 1 meeting or task that isn't essential",
+      pts: 5,
+    },
+    {
+      id: "tm3",
+      text: "Batch all admin into one 90-minute afternoon block",
+      pts: 3,
+    },
+    { id: "tm4", text: "Do not check email before 10am", pts: 3 },
+    {
+      id: "tm5",
+      text: "Time-block tomorrow's calendar before leaving today",
+      pts: 3,
+    },
+    {
+      id: "tm6",
+      text: "Complete your top priority in the first 60 minutes",
+      pts: 5,
+    },
+    { id: "tm7", text: "Track how you spend every hour today", pts: 2 },
+    { id: "tm8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  accountability: [
+    {
+      id: "ac1",
+      text: "Share your daily numbers with your partner today",
+      pts: 5,
+    },
+    { id: "ac2", text: "Review your weekly scorecard honestly", pts: 5 },
+    { id: "ac3", text: "Make a public commitment to your 30-day goal", pts: 5 },
+    { id: "ac4", text: "Schedule your Friday accountability check-in", pts: 3 },
+    {
+      id: "ac5",
+      text: "Write down exactly what you will accomplish today",
+      pts: 3,
+    },
+    {
+      id: "ac6",
+      text: "Report your results to your partner before 6pm",
+      pts: 3,
+    },
+    {
+      id: "ac7",
+      text: "Score yourself honestly on yesterday's plan (1-10)",
+      pts: 2,
+    },
+    { id: "ac8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  cold_call_aversion: [
+    { id: "ca1", text: "Make your first 3 calls to warm contacts", pts: 3 },
+    {
+      id: "ca2",
+      text: "Reframe: make 5 service calls, not sales calls",
+      pts: 5,
+    },
+    {
+      id: "ca3",
+      text: "Set a timer for 30 minutes and dial until it rings",
+      pts: 5,
+    },
+    {
+      id: "ca4",
+      text: "Practice your opening script 5 times out loud",
+      pts: 3,
+    },
+    {
+      id: "ca5",
+      text: "Call 1 person who already likes you — build confidence",
+      pts: 3,
+    },
+    { id: "ca6", text: "Make 5 calls before allowing any other task", pts: 5 },
+    { id: "ca7", text: "Celebrate after every completed call session", pts: 2 },
+    { id: "ca8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  systems_design: [
+    { id: "sd1", text: "Create a checklist for 1 repeating process", pts: 5 },
+    { id: "sd2", text: "Automate 1 administrative task today", pts: 5 },
+    { id: "sd3", text: "Map your ideal client journey on paper", pts: 5 },
+    { id: "sd4", text: "Set up 1 automated follow-up sequence", pts: 3 },
+    {
+      id: "sd5",
+      text: "Document your listing appointment prep process",
+      pts: 3,
+    },
+    { id: "sd6", text: "Review and clean up your CRM for 20 minutes", pts: 2 },
+    {
+      id: "sd7",
+      text: "Identify 1 task you do manually that could be templated",
+      pts: 3,
+    },
+    { id: "sd8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  online_conversion: [
+    {
+      id: "oc1",
+      text: "Send a personalized video text to 3 online leads",
+      pts: 5,
+    },
+    {
+      id: "oc2",
+      text: "Respond to every online inquiry within 5 minutes",
+      pts: 5,
+    },
+    {
+      id: "oc3",
+      text: "Position as advisor in 1 digital conversation today",
+      pts: 3,
+    },
+    {
+      id: "oc4",
+      text: "Follow up on 5 online leads past initial contact",
+      pts: 3,
+    },
+    { id: "oc5", text: "Review your online profile — update 1 thing", pts: 2 },
+    {
+      id: "oc6",
+      text: "Schedule 1 virtual consultation from digital lead",
+      pts: 5,
+    },
+    {
+      id: "oc7",
+      text: "Add value to 3 online leads beyond property info",
+      pts: 3,
+    },
+    { id: "oc8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  pipeline_leakage: [
+    {
+      id: "pl1",
+      text: "Audit every deal — define next action and date",
+      pts: 5,
+    },
+    { id: "pl2", text: "Follow up on 3 deals that have gone silent", pts: 5 },
+    {
+      id: "pl3",
+      text: "Advance 1 stalled deal to the next pipeline stage",
+      pts: 5,
+    },
+    {
+      id: "pl4",
+      text: "Review fall-off rate at your weakest pipeline stage",
+      pts: 3,
+    },
+    {
+      id: "pl5",
+      text: "Update CRM status on every active opportunity",
+      pts: 3,
+    },
+    {
+      id: "pl6",
+      text: "Call 2 leads that fell out in the last 30 days",
+      pts: 3,
+    },
+    { id: "pl7", text: "Remove 3 dead leads and focus your pipeline", pts: 2 },
+    { id: "pl8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+  low_conversion: [
+    {
+      id: "lo1",
+      text: "Prepare 10 diagnostic questions for your next meeting",
+      pts: 5,
+    },
+    {
+      id: "lo2",
+      text: "Listen more than you talk in every consultation",
+      pts: 5,
+    },
+    {
+      id: "lo3",
+      text: "Practice your consultation script for 15 minutes",
+      pts: 3,
+    },
+    {
+      id: "lo4",
+      text: "Ask 3 questions before making any recommendation",
+      pts: 3,
+    },
+    {
+      id: "lo5",
+      text: "Follow up with 2 prospects who chose another agent",
+      pts: 5,
+    },
+    { id: "lo6", text: "Review your last 3 lost deals for patterns", pts: 3 },
+    {
+      id: "lo7",
+      text: "Role-play a listing presentation with a colleague",
+      pts: 3,
+    },
+    { id: "lo8", text: "Execute coaching directive before noon", pts: 5 },
+  ],
+};
+
+function getDailyWinOptions(bottleneck) {
+  return DAILY_WIN_OPTIONS[bottleneck] || DAILY_WIN_OPTIONS.pipeline_volume;
+}
 module.exports = {
   generateCoachingOutput: generateCoachingOutput,
   writeCoachingOutput: writeCoachingOutput,
   runCoachingPipeline: runCoachingPipeline,
   constraintLabel: constraintLabel,
+  getDailyWinOptions: getDailyWinOptions,
 };
