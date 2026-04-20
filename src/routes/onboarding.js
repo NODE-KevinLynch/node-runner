@@ -7,6 +7,7 @@
 
 const { v4: uuidv4 } = require("uuid");
 const { runCoachingPipeline } = require("../lib/coachingGenerator");
+const { runCoachingPipeline } = require("../lib/coachingGenerator");
 
 function registerOnboardingRoutes(app, db) {
   // ── GET /api/lookup-agent ─────────────────────────────────────────────
@@ -256,6 +257,14 @@ function registerOnboardingRoutes(app, db) {
              VALUES ($1, $2, $3, $4, NOW())`,
         )
         .run(agent_id, bottleneck, profile, JSON.stringify(signals));
+
+      // 9. Auto-generate coaching content so portal is ready immediately
+      try {
+        await runCoachingPipeline(db, agent_id);
+        console.log("Coaching generated for:", agent_id);
+      } catch (coachErr) {
+        console.error("Coaching generation failed (non-fatal):", coachErr.message);
+      }
 
       // 9. Auto-generate coaching content so portal is ready immediately
       try {
