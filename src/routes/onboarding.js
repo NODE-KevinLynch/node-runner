@@ -44,32 +44,33 @@ function registerOnboardingRoutes(app, db) {
 
   app.post("/api/onboarding", async (req, res) => {
     try {
-      const {
-        first_name,
-        last_name,
-        email,
-        phone,
-        brokerage,
-        region,
-        units_2024,
-        units_2023,
-        units_2022,
-        gci_2024,
-        gci_2023,
-        gci_2022,
-        net_income,
-        has_budget,
-        monthly_spend,
-        lead_volume,
-        lead_source,
-        has_crm,
-        crm_name,
-        primary_challenge,
-        income_goal,
-        transaction_goal,
-        ford,
-      } = req.body;
-
+      const body = req.body;
+      const first_name = body.first_name;
+      const last_name = body.last_name;
+      const email = body.email;
+      const phone = body.phone;
+      const brokerage = body.brokerage;
+      const region = body.region;
+      const y1 = body.year1 || 2024;
+      const y2 = body.year2 || 2023;
+      const y3 = body.year3 || 2022;
+      const units_y1 = body["units_" + y1] || 0;
+      const units_y2 = body["units_" + y2] || 0;
+      const units_y3 = body["units_" + y3] || 0;
+      const gci_y1 = body["gci_" + y1] || 0;
+      const gci_y2 = body["gci_" + y2] || 0;
+      const gci_y3 = body["gci_" + y3] || 0;
+      const net_income = body.net_income;
+      const has_budget = body.has_budget;
+      const monthly_spend = body.monthly_spend;
+      const lead_volume = body.lead_volume || "";
+      const lead_source = body.lead_source || "";
+      const has_crm = body.has_crm || "";
+      const crm_name = body.crm_name || "";
+      const primary_challenge = body.primary_challenge;
+      const income_goal = body.income_goal;
+      const transaction_goal = body.transaction_goal;
+      const ford = body.ford;
       if (!first_name || !last_name || !email) {
         return res
           .status(400)
@@ -128,12 +129,10 @@ function registerOnboardingRoutes(app, db) {
             insertErr.message.includes("unique") ||
             insertErr.message.includes("duplicate")
           ) {
-            return res
-              .status(400)
-              .json({
-                error:
-                  "An account with this email already exists. Please use a different email or contact Kevin for help updating your profile.",
-              });
+            return res.status(400).json({
+              error:
+                "An account with this email already exists. Please use a different email or contact Kevin for help updating your profile.",
+            });
           }
           throw insertErr;
         }
@@ -162,12 +161,12 @@ function registerOnboardingRoutes(app, db) {
         .run(
           uuidv4(),
           agent_id,
-          units_2024 || 0,
+          units_y1 || 0,
           units_2023 || 0,
-          units_2022 || 0,
-          gci_2024 || 0,
-          gci_2023 || 0,
-          gci_2022 || 0,
+          units_y3 || 0,
+          gci_y1 || 0,
+          gci_y2 || 0,
+          gci_y3 || 0,
           net_income || 0,
           has_budget || "",
           monthly_spend || 0,
