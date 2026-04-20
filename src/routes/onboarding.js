@@ -69,12 +69,10 @@ function registerOnboardingRoutes(app, db) {
       const ford = body.ford;
 
       if (!first_name || !last_name || !email) {
-        return res
-          .status(400)
-          .json({
-            error:
-              "Please fill in your first name, last name, and email to continue.",
-          });
+        return res.status(400).json({
+          error:
+            "Please fill in your first name, last name, and email to continue.",
+        });
       }
 
       // 1. Check if agent already exists by email
@@ -128,12 +126,10 @@ function registerOnboardingRoutes(app, db) {
             insertErr.message.includes("unique") ||
             insertErr.message.includes("duplicate")
           ) {
-            return res
-              .status(400)
-              .json({
-                error:
-                  "An account with this email already exists. Please use a different email or contact Kevin for help updating your profile.",
-              });
+            return res.status(400).json({
+              error:
+                "An account with this email already exists. Please use a different email or contact Kevin for help updating your profile.",
+            });
           }
           throw insertErr;
         }
@@ -193,13 +189,12 @@ function registerOnboardingRoutes(app, db) {
             await db
               .prepare(
                 `INSERT INTO ford_goals (
-                 id, agent_id, category, five_year, one_year, one_month, created_at
-               ) VALUES ($1,$2,$3,$4,$5,$6,NOW())
-               ON CONFLICT (agent_id, category) DO UPDATE SET
-                 five_year=$4, one_year=$5, one_month=$6, updated_at=NOW()`,
+                     agent_id, category, five_year, one_year, one_month, created_at
+                   ) VALUES ($1,$2,$3,$4,$5,NOW())
+                   ON CONFLICT (agent_id, category) DO UPDATE SET
+                     five_year=$3, one_year=$4, one_month=$5, updated_at=NOW()`,
               )
               .run(
-                uuidv4(),
                 agent_id,
                 cat,
                 ford[cat].five_year || "",
@@ -256,10 +251,10 @@ function registerOnboardingRoutes(app, db) {
 
       await db
         .prepare(
-          `INSERT INTO diagnoses (id, agent_id, bottleneck, profile, signals, created_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())`,
+          `INSERT INTO diagnoses (agent_id, bottleneck, profile, signals, created_at)
+             VALUES ($1, $2, $3, $4, NOW())`,
         )
-        .run(uuidv4(), agent_id, bottleneck, profile, JSON.stringify(signals));
+        .run(agent_id, bottleneck, profile, JSON.stringify(signals));
 
       res.json({
         status: "onboarded",
@@ -270,12 +265,10 @@ function registerOnboardingRoutes(app, db) {
       });
     } catch (err) {
       console.error("Onboarding error:", err.message);
-      res
-        .status(500)
-        .json({
-          error:
-            "Something went wrong saving your assessment. Please try again or contact Kevin for help.",
-        });
+      res.status(500).json({
+        error:
+          "Something went wrong saving your assessment. Please try again or contact Kevin for help.",
+      });
     }
   });
 
