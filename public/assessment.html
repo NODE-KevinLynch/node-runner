@@ -1,464 +1,1141 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Copilot by Sutton — Your Business & Life Assessment</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --navy: #1B2A4A;
-      --navy-light: #2C3E6B;
-      --slate: #4A5568;
-      --grey-warm: #6B7280;
-      --grey-light: #E5E7EB;
-      --grey-bg: #F7F8FA;
-      --white: #FFFFFF;
-      --accent: #2563EB;
-      --accent-light: #DBEAFE;
-      --success: #059669;
-      --success-light: #D1FAE5;
-      --gold: #D97706;
-      --gold-light: #FEF3C7;
-      --error: #DC2626;
-      --error-light: #FEE2E2;
-      --shadow-sm: 0 1px 3px rgba(27,42,74,0.08);
-      --shadow-md: 0 4px 12px rgba(27,42,74,0.1);
-      --shadow-lg: 0 8px 30px rgba(27,42,74,0.12);
-      --radius: 10px;
-      --font-display: 'Playfair Display', Georgia, serif;
-      --font-body: 'Source Sans 3', 'Segoe UI', sans-serif;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: var(--font-body);
-      background: var(--grey-bg);
-      color: var(--navy);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-    .header {
-      background: var(--navy);
-      padding: 28px 0 24px;
-      text-align: center;
-    }
-    .header h1 {
-      font-family: var(--font-display);
-      color: var(--white);
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    .header p {
-      color: rgba(255,255,255,0.6);
-      font-size: 13px;
-      margin-top: 4px;
-      font-weight: 300;
-    }
-    .progress-container {
-      max-width: 680px;
-      margin: 30px auto 0;
-      padding: 0 24px;
-    }
-    .progress-steps {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .progress-step {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .step-circle {
-      width: 36px; height: 36px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 600;
-      border: 2px solid var(--grey-light);
-      color: var(--grey-warm); background: var(--white);
-      transition: all 0.3s ease;
-    }
-    .step-circle.active { border-color: var(--accent); background: var(--accent); color: var(--white); }
-    .step-circle.done { border-color: var(--success); background: var(--success); color: var(--white); }
-    .step-label { font-size: 13px; font-weight: 500; color: var(--grey-warm); transition: color 0.3s ease; }
-    .step-label.active { color: var(--navy); }
-    .step-label.done { color: var(--success); }
-    .step-connector { width: 60px; height: 2px; background: var(--grey-light); margin: 0 12px; transition: background 0.3s ease; }
-    .step-connector.done { background: var(--success); }
-    .form-container { max-width: 680px; margin: 24px auto 60px; padding: 0 24px; }
-    .step-panel { display: none; animation: fadeUp 0.4s ease; }
-    .step-panel.active { display: block; }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    .section-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow-md); padding: 32px; margin-bottom: 20px; }
-    .section-title { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
-    .section-subtitle { font-size: 14px; color: var(--grey-warm); margin-bottom: 24px; line-height: 1.5; }
-    .intro-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow-md); padding: 36px 32px; margin-bottom: 24px; border-left: 4px solid var(--accent); }
-    .intro-card h2 { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
-    .intro-card p { font-size: 15px; color: var(--slate); line-height: 1.7; margin-bottom: 12px; }
-    .intro-card p:last-of-type { margin-bottom: 0; }
-    .intro-signature { font-size: 14px; color: var(--grey-warm); font-style: italic; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--grey-light); }
-    .field-group { margin-bottom: 20px; }
-    .field-group label { display: block; font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
-    .field-group label .hint { font-weight: 400; color: var(--grey-warm); font-size: 13px; }
-    .field-group input, .field-group select, .field-group textarea {
-      width: 100%; padding: 12px 14px; border: 1.5px solid var(--grey-light); border-radius: 8px;
-      font-size: 15px; font-family: var(--font-body); color: var(--navy); background: var(--white);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease; outline: none;
-    }
-    .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
-    .field-group textarea { min-height: 80px; resize: vertical; }
-    .field-group input::placeholder, .field-group textarea::placeholder { color: #B0B8C4; }
-    .year-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-    .year-col label { font-size: 13px; font-weight: 500; color: var(--slate); margin-bottom: 4px; display: block; }
-    .year-col input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--grey-light); border-radius: 8px; font-size: 14px; font-family: var(--font-body); color: var(--navy); outline: none; transition: border-color 0.2s ease; }
-    .year-col input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
-    .option-group { display: flex; flex-wrap: wrap; gap: 10px; }
-    .option-btn { padding: 10px 18px; border: 1.5px solid var(--grey-light); border-radius: 8px; background: var(--white); font-size: 14px; font-family: var(--font-body); color: var(--slate); cursor: pointer; transition: all 0.2s ease; font-weight: 500; }
-    .option-btn:hover { border-color: var(--accent); background: var(--accent-light); }
-    .option-btn.selected { border-color: var(--accent); background: var(--accent); color: var(--white); }
-    .ford-category { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow-md); padding: 28px 32px; margin-bottom: 16px; }
-    .ford-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-    .ford-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-    .ford-icon.family { background: #EDE9FE; }
-    .ford-icon.occupation { background: var(--accent-light); }
-    .ford-icon.recreation { background: var(--success-light); }
-    .ford-icon.dreams { background: var(--gold-light); }
-    .ford-cat-title { font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--navy); }
-    .ford-cat-desc { font-size: 13px; color: var(--grey-warm); }
-    .ford-targets { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-    .ford-target label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--grey-warm); margin-bottom: 4px; display: block; }
-    .ford-target textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--grey-light); border-radius: 8px; font-size: 13px; font-family: var(--font-body); color: var(--navy); min-height: 70px; resize: vertical; outline: none; transition: border-color 0.2s ease; }
-    .ford-target textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
-    .btn-row { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; }
-    .btn { padding: 14px 32px; border-radius: 8px; font-size: 15px; font-family: var(--font-body); font-weight: 600; cursor: pointer; border: none; transition: all 0.2s ease; }
-    .btn-primary { background: var(--accent); color: var(--white); box-shadow: var(--shadow-sm); }
-    .btn-primary:hover { background: #1D4ED8; box-shadow: var(--shadow-md); }
-    .btn-secondary { background: transparent; color: var(--slate); border: 1.5px solid var(--grey-light); }
-    .btn-secondary:hover { border-color: var(--slate); }
-    .btn-success { background: var(--success); color: var(--white); box-shadow: var(--shadow-sm); font-size: 16px; padding: 16px 40px; }
-    .btn-success:hover { background: #047857; box-shadow: var(--shadow-md); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .confirm-screen { text-align: center; padding: 60px 32px; }
-    .confirm-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--success-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; }
-    .confirm-title { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
-    .confirm-text { font-size: 16px; color: var(--grey-warm); line-height: 1.6; max-width: 460px; margin: 0 auto 32px; }
-    .error-msg { background: var(--error-light); color: var(--error); padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: none; }
-    .error-msg.visible { display: block; }
-    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @media (max-width: 600px) {
-      .year-grid, .ford-targets { grid-template-columns: 1fr; }
-      .option-group { flex-direction: column; }
-      .section-card, .ford-category, .intro-card { padding: 20px; }
-      .progress-steps { flex-wrap: wrap; gap: 8px; justify-content: center; }
-      .step-connector { width: 30px; }
-      .btn-row { flex-direction: column-reverse; gap: 12px; }
-      .btn { width: 100%; text-align: center; }
-    }
-  </style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Copilot by Sutton — Your Business & Life Assessment</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --navy: #1b2a4a;
+        --navy-light: #2c3e6b;
+        --slate: #4a5568;
+        --grey-warm: #6b7280;
+        --grey-light: #e5e7eb;
+        --grey-bg: #f7f8fa;
+        --white: #ffffff;
+        --accent: #2563eb;
+        --accent-light: #dbeafe;
+        --success: #059669;
+        --success-light: #d1fae5;
+        --gold: #d97706;
+        --gold-light: #fef3c7;
+        --error: #dc2626;
+        --error-light: #fee2e2;
+        --shadow-sm: 0 1px 3px rgba(27, 42, 74, 0.08);
+        --shadow-md: 0 4px 12px rgba(27, 42, 74, 0.1);
+        --shadow-lg: 0 8px 30px rgba(27, 42, 74, 0.12);
+        --radius: 10px;
+        --font-display: "Playfair Display", Georgia, serif;
+        --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: var(--font-body);
+        background: var(--grey-bg);
+        color: var(--navy);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+      .header {
+        background: var(--navy);
+        padding: 28px 0 24px;
+        text-align: center;
+      }
+      .header h1 {
+        font-family: var(--font-display);
+        color: var(--white);
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+      .header p {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 13px;
+        margin-top: 4px;
+        font-weight: 300;
+      }
+      .progress-container {
+        max-width: 680px;
+        margin: 30px auto 0;
+        padding: 0 24px;
+      }
+      .progress-steps {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .progress-step {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .step-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 600;
+        border: 2px solid var(--grey-light);
+        color: var(--grey-warm);
+        background: var(--white);
+        transition: all 0.3s ease;
+      }
+      .step-circle.active {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--white);
+      }
+      .step-circle.done {
+        border-color: var(--success);
+        background: var(--success);
+        color: var(--white);
+      }
+      .step-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--grey-warm);
+        transition: color 0.3s ease;
+      }
+      .step-label.active {
+        color: var(--navy);
+      }
+      .step-label.done {
+        color: var(--success);
+      }
+      .step-connector {
+        width: 60px;
+        height: 2px;
+        background: var(--grey-light);
+        margin: 0 12px;
+        transition: background 0.3s ease;
+      }
+      .step-connector.done {
+        background: var(--success);
+      }
+      .form-container {
+        max-width: 680px;
+        margin: 24px auto 60px;
+        padding: 0 24px;
+      }
+      .step-panel {
+        display: none;
+        animation: fadeUp 0.4s ease;
+      }
+      .step-panel.active {
+        display: block;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .section-card {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-md);
+        padding: 32px;
+        margin-bottom: 20px;
+      }
+      .section-title {
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--navy);
+        margin-bottom: 4px;
+      }
+      .section-subtitle {
+        font-size: 14px;
+        color: var(--grey-warm);
+        margin-bottom: 24px;
+        line-height: 1.5;
+      }
+      .intro-card {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-md);
+        padding: 36px 32px;
+        margin-bottom: 24px;
+        border-left: 4px solid var(--accent);
+      }
+      .intro-card h2 {
+        font-family: var(--font-display);
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--navy);
+        margin-bottom: 16px;
+      }
+      .intro-card p {
+        font-size: 15px;
+        color: var(--slate);
+        line-height: 1.7;
+        margin-bottom: 12px;
+      }
+      .intro-card p:last-of-type {
+        margin-bottom: 0;
+      }
+      .intro-signature {
+        font-size: 14px;
+        color: var(--grey-warm);
+        font-style: italic;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--grey-light);
+      }
+      .field-group {
+        margin-bottom: 20px;
+      }
+      .field-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--navy);
+        margin-bottom: 6px;
+      }
+      .field-group label .hint {
+        font-weight: 400;
+        color: var(--grey-warm);
+        font-size: 13px;
+      }
+      .field-group input,
+      .field-group select,
+      .field-group textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid var(--grey-light);
+        border-radius: 8px;
+        font-size: 15px;
+        font-family: var(--font-body);
+        color: var(--navy);
+        background: var(--white);
+        transition:
+          border-color 0.2s ease,
+          box-shadow 0.2s ease;
+        outline: none;
+      }
+      .field-group input:focus,
+      .field-group select:focus,
+      .field-group textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-light);
+      }
+      .field-group textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+      .field-group input::placeholder,
+      .field-group textarea::placeholder {
+        color: #b0b8c4;
+      }
+      .year-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 14px;
+      }
+      .year-col label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--slate);
+        margin-bottom: 4px;
+        display: block;
+      }
+      .year-col input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1.5px solid var(--grey-light);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: var(--font-body);
+        color: var(--navy);
+        outline: none;
+        transition: border-color 0.2s ease;
+      }
+      .year-col input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-light);
+      }
+      .option-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .option-btn {
+        padding: 10px 18px;
+        border: 1.5px solid var(--grey-light);
+        border-radius: 8px;
+        background: var(--white);
+        font-size: 14px;
+        font-family: var(--font-body);
+        color: var(--slate);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+      }
+      .option-btn:hover {
+        border-color: var(--accent);
+        background: var(--accent-light);
+      }
+      .option-btn.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--white);
+      }
+      .ford-category {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-md);
+        padding: 28px 32px;
+        margin-bottom: 16px;
+      }
+      .ford-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .ford-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+      }
+      .ford-icon.family {
+        background: #ede9fe;
+      }
+      .ford-icon.occupation {
+        background: var(--accent-light);
+      }
+      .ford-icon.recreation {
+        background: var(--success-light);
+      }
+      .ford-icon.dreams {
+        background: var(--gold-light);
+      }
+      .ford-cat-title {
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .ford-cat-desc {
+        font-size: 13px;
+        color: var(--grey-warm);
+      }
+      .ford-targets {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 14px;
+      }
+      .ford-target label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--grey-warm);
+        margin-bottom: 4px;
+        display: block;
+      }
+      .ford-target textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1.5px solid var(--grey-light);
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: var(--font-body);
+        color: var(--navy);
+        min-height: 70px;
+        resize: vertical;
+        outline: none;
+        transition: border-color 0.2s ease;
+      }
+      .ford-target textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-light);
+      }
+      .btn-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 24px;
+      }
+      .btn {
+        padding: 14px 32px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-family: var(--font-body);
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: var(--white);
+        box-shadow: var(--shadow-sm);
+      }
+      .btn-primary:hover {
+        background: #1d4ed8;
+        box-shadow: var(--shadow-md);
+      }
+      .btn-secondary {
+        background: transparent;
+        color: var(--slate);
+        border: 1.5px solid var(--grey-light);
+      }
+      .btn-secondary:hover {
+        border-color: var(--slate);
+      }
+      .btn-success {
+        background: var(--success);
+        color: var(--white);
+        box-shadow: var(--shadow-sm);
+        font-size: 16px;
+        padding: 16px 40px;
+      }
+      .btn-success:hover {
+        background: #047857;
+        box-shadow: var(--shadow-md);
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .confirm-screen {
+        text-align: center;
+        padding: 60px 32px;
+      }
+      .confirm-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--success-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        font-size: 36px;
+      }
+      .confirm-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--navy);
+        margin-bottom: 12px;
+      }
+      .confirm-text {
+        font-size: 16px;
+        color: var(--grey-warm);
+        line-height: 1.6;
+        max-width: 460px;
+        margin: 0 auto 32px;
+      }
+      .error-msg {
+        background: var(--error-light);
+        color: var(--error);
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 16px;
+        display: none;
+      }
+      .error-msg.visible {
+        display: block;
+      }
+      .spinner {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (max-width: 600px) {
+        .year-grid,
+        .ford-targets {
+          grid-template-columns: 1fr;
+        }
+        .option-group {
+          flex-direction: column;
+        }
+        .section-card,
+        .ford-category,
+        .intro-card {
+          padding: 20px;
+        }
+        .progress-steps {
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+        }
+        .step-connector {
+          width: 30px;
+        }
+        .btn-row {
+          flex-direction: column-reverse;
+          gap: 12px;
+        }
+        .btn {
+          width: 100%;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Copilot by Sutton</h1>
+      <p>Your Business & Life Performance System</p>
+    </div>
 
-  <div class="header">
-    <h1>Copilot by Sutton</h1>
-    <p>Your Business & Life Performance System</p>
-  </div>
-
-  <div class="progress-container">
-    <div class="progress-steps">
-      <div class="progress-step">
-        <div class="step-circle active" id="circle-1">1</div>
-        <span class="step-label active" id="label-1">Your Info</span>
-      </div>
-      <div class="step-connector" id="conn-1"></div>
-      <div class="progress-step">
-        <div class="step-circle" id="circle-2">2</div>
-        <span class="step-label" id="label-2">Business</span>
-      </div>
-      <div class="step-connector" id="conn-2"></div>
-      <div class="progress-step">
-        <div class="step-circle" id="circle-3">3</div>
-        <span class="step-label" id="label-3">Great Life</span>
-      </div>
-      <div class="step-connector" id="conn-3"></div>
-      <div class="progress-step">
-        <div class="step-circle" id="circle-4">4</div>
-        <span class="step-label" id="label-4">Done</span>
+    <div class="progress-container">
+      <div class="progress-steps">
+        <div class="progress-step">
+          <div class="step-circle active" id="circle-1">1</div>
+          <span class="step-label active" id="label-1">Your Info</span>
+        </div>
+        <div class="step-connector" id="conn-1"></div>
+        <div class="progress-step">
+          <div class="step-circle" id="circle-2">2</div>
+          <span class="step-label" id="label-2">Business</span>
+        </div>
+        <div class="step-connector" id="conn-2"></div>
+        <div class="progress-step">
+          <div class="step-circle" id="circle-3">3</div>
+          <span class="step-label" id="label-3">Great Life</span>
+        </div>
+        <div class="step-connector" id="conn-3"></div>
+        <div class="progress-step">
+          <div class="step-circle" id="circle-4">4</div>
+          <span class="step-label" id="label-4">Done</span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="form-container">
-    <div id="error-box" class="error-msg"></div>
+    <div class="form-container">
+      <div id="error-box" class="error-msg"></div>
 
-    <!-- STEP 1 -->
-    <div class="step-panel active" id="step-1">
-      <div class="intro-card">
-        <h2>This Is Where It Starts</h2>
-        <p>You didn't get into real estate to be average. You got in because you saw a future worth building — for your clients, your family, and yourself. But somewhere between the listings, the leads, and the late nights, it's easy to lose sight of the bigger picture.</p>
-        <p>Copilot was built for agents who are ready to stop guessing and start operating with a plan. In the next few minutes, you'll map out where your business stands today, where you want it to go, and what kind of life you're building along the way. No fluff. No judgment. Just clarity.</p>
-        <p>Your answers power a personalized coaching roadmap — real strategy, tailored to your numbers, your goals, and your life. This is the starting line.</p>
-        <div class="intro-signature">— Kevin Lynch, Performance Architect · National Coach, Sutton Group Canada</div>
-      </div>
-
-      <div class="section-card">
-        <div class="section-title">About You</div>
-        <div class="section-subtitle">Let's get the basics locked in. Takes about 8 minutes total.</div>
-        <div class="field-group"><label>First Name</label><input type="text" id="first_name" placeholder="e.g. Marcus"></div>
-        <div class="field-group"><label>Last Name</label><input type="text" id="last_name" placeholder="e.g. Jordan"></div>
-        <div class="field-group"><label>Email</label><input type="email" id="email" placeholder="you@example.com"></div>
-        <div class="field-group"><label>Phone <span class="hint">(optional)</span></label><input type="tel" id="phone" placeholder="(555) 123-4567"></div>
-        <div class="field-group"><label>Brokerage</label><input type="text" id="brokerage" placeholder="e.g. Sutton Group"></div>
-        <div class="field-group"><label>Region / Market Area</label><input type="text" id="region" placeholder="e.g. Greater Vancouver"></div>
-      </div>
-      <div class="btn-row"><div></div><button class="btn btn-primary" onclick="goToStep(2)">Next — Your Business →</button></div>
-    </div>
-
-    <!-- STEP 2 -->
-    <div class="step-panel" id="step-2">
-      <div class="section-card">
-        <div class="section-title">Business Performance</div>
-        <div class="section-subtitle">Your numbers tell a story. No judgment — just clarity. This powers your diagnosis and coaching plan.</div>
-
-        <div class="field-group">
-          <label>Units Closed — Last 3 Years</label>
-          <div class="year-grid" id="units-grid"></div>
-        </div>
-        <div class="field-group">
-          <label>Gross Commission Income (GCI) — Last 3 Years</label>
-          <div class="year-grid" id="gci-grid"></div>
-        </div>
-        <div class="field-group">
-          <label>Annual Net Income Before Taxes <span class="hint">(most recent year)</span></label>
-          <input type="text" id="net_income" placeholder="$0">
-        </div>
-        <div class="field-group">
-          <label>Do you follow a monthly budget for your business?</label>
-          <div class="option-group" data-field="has_budget">
-            <div class="option-btn" data-value="yes">Yes</div>
-            <div class="option-btn" data-value="no">No</div>
-            <div class="option-btn" data-value="sometimes">Sometimes</div>
+      <!-- STEP 1 -->
+      <div class="step-panel active" id="step-1">
+        <div class="intro-card">
+          <h2>This Is Where It Starts</h2>
+          <p>
+            You didn't get into real estate to be average. You got in because
+            you saw a future worth building — for your clients, your family, and
+            yourself. But somewhere between the listings, the leads, and the
+            late nights, it's easy to lose sight of the bigger picture.
+          </p>
+          <p>
+            Copilot was built for agents who are ready to stop guessing and
+            start operating with a plan. In the next few minutes, you'll map out
+            where your business stands today, where you want it to go, and what
+            kind of life you're building along the way. No fluff. No judgment.
+            Just clarity.
+          </p>
+          <p>
+            Your answers power a personalized coaching roadmap — real strategy,
+            tailored to your numbers, your goals, and your life. This is the
+            starting line.
+          </p>
+          <div class="intro-signature">
+            — Kevin Lynch, Performance Architect · National Coach, Sutton Group
+            Canada
           </div>
         </div>
-        <div class="field-group">
-          <label>Average Monthly Business Spend <span class="hint">(marketing, tools, gas, etc.)</span></label>
-          <input type="text" id="monthly_spend" placeholder="$0">
-        </div>
-        <div class="field-group">
-          <label>What is your #1 business challenge right now?</label>
-          <div class="option-group" data-field="primary_challenge">
-            <div class="option-btn" data-value="lead_gen">Getting more leads</div>
-            <div class="option-btn" data-value="conversion">Converting leads to clients</div>
-            <div class="option-btn" data-value="follow_up">Consistent follow-up</div>
-            <div class="option-btn" data-value="time_mgmt">Time management</div>
-            <div class="option-btn" data-value="sphere">Growing my sphere</div>
-            <div class="option-btn" data-value="confidence">Confidence / Mindset</div>
+
+        <div class="section-card">
+          <div class="section-title">About You</div>
+          <div class="section-subtitle">
+            Let's get the basics locked in. Takes about 8 minutes total.
+          </div>
+          <div class="field-group">
+            <label>First Name</label
+            ><input type="text" id="first_name" placeholder="e.g. Marcus" />
+          </div>
+          <div class="field-group">
+            <label>Last Name</label
+            ><input type="text" id="last_name" placeholder="e.g. Jordan" />
+          </div>
+          <div class="field-group">
+            <label
+              >Email
+              <span class="hint"
+                >— use the same email you used in your Agent Assessment</span
+              ></label
+            ><input
+              type="email"
+              id="email"
+              placeholder="you@example.com"
+              onblur="lookupAgent()"
+            />
+            <div
+              id="lookup-msg"
+              style="
+                display: none;
+                margin-top: 6px;
+                padding: 8px 12px;
+                background: #dbeafe;
+                color: #1b2a4a;
+                border-radius: 6px;
+                font-size: 13px;
+              "
+            ></div>
+          </div>
+          <div class="field-group">
+            <label>Phone <span class="hint">(optional)</span></label
+            ><input type="tel" id="phone" placeholder="(555) 123-4567" />
+          </div>
+          <div class="field-group">
+            <label>Brokerage</label
+            ><input
+              type="text"
+              id="brokerage"
+              placeholder="e.g. Sutton Group"
+            />
+          </div>
+          <div class="field-group">
+            <label>Region / Market Area</label
+            ><input
+              type="text"
+              id="region"
+              placeholder="e.g. Greater Vancouver"
+            />
           </div>
         </div>
-        <div class="field-group">
-          <label>Income Goal — Next 12 Months</label>
-          <input type="text" id="income_goal" placeholder="$0">
-        </div>
-        <div class="field-group">
-          <label>Transaction Goal — Next 12 Months</label>
-          <input type="number" id="transaction_goal" placeholder="0">
+        <div class="btn-row">
+          <div></div>
+          <button class="btn btn-primary" onclick="goToStep(2)">
+            Next — Your Business →
+          </button>
         </div>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
-        <button class="btn btn-primary" onclick="goToStep(3)">Next — Your Great Life →</button>
+
+      <!-- STEP 2 -->
+      <div class="step-panel" id="step-2">
+        <div class="section-card">
+          <div class="section-title">Business Performance</div>
+          <div class="section-subtitle">
+            Your numbers tell a story. No judgment — just clarity. This powers
+            your diagnosis and coaching plan.
+          </div>
+
+          <div class="field-group">
+            <label>Units Closed — Last 3 Years</label>
+            <div class="year-grid" id="units-grid"></div>
+          </div>
+          <div class="field-group">
+            <label>Gross Commission Income (GCI) — Last 3 Years</label>
+            <div class="year-grid" id="gci-grid"></div>
+          </div>
+          <div class="field-group">
+            <label
+              >Annual Net Income Before Taxes
+              <span class="hint">(most recent year)</span></label
+            >
+            <input type="text" id="net_income" placeholder="$0" />
+          </div>
+          <div class="field-group">
+            <label>Do you follow a monthly budget for your business?</label>
+            <div class="option-group" data-field="has_budget">
+              <div class="option-btn" data-value="yes">Yes</div>
+              <div class="option-btn" data-value="no">No</div>
+              <div class="option-btn" data-value="sometimes">Sometimes</div>
+            </div>
+          </div>
+          <div class="field-group">
+            <label
+              >Average Monthly Business Spend
+              <span class="hint">(marketing, tools, gas, etc.)</span></label
+            >
+            <input type="text" id="monthly_spend" placeholder="$0" />
+          </div>
+          <div class="field-group">
+            <label>What is your #1 business challenge right now?</label>
+            <div class="option-group" data-field="primary_challenge">
+              <div class="option-btn" data-value="lead_gen">
+                Getting more leads
+              </div>
+              <div class="option-btn" data-value="conversion">
+                Converting leads to clients
+              </div>
+              <div class="option-btn" data-value="follow_up">
+                Consistent follow-up
+              </div>
+              <div class="option-btn" data-value="time_mgmt">
+                Time management
+              </div>
+              <div class="option-btn" data-value="sphere">
+                Growing my sphere
+              </div>
+              <div class="option-btn" data-value="confidence">
+                Confidence / Mindset
+              </div>
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Income Goal — Next 12 Months</label>
+            <input type="text" id="income_goal" placeholder="$0" />
+          </div>
+          <div class="field-group">
+            <label>Transaction Goal — Next 12 Months</label>
+            <input type="number" id="transaction_goal" placeholder="0" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="goToStep(1)">
+            ← Back
+          </button>
+          <button class="btn btn-primary" onclick="goToStep(3)">
+            Next — Your Great Life →
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step-panel" id="step-3">
+        <div class="section-card">
+          <div class="section-title">Your Great Life — Dream Board</div>
+          <div class="section-subtitle">
+            Business is a vehicle, not a destination. What does the life you're
+            building actually look like? Set targets across four areas — these
+            can change monthly.
+          </div>
+        </div>
+        <div class="ford-category">
+          <div class="ford-header">
+            <div class="ford-icon family">👨‍👩‍👧‍👦</div>
+            <div>
+              <div class="ford-cat-title">Family</div>
+              <div class="ford-cat-desc">
+                Relationships, health, presence, connection
+              </div>
+            </div>
+          </div>
+          <div class="ford-targets">
+            <div class="ford-target">
+              <label>5-Year Vision</label
+              ><textarea
+                id="family_5yr"
+                placeholder="Where do you want your family life to be in 5 years?"
+              ></textarea>
+            </div>
+            <div class="ford-target">
+              <label>1-Year Target</label
+              ><textarea
+                id="family_1yr"
+                placeholder="What do you want to accomplish this year?"
+              ></textarea>
+            </div>
+            <div class="ford-target">
+              <label>This Month</label
+              ><textarea
+                id="family_1mo"
+                placeholder="One thing you'll do this month"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="ford-category">
+          <div class="ford-header">
+            <div class="ford-icon occupation">💼</div>
+            <div>
+              <div class="ford-cat-title">Occupation</div>
+              <div class="ford-cat-desc">
+                Career milestones, income targets, professional growth
+              </div>
+            </div>
+          </div>
+          <div class="ford-targets">
+            <div class="ford-target">
+              <label>5-Year Vision</label
+              ><textarea
+                id="occupation_5yr"
+                placeholder="Where is your career in 5 years?"
+              ></textarea>
+            </div>
+            <div class="ford-target">
+              <label>1-Year Target</label
+              ><textarea
+                id="occupation_1yr"
+                placeholder="What will you achieve this year?"
+              ></textarea>
+            </div>
+            <div class="ford-target">
+              <label>This Month</label
+              ><textarea
+                id="occupation_1mo"
+                placeholder="One professional action this month"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="ford-category">
+          <div class="ford-header">
+            <div class="ford-icon recreation">🏔️</div>
+            <div>
+              <div class="ford-cat-title">Recreation</div>
+              <div class="ford-cat-desc">
+                Fun, hobbies, travel, experiences, rest
+              </div>
+            </div>
+          </div>
+          <div class="ford-targets">
+            <div class="ford-target">
+              <label>5-Year Vision</label
+              ><textarea
+                id="recreation_5yr"
+                placeholder="What does play and adventure look like?"
+              ></textarea>
+            </div>
+            <div class="ford-target">
+              <label>1-Year Target</label
+              ><textarea
+                id="recreation_1yr"
+                placeholder="What experience will you have this year?"
+              ></textarea>
+            </div>
+            <div class="ford-target">
+              <label>This Month</label
+              ><textarea
+                id="recreation_1mo"
+                placeholder="One fun thing this month"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="ford-category">
+          <div class="ford-header">
+            <div class="ford-icon dreams">✨</div>
+            <div>
+              <div class="ford-cat-title">Dreams</div>
+              <div class="ford-cat-desc">
+                Legacy, giving back, the big audacious goals
+              </div>
+            </div>
+          </div>
+          <div class="ford-targets">
+            <div class="ford-target">
+              <label>5-Year Vision</label
+              ><textarea
+                id="dreams_5yr"
+                placeholder="What's the dream you haven't told anyone yet?"
+              ></textarea>
+            </div>
+            <div class="ford-target">
+              <label>1-Year Target</label
+              ><textarea
+                id="dreams_1yr"
+                placeholder="What step toward that dream this year?"
+              ></textarea>
+            </div>
+            <div class="ford-target">
+              <label>This Month</label
+              ><textarea
+                id="dreams_1mo"
+                placeholder="One step this month"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="goToStep(2)">
+            ← Back
+          </button>
+          <button
+            class="btn btn-success"
+            id="submit-btn"
+            onclick="submitAssessment()"
+          >
+            Submit My Assessment ✓
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="step-panel" id="step-4">
+        <div class="section-card confirm-screen">
+          <div class="confirm-icon">✓</div>
+          <div class="confirm-title">You're In.</div>
+          <div class="confirm-text">
+            Your assessment is locked in. Kevin is reviewing your numbers and
+            building your personalized coaching roadmap. You'll receive your
+            first coaching insight within 24 hours.
+          </div>
+          <a id="portal-link" href="#" style="display: none"
+            ><button class="btn btn-primary">
+              View My Coaching Portal →
+            </button></a
+          >
+        </div>
       </div>
     </div>
 
-    <!-- STEP 3 -->
-    <div class="step-panel" id="step-3">
-      <div class="section-card">
-        <div class="section-title">Your Great Life — Dream Board</div>
-        <div class="section-subtitle">Business is a vehicle, not a destination. What does the life you're building actually look like? Set targets across four areas — these can change monthly.</div>
-      </div>
-      <div class="ford-category">
-        <div class="ford-header"><div class="ford-icon family">👨‍👩‍👧‍👦</div><div><div class="ford-cat-title">Family</div><div class="ford-cat-desc">Relationships, health, presence, connection</div></div></div>
-        <div class="ford-targets">
-          <div class="ford-target"><label>5-Year Vision</label><textarea id="family_5yr" placeholder="Where do you want your family life to be in 5 years?"></textarea></div>
-          <div class="ford-target"><label>1-Year Target</label><textarea id="family_1yr" placeholder="What do you want to accomplish this year?"></textarea></div>
-          <div class="ford-target"><label>This Month</label><textarea id="family_1mo" placeholder="One thing you'll do this month"></textarea></div>
-        </div>
-      </div>
-      <div class="ford-category">
-        <div class="ford-header"><div class="ford-icon occupation">💼</div><div><div class="ford-cat-title">Occupation</div><div class="ford-cat-desc">Career milestones, income targets, professional growth</div></div></div>
-        <div class="ford-targets">
-          <div class="ford-target"><label>5-Year Vision</label><textarea id="occupation_5yr" placeholder="Where is your career in 5 years?"></textarea></div>
-          <div class="ford-target"><label>1-Year Target</label><textarea id="occupation_1yr" placeholder="What will you achieve this year?"></textarea></div>
-          <div class="ford-target"><label>This Month</label><textarea id="occupation_1mo" placeholder="One professional action this month"></textarea></div>
-        </div>
-      </div>
-      <div class="ford-category">
-        <div class="ford-header"><div class="ford-icon recreation">🏔️</div><div><div class="ford-cat-title">Recreation</div><div class="ford-cat-desc">Fun, hobbies, travel, experiences, rest</div></div></div>
-        <div class="ford-targets">
-          <div class="ford-target"><label>5-Year Vision</label><textarea id="recreation_5yr" placeholder="What does play and adventure look like?"></textarea></div>
-          <div class="ford-target"><label>1-Year Target</label><textarea id="recreation_1yr" placeholder="What experience will you have this year?"></textarea></div>
-          <div class="ford-target"><label>This Month</label><textarea id="recreation_1mo" placeholder="One fun thing this month"></textarea></div>
-        </div>
-      </div>
-      <div class="ford-category">
-        <div class="ford-header"><div class="ford-icon dreams">✨</div><div><div class="ford-cat-title">Dreams</div><div class="ford-cat-desc">Legacy, giving back, the big audacious goals</div></div></div>
-        <div class="ford-targets">
-          <div class="ford-target"><label>5-Year Vision</label><textarea id="dreams_5yr" placeholder="What's the dream you haven't told anyone yet?"></textarea></div>
-          <div class="ford-target"><label>1-Year Target</label><textarea id="dreams_1yr" placeholder="What step toward that dream this year?"></textarea></div>
-          <div class="ford-target"><label>This Month</label><textarea id="dreams_1mo" placeholder="One step this month"></textarea></div>
-        </div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-secondary" onclick="goToStep(2)">← Back</button>
-        <button class="btn btn-success" id="submit-btn" onclick="submitAssessment()">Submit My Assessment ✓</button>
-      </div>
-    </div>
+    <script>
+      const NOW = new Date();
+      const YEAR1 = NOW.getFullYear() - 1;
+      const YEAR2 = NOW.getFullYear() - 2;
+      const YEAR3 = NOW.getFullYear() - 3;
 
-    <!-- STEP 4 -->
-    <div class="step-panel" id="step-4">
-      <div class="section-card confirm-screen">
-        <div class="confirm-icon">✓</div>
-        <div class="confirm-title">You're In.</div>
-        <div class="confirm-text">Your assessment is locked in. Kevin is reviewing your numbers and building your personalized coaching roadmap. You'll receive your first coaching insight within 24 hours.</div>
-        <a id="portal-link" href="#" style="display:none"><button class="btn btn-primary">View My Coaching Portal →</button></a>
-      </div>
-    </div>
-  </div>
+      function buildYearGrid(containerId, prefix, type) {
+        const grid = document.getElementById(containerId);
+        [YEAR1, YEAR2, YEAR3].forEach((yr) => {
+          const col = document.createElement("div");
+          col.className = "year-col";
+          const label = document.createElement("label");
+          label.textContent = yr;
+          const input = document.createElement("input");
+          input.type = type === "currency" ? "text" : "number";
+          input.id = prefix + "_" + yr;
+          input.placeholder = type === "currency" ? "$0" : "0";
+          col.appendChild(label);
+          col.appendChild(input);
+          grid.appendChild(col);
+        });
+      }
+      buildYearGrid("units-grid", "units", "number");
+      buildYearGrid("gci-grid", "gci", "currency");
 
-  <script>
-    const NOW = new Date();
-    const YEAR1 = NOW.getFullYear() - 1;
-    const YEAR2 = NOW.getFullYear() - 2;
-    const YEAR3 = NOW.getFullYear() - 3;
+      let currentStep = 1;
+      const optionSelections = {};
 
-    function buildYearGrid(containerId, prefix, type) {
-      const grid = document.getElementById(containerId);
-      [YEAR1, YEAR2, YEAR3].forEach(yr => {
-        const col = document.createElement('div');
-        col.className = 'year-col';
-        const label = document.createElement('label');
-        label.textContent = yr;
-        const input = document.createElement('input');
-        input.type = type === 'currency' ? 'text' : 'number';
-        input.id = prefix + '_' + yr;
-        input.placeholder = type === 'currency' ? '$0' : '0';
-        col.appendChild(label);
-        col.appendChild(input);
-        grid.appendChild(col);
-      });
-    }
-    buildYearGrid('units-grid', 'units', 'number');
-    buildYearGrid('gci-grid', 'gci', 'currency');
-
-    let currentStep = 1;
-    const optionSelections = {};
-
-    document.querySelectorAll('.option-group').forEach(group => {
-      const field = group.dataset.field;
-      group.querySelectorAll('.option-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          group.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-          btn.classList.add('selected');
-          optionSelections[field] = btn.dataset.value;
+      document.querySelectorAll(".option-group").forEach((group) => {
+        const field = group.dataset.field;
+        group.querySelectorAll(".option-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            group
+              .querySelectorAll(".option-btn")
+              .forEach((b) => b.classList.remove("selected"));
+            btn.classList.add("selected");
+            optionSelections[field] = btn.dataset.value;
+          });
         });
       });
-    });
 
-    function goToStep(step) {
-      if (step > currentStep) { if (!validateStep(currentStep)) return; }
-      document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
-      document.getElementById('step-' + step).classList.add('active');
-      for (let i = 1; i <= 4; i++) {
-        const circle = document.getElementById('circle-' + i);
-        const label = document.getElementById('label-' + i);
-        circle.classList.remove('active', 'done');
-        label.classList.remove('active', 'done');
-        if (i < step) { circle.classList.add('done'); circle.innerHTML = '✓'; label.classList.add('done'); }
-        else if (i === step) { circle.classList.add('active'); circle.innerHTML = i; label.classList.add('active'); }
-        else { circle.innerHTML = i; }
-      }
-      for (let i = 1; i <= 3; i++) { document.getElementById('conn-' + i).classList.toggle('done', i < step); }
-      currentStep = step;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function validateStep(step) {
-      hideError();
-      if (step === 1) {
-        const first = document.getElementById('first_name').value.trim();
-        const last = document.getElementById('last_name').value.trim();
-        const email = document.getElementById('email').value.trim();
-        if (!first || !last) { showError('Please enter your first and last name.'); return false; }
-        if (!email || !email.includes('@')) { showError('Please enter a valid email address.'); return false; }
-        return true;
-      }
-      if (step === 2) {
-        if (!document.getElementById('income_goal').value.trim()) { showError('Please enter your 12-month income goal.'); return false; }
-        return true;
-      }
-      return true;
-    }
-
-    function showError(msg) { const box = document.getElementById('error-box'); box.textContent = msg; box.classList.add('visible'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-    function hideError() { document.getElementById('error-box').classList.remove('visible'); }
-
-    function setupCurrencyFields() {
-      ['net_income','monthly_spend','income_goal','gci_'+YEAR1,'gci_'+YEAR2,'gci_'+YEAR3].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('blur', () => { let v = el.value.replace(/[^0-9.]/g,''); if (v) el.value = '$' + Number(v).toLocaleString(); });
-      });
-    }
-    setupCurrencyFields();
-
-    function parseCurrency(val) { return val ? Number(String(val).replace(/[^0-9.]/g,'')) || 0 : 0; }
-    function getVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
-
-    async function submitAssessment() {
-      const btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Submitting...';
-      hideError();
-
-      const payload = {
-        first_name: getVal('first_name').trim(),
-        last_name: getVal('last_name').trim(),
-        email: getVal('email').trim(),
-        phone: getVal('phone').trim(),
-        brokerage: getVal('brokerage').trim(),
-        region: getVal('region').trim(),
-        ['units_' + YEAR1]: Number(getVal('units_' + YEAR1)) || 0,
-        ['units_' + YEAR2]: Number(getVal('units_' + YEAR2)) || 0,
-        ['units_' + YEAR3]: Number(getVal('units_' + YEAR3)) || 0,
-        ['gci_' + YEAR1]: parseCurrency(getVal('gci_' + YEAR1)),
-        ['gci_' + YEAR2]: parseCurrency(getVal('gci_' + YEAR2)),
-        ['gci_' + YEAR3]: parseCurrency(getVal('gci_' + YEAR3)),
-        year1: YEAR1, year2: YEAR2, year3: YEAR3,
-        net_income: parseCurrency(getVal('net_income')),
-        has_budget: optionSelections.has_budget || '',
-        monthly_spend: parseCurrency(getVal('monthly_spend')),
-        primary_challenge: optionSelections.primary_challenge || '',
-        income_goal: parseCurrency(getVal('income_goal')),
-        transaction_goal: Number(getVal('transaction_goal')) || 0,
-        ford: {
-          family:     { five_year: getVal('family_5yr').trim(),     one_year: getVal('family_1yr').trim(),     one_month: getVal('family_1mo').trim() },
-          occupation: { five_year: getVal('occupation_5yr').trim(), one_year: getVal('occupation_1yr').trim(), one_month: getVal('occupation_1mo').trim() },
-          recreation: { five_year: getVal('recreation_5yr').trim(), one_year: getVal('recreation_1yr').trim(), one_month: getVal('recreation_1mo').trim() },
-          dreams:     { five_year: getVal('dreams_5yr').trim(),     one_year: getVal('dreams_1yr').trim(),     one_month: getVal('dreams_1mo').trim() }
+      function goToStep(step) {
+        if (step > currentStep) {
+          if (!validateStep(currentStep)) return;
         }
-      };
-
-      try {
-        const resp = await fetch('/api/onboarding', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || 'Submission failed');
-        if (data.agent_id) { const link = document.getElementById('portal-link'); link.href = '/portal/' + data.agent_id; link.style.display = 'inline-block'; }
-        goToStep(4);
-      } catch (err) {
-        showError('Something went wrong: ' + err.message);
-        btn.disabled = false;
-        btn.innerHTML = 'Submit My Assessment ✓';
+        document
+          .querySelectorAll(".step-panel")
+          .forEach((p) => p.classList.remove("active"));
+        document.getElementById("step-" + step).classList.add("active");
+        for (let i = 1; i <= 4; i++) {
+          const circle = document.getElementById("circle-" + i);
+          const label = document.getElementById("label-" + i);
+          circle.classList.remove("active", "done");
+          label.classList.remove("active", "done");
+          if (i < step) {
+            circle.classList.add("done");
+            circle.innerHTML = "✓";
+            label.classList.add("done");
+          } else if (i === step) {
+            circle.classList.add("active");
+            circle.innerHTML = i;
+            label.classList.add("active");
+          } else {
+            circle.innerHTML = i;
+          }
+        }
+        for (let i = 1; i <= 3; i++) {
+          document
+            .getElementById("conn-" + i)
+            .classList.toggle("done", i < step);
+        }
+        currentStep = step;
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
-    }
-  </script>
-</body>
+      async function lookupAgent() {
+        const email = document.getElementById("email").value.trim();
+        const msg = document.getElementById("lookup-msg");
+        if (!email || !email.includes("@")) {
+          msg.style.display = "none";
+          return;
+        }
+        try {
+          const resp = await fetch(
+            "/api/lookup-agent?email=" + encodeURIComponent(email),
+          );
+          const data = await resp.json();
+          if (data.found && data.agent) {
+            const a = data.agent;
+            if (a.name) document.getElementById("first_name").value = a.name;
+            if (a.last_name)
+              document.getElementById("last_name").value = a.last_name;
+            if (a.phone) document.getElementById("phone").value = a.phone;
+            if (a.brokerage)
+              document.getElementById("brokerage").value = a.brokerage;
+            if (a.region) document.getElementById("region").value = a.region;
+            msg.textContent =
+              "✓ Welcome back! We found your profile and filled in your details.";
+            msg.style.display = "block";
+          } else {
+            msg.style.display = "none";
+          }
+        } catch (e) {
+          msg.style.display = "none";
+        }
+      }
+
+      function validateStep(step) {
+        hideError();
+        if (step === 1) {
+          const first = document.getElementById("first_name").value.trim();
+          const last = document.getElementById("last_name").value.trim();
+          const email = document.getElementById("email").value.trim();
+          if (!first || !last) {
+            showError("Please enter your first and last name.");
+            return false;
+          }
+          if (!email || !email.includes("@")) {
+            showError("Please enter a valid email address.");
+            return false;
+          }
+          return true;
+        }
+        if (step === 2) {
+          if (!document.getElementById("income_goal").value.trim()) {
+            showError("Please enter your 12-month income goal.");
+            return false;
+          }
+          return true;
+        }
+        return true;
+      }
+
+      function showError(msg) {
+        const box = document.getElementById("error-box");
+        box.textContent = msg;
+        box.classList.add("visible");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      function hideError() {
+        document.getElementById("error-box").classList.remove("visible");
+      }
+
+      function setupCurrencyFields() {
+        [
+          "net_income",
+          "monthly_spend",
+          "income_goal",
+          "gci_" + YEAR1,
+          "gci_" + YEAR2,
+          "gci_" + YEAR3,
+        ].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el)
+            el.addEventListener("blur", () => {
+              let v = el.value.replace(/[^0-9.]/g, "");
+              if (v) el.value = "$" + Number(v).toLocaleString();
+            });
+        });
+      }
+      setupCurrencyFields();
+
+      function parseCurrency(val) {
+        return val ? Number(String(val).replace(/[^0-9.]/g, "")) || 0 : 0;
+      }
+      function getVal(id) {
+        const el = document.getElementById(id);
+        return el ? el.value : "";
+      }
+
+      async function submitAssessment() {
+        const btn = document.getElementById("submit-btn");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Submitting...';
+        hideError();
+
+        const payload = {
+          first_name: getVal("first_name").trim(),
+          last_name: getVal("last_name").trim(),
+          email: getVal("email").trim(),
+          phone: getVal("phone").trim(),
+          brokerage: getVal("brokerage").trim(),
+          region: getVal("region").trim(),
+          ["units_" + YEAR1]: Number(getVal("units_" + YEAR1)) || 0,
+          ["units_" + YEAR2]: Number(getVal("units_" + YEAR2)) || 0,
+          ["units_" + YEAR3]: Number(getVal("units_" + YEAR3)) || 0,
+          ["gci_" + YEAR1]: parseCurrency(getVal("gci_" + YEAR1)),
+          ["gci_" + YEAR2]: parseCurrency(getVal("gci_" + YEAR2)),
+          ["gci_" + YEAR3]: parseCurrency(getVal("gci_" + YEAR3)),
+          year1: YEAR1,
+          year2: YEAR2,
+          year3: YEAR3,
+          net_income: parseCurrency(getVal("net_income")),
+          has_budget: optionSelections.has_budget || "",
+          monthly_spend: parseCurrency(getVal("monthly_spend")),
+          primary_challenge: optionSelections.primary_challenge || "",
+          income_goal: parseCurrency(getVal("income_goal")),
+          transaction_goal: Number(getVal("transaction_goal")) || 0,
+          ford: {
+            family: {
+              five_year: getVal("family_5yr").trim(),
+              one_year: getVal("family_1yr").trim(),
+              one_month: getVal("family_1mo").trim(),
+            },
+            occupation: {
+              five_year: getVal("occupation_5yr").trim(),
+              one_year: getVal("occupation_1yr").trim(),
+              one_month: getVal("occupation_1mo").trim(),
+            },
+            recreation: {
+              five_year: getVal("recreation_5yr").trim(),
+              one_year: getVal("recreation_1yr").trim(),
+              one_month: getVal("recreation_1mo").trim(),
+            },
+            dreams: {
+              five_year: getVal("dreams_5yr").trim(),
+              one_year: getVal("dreams_1yr").trim(),
+              one_month: getVal("dreams_1mo").trim(),
+            },
+          },
+        };
+
+        try {
+          const resp = await fetch("/api/onboarding", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || "Submission failed");
+          if (data.agent_id) {
+            const link = document.getElementById("portal-link");
+            link.href = "/portal/" + data.agent_id;
+            link.style.display = "inline-block";
+          }
+          goToStep(4);
+        } catch (err) {
+          showError("Something went wrong: " + err.message);
+          btn.disabled = false;
+          btn.innerHTML = "Submit My Assessment ✓";
+        }
+      }
+    </script>
+  </body>
 </html>
