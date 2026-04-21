@@ -579,6 +579,13 @@ app.listen(PORT, () => {
 
       if (!agent) return res.status(404).send("<h2>Agent not found</h2>");
       try { const { trackEngagement } = require("./services/engagementEngine"); await trackEngagement(agentId, "login"); } catch(engErr) { console.error("Portal engagement track failed:", engErr.message); }
+      // Portal auth check
+      const { validateToken } = require("./utils/portalAuth");
+      const token = req.query.token;
+      const isValid = await validateToken(agentId, token);
+      if (!isValid) {
+        return res.status(401).send(`<html><head><title>Access Required</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8f9fa;margin:0}.box{text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{color:#1a2b4a}p{color:#666;line-height:1.6}</style></head><body><div class="box"><h1>Access Required</h1><p>This portal requires a valid access link. Check your email for your personalized Co.Pilot portal link, or complete the assessment to get started.</p><a style="display:inline-block;margin-top:20px;padding:12px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px" href="/assessment.html">Take the Assessment</a></div></body></html>`);
+      }
       // Trial gating check
       const { isTrialExpired, getTrialDaysRemaining } = require("./utils/trialGating");
       if (isTrialExpired(agent)) {

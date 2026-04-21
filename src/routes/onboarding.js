@@ -265,6 +265,7 @@ function registerOnboardingRoutes(app, db) {
         await runCoachingPipeline(db, agent_id);
         console.log("Coaching generated for:", agent_id);
             try { const { trackEngagement } = require("../services/engagementEngine"); await trackEngagement(agent_id, "assessment_completed"); } catch(engErr) { console.error("Engagement track failed:", engErr.message); }
+            try { const { generateToken } = require("../utils/portalAuth"); const token = await generateToken(agent_id); console.log("Portal token generated for:", agent_id); } catch(tokErr) { console.error("Token generation failed:", tokErr.message); }
       } catch (coachErr) {
         console.error("Coaching generation failed (non-fatal):", coachErr.message);
       }
