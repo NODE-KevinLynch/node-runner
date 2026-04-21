@@ -13,7 +13,7 @@ function assignInitialLifecycle(diagnosis) {
 
   lifecycleRepo.createLifecycle({
     agent_id: diagnosis.agent_id,
-    current_phase: phase,
+    stage: phase,
     phase_entered_at: new Date().toISOString(),
     last_engaged_at: new Date().toISOString(),
     last_sync_at: new Date().toISOString(),
