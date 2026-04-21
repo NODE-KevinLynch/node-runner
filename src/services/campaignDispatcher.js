@@ -150,6 +150,10 @@ async function dispatch(agentId) {
       sendMode,
     });
 
+      // Track engagement on successful send
+      if (sendStatus === "sent") {
+        try { const { trackEngagement } = require("./engagementEngine"); trackEngagement(agentId, "email_open"); } catch(engErr) { console.error("Engagement track failed:", engErr.message); }
+      }
     // Step 3 — Advance campaign step
     if (sendResult.sent || sendResult.blocked) {
       advanceCampaignStep(agentId, nextStep);

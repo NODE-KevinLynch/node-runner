@@ -6,9 +6,9 @@ const engagementRepo = {
     const now = nowISO();
     const stmt = db.prepare(`
       UPDATE agent_lifecycle
-      SET engagement_score = engagement_score + ?,
-          last_engaged_at = $1
-      WHERE agent_id = $1
+      SET engagement_score = engagement_score + $1,
+          last_engaged_at = $2
+      WHERE agent_id = $3
     `);
 
     return stmt.run(points, now, agentId);

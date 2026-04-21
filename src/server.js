@@ -4,6 +4,7 @@ const db = require("./db/db");
 
 const generateRoutes = require("./routes/generate");
 const onboardingRoutes = require("./routes/onboarding");
+const engagementRoutes = require("./routes/engagement");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -11,6 +12,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, "..", "public")));
 app.use(express.json());
 onboardingRoutes(app, db);
+app.use("/api/engagement", engagementRoutes);
 // Health check
 app.get("/api/health", async (req, res) => {
   try {
@@ -576,6 +578,7 @@ app.listen(PORT, () => {
         .get(agentId);
 
       if (!agent) return res.status(404).send("<h2>Agent not found</h2>");
+      try { const { trackEngagement } = require("./services/engagementEngine"); await trackEngagement(agentId, "login"); } catch(engErr) { console.error("Portal engagement track failed:", engErr.message); }
 
       const coaching = await db
         .prepare(
