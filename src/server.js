@@ -558,6 +558,22 @@ app.post("/api/daily-wins", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Error log endpoint
+app.get("/api/errors", async (req, res) => {
+  try {
+    const rows = await db.prepare("SELECT * FROM error_log ORDER BY created_at DESC LIMIT 50").all();
+    res.json({ errors: rows, count: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  const { logError } = require("./utils/errorMonitor");
+  logError("express", err.message, err.stack);
+  res.status(500).json({ error: "Internal server error" });
+});
 app.listen(PORT, () => {
   // ── GET /portal/:agentId ─────────────────────────────────────────────────────
   // Real coaching_outputs columns: id, agent_id, the_truth, the_strategy, rpm_plan,
