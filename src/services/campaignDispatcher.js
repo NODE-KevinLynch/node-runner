@@ -49,10 +49,10 @@ function advanceCampaignStep(agentId, newStep) {
     db.prepare(
       `
       UPDATE agent_lifecycle
-      SET campaign_step = ?,
-          campaign_last_sent_at = ?,
-          last_sync_at = ?
-      WHERE agent_id = ?
+      SET campaign_step = $1,
+          campaign_last_sent_at = $2,
+          last_sync_at = $3
+      WHERE agent_id = $4
     `,
     ).run(newStep, new Date().toISOString(), new Date().toISOString(), agentId);
   } catch (err) {
@@ -70,7 +70,7 @@ async function dispatch(agentId) {
              al.campaign_state, al.campaign_step
       FROM agents a
       JOIN agent_lifecycle al ON al.agent_id = a.id
-      WHERE a.id = ?
+      WHERE a.id = $1
     `,
       )
       .get(agentId);

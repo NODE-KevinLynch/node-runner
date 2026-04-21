@@ -132,7 +132,7 @@ function buildEmails(firstName, insight) {
 function getPostAnalysisEmail(agentId, firstName, step) {
   const assessment = db
     .prepare(
-      "SELECT score_json, responses_json FROM assessments WHERE agent_id = ? ORDER BY created_at DESC LIMIT 1",
+      "SELECT score_json, responses_json FROM assessments WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1",
     )
     .get(agentId);
 

@@ -3,13 +3,13 @@ const db = require("../db/db");
 
 function determineCampaignState(agentId) {
   const assessment = db
-    .prepare("SELECT id FROM assessments WHERE agent_id = ? LIMIT 1")
+    .prepare("SELECT id FROM assessments WHERE agent_id = $1 LIMIT 1")
     .get(agentId);
 
   if (!assessment) return "pre_activation";
 
   const lifecycle = db
-    .prepare("SELECT current_phase FROM agent_lifecycle WHERE agent_id = ?")
+    .prepare("SELECT current_phase FROM agent_lifecycle WHERE agent_id = $1")
     .get(agentId);
 
   if (!lifecycle) return "pre_activation";
@@ -25,7 +25,7 @@ function assignCampaignState(agentId) {
 
   const current = db
     .prepare(
-      "SELECT campaign_state, campaign_step FROM agent_lifecycle WHERE agent_id = ?",
+      "SELECT campaign_state, campaign_step FROM agent_lifecycle WHERE agent_id = $1",
     )
     .get(agentId);
 
@@ -38,13 +38,11 @@ function assignCampaignState(agentId) {
       : current.campaign_step;
 
   db.prepare(
-    `
-    UPDATE agent_lifecycle
-    SET campaign_state = ?,
-        campaign_step = ?,
-        last_sync_at = ?
-    WHERE agent_id = ?
-  `,
+    `UPDATE agent_lifecycle
+     SET campaign_state = $1,
+         campaign_step = $2,
+         last_sync_at = $3
+     WHERE agent_id = $4`,
   ).run(newState, newStep, new Date().toISOString(), agentId);
 
   return { agentId, campaignState: newState, campaignStep: newStep };
