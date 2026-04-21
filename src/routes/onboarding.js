@@ -270,11 +270,14 @@ function registerOnboardingRoutes(app, db) {
         console.error("Coaching generation failed (non-fatal):", coachErr.message);
       }
 
+        let portal_url = null;
+        try { const { getTokenForAgent } = require("../utils/portalAuth"); const t = await getTokenForAgent(agent_id); if (t) portal_url = "https://node-runner.onrender.com/portal/" + agent_id + "?token=" + t; } catch(e) {}
       res.json({
         status: "onboarded",
         agent_id,
         bottleneck,
         profile,
+            portal_url,
         message: "Assessment saved. Coaching pipeline ready.",
       });
     } catch (err) {
