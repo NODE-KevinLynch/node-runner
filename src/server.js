@@ -611,6 +611,15 @@ app.listen(PORT, () => {
       // No supporting_actions_json column exists — use empty array
       const supporting = [];
 
+      // Query F.O.R.D. goals
+      const fordGoals = await db
+        .prepare(
+          "SELECT category, five_year, one_year, one_month FROM ford_goals WHERE agent_id = $1 ORDER BY category",
+        )
+        .all(agentId);
+      const fordMap = {};
+      fordGoals.forEach((r) => { fordMap[r.category] = r; });
+
       const emailRows = recentEmails.length
         ? recentEmails
             .map(
@@ -716,6 +725,18 @@ app.listen(PORT, () => {
             : "—",
         );
 
+
+      // Build F.O.R.D. section
+      const fordCards = fordGoals.length ? fordGoals.map(function(f) {
+        var icons = { family: "Family", occupation: "Occupation", recreation: "Recreation", dreams: "Dreams" };
+        return "<div class=\"ford-card\">"
+          + "<div class=\"ford-cat\">" + (icons[f.category] || f.category) + "</div>"
+          + "<div class=\"ford-row\"><span class=\"ford-lbl\">5-Year Vision:</span> " + (f.five_year || "—") + "</div>"
+          + "<div class=\"ford-row\"><span class=\"ford-lbl\">1-Year Target:</span> " + (f.one_year || "—") + "</div>"
+          + "<div class=\"ford-row\"><span class=\"ford-lbl\">This Month:</span> " + (f.one_month || "—") + "</div>"
+          + "</div>";
+      }).join("") : "<p style=\"color:#888;text-align:center\">Dream Board not yet completed</p>";
+      html = html.replace(/__FORD_SECTION__/g, fordCards);
       res.send(html);
     } catch (err) {
       res.status(500).send("Portal error: " + err.message);
