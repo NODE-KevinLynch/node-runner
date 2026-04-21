@@ -152,4 +152,16 @@ function registerGenerateRoutes(app, db) {
   });
 }
 
+
+  // POST /api/regenerate/:agentId — regenerate coaching for an agent
+  app.post("/api/regenerate/:agentId", async (req, res) => {
+    try {
+      const { runCoachingPipeline } = require("../lib/coachingGenerator");
+      const { agentId } = req.params;
+      await runCoachingPipeline(db, agentId);
+      res.json({ status: "regenerated", agent_id: agentId });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 module.exports = registerGenerateRoutes;
