@@ -150,8 +150,6 @@ function registerGenerateRoutes(app, db) {
     }));
     res.json({ bottlenecks: mapped, count: mapped.length });
   });
-}
-
 
   // POST /api/regenerate/:agentId — regenerate coaching for an agent
   app.post("/api/regenerate/:agentId", async (req, res) => {
@@ -164,4 +162,6 @@ function registerGenerateRoutes(app, db) {
       res.status(500).json({ error: err.message });
     }
   });
+}
+
 module.exports = registerGenerateRoutes;
