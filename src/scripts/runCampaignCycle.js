@@ -4,7 +4,7 @@
 // Safe: skips agents already sent today, respects allowlist
 // Run: node src/scripts/runCampaignCycle.js (from Render Shell)
 
-require("dotenv").config();
+try { require("dotenv").config(); } catch(e) {}
 
 const db = require("../db/db");
 const { assignCampaignState } = require("../services/campaignStateService");
