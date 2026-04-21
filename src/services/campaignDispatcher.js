@@ -66,7 +66,7 @@ async function dispatch(agentId) {
     const row = db
       .prepare(
         `
-      SELECT a.id, a.first_name, a.last_name, a.email,
+      SELECT a.id, a.name AS first_name, a.last_name, a.email,
              al.campaign_state, al.campaign_step
       FROM agents a
       JOIN agent_lifecycle al ON al.agent_id = a.id

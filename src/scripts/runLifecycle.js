@@ -11,7 +11,7 @@ async function runLifecycle() {
       `
       SELECT
         a.id,
-        a.first_name,
+        a.name AS first_name,
         a.last_name,
         a.email,
         al.stage,

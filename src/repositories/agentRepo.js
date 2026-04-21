@@ -2,7 +2,7 @@ const db = require("../db/db");
 
 function createAgent(agent) {
   const stmt = db.prepare(`
-    INSERT INTO agents (id, first_name, last_name, email, phone, source, created_at)
+    INSERT INTO agents (id, name, last_name, email, phone, source, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
@@ -36,7 +36,7 @@ function getAgentByEmail(email) {
 function updateAgent(agent) {
   const stmt = db.prepare(`
     UPDATE agents
-    SET first_name = ?,
+    SET name = ?,
         last_name = ?,
         email = ?,
         phone = ?,
