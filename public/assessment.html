@@ -509,7 +509,7 @@
         const resp = await fetch('/api/onboarding', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Submission failed');
-        if (data.agent_id) { const link = document.getElementById('portal-link'); link.href = '/portal/' + data.agent_id; link.style.display = 'inline-block'; }
+        if (data.agent_id) { const link = document.getElementById('portal-link'); link.href = data.portal_url || ('/portal/' + data.agent_id); link.style.display = 'inline-block'; }
         goToStep(4);
       } catch (err) {
         showError(err.message);
