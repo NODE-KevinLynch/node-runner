@@ -14,7 +14,7 @@ async function runLifecycle() {
         a.first_name,
         a.last_name,
         a.email,
-        al.current_phase,
+        al.stage,
         al.engagement_score,
         al.status
       FROM agents a
@@ -25,21 +25,21 @@ async function runLifecycle() {
     .all();
 
   for (const agent of agents) {
-    let newPhase = agent.current_phase;
+    let newPhase = agent.stage;
 
-    if (agent.engagement_score >= 20 && agent.current_phase !== "COACHING") {
+    if (agent.engagement_score >= 20 && agent.stage !== "COACHING") {
       newPhase = "COACHING";
     }
 
-    if (newPhase !== agent.current_phase) {
+    if (newPhase !== agent.stage) {
       console.log(
-        `Promoting ${agent.first_name} from ${agent.current_phase} → ${newPhase}`,
+        `Promoting ${agent.first_name} from ${agent.stage} → ${newPhase}`,
       );
 
       db.prepare(
         `
         UPDATE agent_lifecycle
-        SET current_phase = ?,
+        SET stage = ?,
             phase_entered_at = ?,
             last_sync_at = ?
         WHERE agent_id = ?
@@ -54,7 +54,7 @@ async function runLifecycle() {
       await sendEmail({
         to: agent.email,
         phase: newPhase,
-        extra: { from_phase: agent.current_phase },
+        extra: { from_phase: agent.stage },
       });
     }
   }

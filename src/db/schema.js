@@ -31,7 +31,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS agent_lifecycle (
     agent_id TEXT PRIMARY KEY,
-    current_phase TEXT NOT NULL,
+    stage TEXT NOT NULL,
     phase_entered_at TEXT NOT NULL,
     last_engaged_at TEXT,
     last_sync_at TEXT NOT NULL,

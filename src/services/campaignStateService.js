@@ -9,13 +9,13 @@ function determineCampaignState(agentId) {
   if (!assessment) return "pre_activation";
 
   const lifecycle = db
-    .prepare("SELECT current_phase FROM agent_lifecycle WHERE agent_id = $1")
+    .prepare("SELECT stage FROM agent_lifecycle WHERE agent_id = $1")
     .get(agentId);
 
   if (!lifecycle) return "pre_activation";
 
   const activePhases = ["COACHING", "ACTIVE_PIPELINE"];
-  if (activePhases.includes(lifecycle.current_phase)) return "lifecycle";
+  if (activePhases.includes(lifecycle.stage)) return "lifecycle";
 
   return "post_analysis";
 }

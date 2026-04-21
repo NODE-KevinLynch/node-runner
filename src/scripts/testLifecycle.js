@@ -55,7 +55,7 @@ function runLifecycleTest() {
   createLifecycle({
     id: generateId("lifecycle"),
     agent_id: agentId,
-    current_phase: "NEW",
+    stage: "NEW",
     phase_entered_at: now,
     last_engaged_at: now,
     last_sync_at: now,
@@ -66,7 +66,7 @@ function runLifecycleTest() {
   // Update lifecycle (simulate progression)
   updateLifecycle({
     agent_id: agentId,
-    current_phase: "ACTIVE_PIPELINE",
+    stage: "ACTIVE_PIPELINE",
     phase_entered_at: nowISO(),
     last_engaged_at: nowISO(),
     last_sync_at: nowISO(),
