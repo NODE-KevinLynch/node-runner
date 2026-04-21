@@ -568,7 +568,7 @@ app.listen(PORT, () => {
       const agent = await db
         .prepare(
           `
-        SELECT a.id, a.name, a.last_name, a.email,
+        SELECT a.id, a.name, a.last_name, a.email, a.brokerage, a.trial_start_date,
                al.stage, al.engagement_score, al.campaign_state
         FROM agents a
         LEFT JOIN agent_lifecycle al ON a.id = al.agent_id
@@ -579,6 +579,12 @@ app.listen(PORT, () => {
 
       if (!agent) return res.status(404).send("<h2>Agent not found</h2>");
       try { const { trackEngagement } = require("./services/engagementEngine"); await trackEngagement(agentId, "login"); } catch(engErr) { console.error("Portal engagement track failed:", engErr.message); }
+      // Trial gating check
+      const { isTrialExpired, getTrialDaysRemaining } = require("./utils/trialGating");
+      if (isTrialExpired(agent)) {
+        return res.send(`<html><head><title>Trial Expired</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8f9fa;margin:0}.box{text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{color:#1a2b4a}p{color:#666;line-height:1.6}.btn{display:inline-block;margin-top:20px;padding:12px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px}</style></head><body><div class="box"><h1>Your 30-Day Trial Has Ended</h1><p>Your free trial of Co.Pilot by Sutton has expired. To continue accessing your personalized coaching portal, upgrade to a paid plan.</p><a class="btn" href="mailto:kevin@sutton.com?subject=Co.Pilot Upgrade">Contact Us to Upgrade</a></div></body></html>`);
+      }
+      const trialDaysLeft = getTrialDaysRemaining(agent);
 
       const coaching = await db
         .prepare(

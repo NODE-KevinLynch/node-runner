@@ -220,6 +220,8 @@ function registerOnboardingRoutes(app, db) {
           .run(agent_id);
       }
 
+      // Set trial start date
+      await db.prepare("UPDATE agents SET trial_start_date = NOW() WHERE id = $1 AND trial_start_date IS NULL").run(agent_id);
       // 5. Determine bottleneck from ALL responses (enhanced diagnosis)
       const bottleneck = diagnoseBottleneck({
         gci_y1,
