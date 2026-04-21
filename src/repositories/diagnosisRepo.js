@@ -29,7 +29,7 @@ function getLatestDiagnosisForAgent(agentId) {
   const stmt = db.prepare(`
     SELECT *
     FROM diagnoses
-    WHERE agent_id = ?
+    WHERE agent_id = $1
     ORDER BY created_at DESC
     LIMIT 1
   `);
@@ -41,7 +41,7 @@ function getDiagnosisByAssessmentId(assessmentId) {
   const stmt = db.prepare(`
     SELECT *
     FROM diagnoses
-    WHERE assessment_id = ?
+    WHERE assessment_id = $1
     LIMIT 1
   `);
 

@@ -39,7 +39,7 @@ function getLatestCoachingOutputForAgent(agentId) {
   const stmt = db.prepare(`
     SELECT *
     FROM coaching_outputs
-    WHERE agent_id = ?
+    WHERE agent_id = $1
     ORDER BY generated_at DESC
     LIMIT 1
   `);

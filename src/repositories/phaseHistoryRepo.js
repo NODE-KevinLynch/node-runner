@@ -27,7 +27,7 @@ function getPhaseHistoryForAgent(agentId) {
   const stmt = db.prepare(`
     SELECT *
     FROM phase_history
-    WHERE agent_id = ?
+    WHERE agent_id = $1
     ORDER BY changed_at DESC
   `);
 

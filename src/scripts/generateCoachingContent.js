@@ -479,7 +479,7 @@ function generateCoachingOutputs() {
     return;
   }
 
-  const del = db.prepare("DELETE FROM coaching_outputs WHERE agent_id = ?");
+  const del = db.prepare("DELETE FROM coaching_outputs WHERE agent_id = $1");
   const insert = db.prepare(`
     INSERT INTO coaching_outputs (
       agent_id, phase, focus, top_action, daily_ritual,

@@ -3,7 +3,7 @@ const db = require("../db/db");
 function createAgent(agent) {
   const stmt = db.prepare(`
     INSERT INTO agents (id, name, last_name, email, phone, source, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
   `);
 
   stmt.run(
@@ -19,7 +19,7 @@ function createAgent(agent) {
 
 function getAgentById(id) {
   const stmt = db.prepare(`
-    SELECT * FROM agents WHERE id = ?
+    SELECT * FROM agents WHERE id = $1
   `);
 
   return stmt.get(id);
@@ -27,7 +27,7 @@ function getAgentById(id) {
 
 function getAgentByEmail(email) {
   const stmt = db.prepare(`
-    SELECT * FROM agents WHERE email = ?
+    SELECT * FROM agents WHERE email = $1
   `);
 
   return stmt.get(email);
@@ -36,12 +36,12 @@ function getAgentByEmail(email) {
 function updateAgent(agent) {
   const stmt = db.prepare(`
     UPDATE agents
-    SET name = ?,
-        last_name = ?,
-        email = ?,
-        phone = ?,
-        source = ?
-    WHERE id = ?
+    SET name = $1,
+        last_name = $2,
+        email = $3,
+        phone = $4,
+        source = $5
+    WHERE id = $6
   `);
 
   stmt.run(

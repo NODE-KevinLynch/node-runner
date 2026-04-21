@@ -17,7 +17,7 @@ function createAssessment(assessment) {
 
 function getAssessmentById(id) {
   const stmt = db.prepare(`
-    SELECT * FROM assessments WHERE id = ?
+    SELECT * FROM assessments WHERE id = $1
   `);
 
   return stmt.get(id);
@@ -27,7 +27,7 @@ function getLatestAssessmentForAgent(agentId) {
   const stmt = db.prepare(`
     SELECT *
     FROM assessments
-    WHERE agent_id = ?
+    WHERE agent_id = $1
     ORDER BY created_at DESC
     LIMIT 1
   `);

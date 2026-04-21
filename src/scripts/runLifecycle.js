@@ -39,10 +39,10 @@ async function runLifecycle() {
       db.prepare(
         `
         UPDATE agent_lifecycle
-        SET stage = ?,
-            phase_entered_at = ?,
-            last_sync_at = ?
-        WHERE agent_id = ?
+        SET stage = $1,
+            phase_entered_at = $2,
+            last_sync_at = $3
+        WHERE agent_id = $4
         `,
       ).run(
         newPhase,

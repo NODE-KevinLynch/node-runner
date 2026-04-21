@@ -7,8 +7,8 @@ const engagementRepo = {
     const stmt = db.prepare(`
       UPDATE agent_lifecycle
       SET engagement_score = engagement_score + ?,
-          last_engaged_at = ?
-      WHERE agent_id = ?
+          last_engaged_at = $1
+      WHERE agent_id = $1
     `);
 
     return stmt.run(points, now, agentId);
@@ -18,7 +18,7 @@ const engagementRepo = {
     const stmt = db.prepare(`
       SELECT engagement_score, last_engaged_at
       FROM agent_lifecycle
-      WHERE agent_id = ?
+      WHERE agent_id = $1
     `);
 
     return stmt.get(agentId);
