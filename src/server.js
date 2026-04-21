@@ -5,6 +5,7 @@ const db = require("./db/db");
 const generateRoutes = require("./routes/generate");
 const onboardingRoutes = require("./routes/onboarding");
 const engagementRoutes = require("./routes/engagement");
+const webhookRoutes = require("./routes/webhook");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -13,6 +14,7 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 app.use(express.json());
 onboardingRoutes(app, db);
 app.use("/api/engagement", engagementRoutes);
+app.use("/api/webhook", webhookRoutes);
 // Health check
 app.get("/api/health", async (req, res) => {
   try {
