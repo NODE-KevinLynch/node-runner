@@ -379,7 +379,7 @@ function generateCoachingOutput({
 
   const the_truth = [
     profileLine,
-    "── Kevin's Straight Talk ──",
+    "── Keeping it Real ──",
     architectTruth1,
     architectTruth2,
     masterValidation,
