@@ -367,7 +367,9 @@ function generateCoachingOutput({
   // ── Kevin's Straight Talk (70%) — Two paragraphs ──
   const architectTruths =
     ARCHITECT_TRUTHS[bottleneck] || ARCHITECT_TRUTHS.pipeline_volume;
-  const selectedTruths = pickN(architectTruths, 2);
+  const primaryIndex = Math.floor(Math.random() * architectTruths.length);
+  const secondaryIndex = (primaryIndex + 1) % architectTruths.length;
+  const selectedTruths = [architectTruths[primaryIndex], architectTruths[secondaryIndex]];
   const architectTruth1 = selectedTruths[0];
   const architectTruth2 = selectedTruths[1] || selectedTruths[0];
   const profileLine = profile
@@ -390,9 +392,9 @@ function generateCoachingOutput({
   // ── The Strategy (70% Architect + 30% Master) ──
   const architectStrategies =
     ARCHITECT_STRATEGIES[bottleneck] || ARCHITECT_STRATEGIES.pipeline_volume;
-  const truthIndex = architectTruths.indexOf(architectTruth1);
+  // Use same primaryIndex to pair truth with strategy
   const architectStrategy =
-    architectStrategies[truthIndex] || pick(architectStrategies);
+    architectStrategies[primaryIndex % architectStrategies.length] || pick(architectStrategies);
   const masterStrategySupport = buildMasterStrategySupport(council);
 
   const the_strategy = ["── Your Action Plan ──", "", architectStrategy]
