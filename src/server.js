@@ -597,6 +597,7 @@ app.listen(PORT, () => {
 
       if (!agent) return res.status(404).send("<h2>Agent not found</h2>");
       try { const { trackEngagement } = require("./services/engagementEngine"); await trackEngagement(agentId, "login"); } catch(engErr) { console.error("Portal engagement track failed:", engErr.message); }
+      try { const { syncPortalActivityToFub } = require("./services/fubMirrorService"); const agentRow = await db.prepare("SELECT email FROM agents WHERE id = $1").get(agentId); if (agentRow?.email) await syncPortalActivityToFub(agentId, agentRow.email, "portal_visit"); } catch(fubErr) { console.error("FUB portal sync failed (non-fatal):", fubErr.message); }
       // Portal auth check
       const { validateToken } = require("./utils/portalAuth");
       const token = req.query.token;

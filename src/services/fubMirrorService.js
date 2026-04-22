@@ -173,4 +173,30 @@ async function syncEngagementToFub(agentId, agentEmail, score, phase) {
   }
 }
 
-module.exports = { logCampaignActivity, syncAssessmentToFub, syncCoachingToFub, syncEngagementToFub };
+// ── Portal Activity → FUB Note ──────────────────────────────────────────────
+async function syncPortalActivityToFub(agentId, agentEmail, activity) {
+  try {
+    const fub = getFubClient();
+    if (!fub || !agentEmail) return { mirrored: false, reason: !fub ? "no_api_key" : "no_email" };
+    const person = await findFubPersonByEmail(fub, agentEmail);
+    if (!person) return { mirrored: false, reason: "person_not_found" };
+    const noteBody = [
+      "[Node Runner — Portal Activity]",
+      "Activity : " + (activity || "portal_visit"),
+      "Agent    : " + agentEmail,
+      "Logged   : " + new Date().toISOString(),
+    ].join("\n");
+    await fub.post("/notes", {
+      personId: person.id,
+      body: noteBody,
+      isHtml: false,
+    });
+    console.log("FUB mirror: portal activity note for person " + person.id);
+    return { mirrored: true, personId: person.id };
+  } catch (err) {
+    console.error("FUB mirror portal error (non-fatal):", err.message);
+    return { mirrored: false, reason: err.message };
+  }
+}
+
+module.exports = { logCampaignActivity, syncAssessmentToFub, syncCoachingToFub, syncEngagementToFub, syncPortalActivityToFub };
