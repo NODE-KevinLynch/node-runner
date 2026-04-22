@@ -684,6 +684,61 @@
     .ford-cat { font-weight: 700; font-size: 16px; margin-bottom: 10px; color: var(--navy, #1a2a3a); }
     .ford-row { font-size: 14px; margin-bottom: 6px; color: var(--grey-warm, #555); }
     .ford-lbl { font-weight: 600; color: var(--navy, #1a2a3a); margin-right: 6px; }
+
+    /* ═══ MOBILE RESPONSIVE FIX ═══ */
+    @media (max-width: 640px) {
+      body, html { overflow-x: hidden; }
+      main { padding: 0 12px !important; max-width: 100vw !important; overflow-x: hidden; }
+      .card { padding: 16px 14px !important; word-wrap: break-word; overflow-wrap: break-word; }
+      .header { padding: 20px 14px !important; }
+      .header h1 { font-size: 1.6em !important; }
+
+      /* Journey timeline */
+      .funnel-row { gap: 4px !important; overflow-x: auto; }
+      .funnel-step { min-width: 56px !important; font-size: 9px !important; }
+
+      /* Scorecard grid */
+      .sc-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+      .sc-item { padding: 10px !important; }
+
+      /* RPM plan */
+      .rpm-grid { grid-template-columns: 1fr !important; }
+      .rpm-card { padding: 16px !important; }
+
+      /* Email table */
+      .email-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .email-table table { min-width: 500px; }
+
+      /* Truth/Strategy text */
+      .truth-card, .strategy-card { padding: 16px 14px !important; font-size: 14px !important; line-height: 1.6 !important; }
+      .truth-card p, .strategy-card p { word-wrap: break-word; overflow-wrap: break-word; }
+
+      /* Constraint card */
+      .constraint-card { flex-direction: column !important; text-align: center; }
+
+      /* Stat cards row */
+      .stat-row { grid-template-columns: 1fr !important; }
+
+      /* Goal cards */
+      .goal-cards { grid-template-columns: 1fr !important; }
+
+      /* Daily win items */
+      .daily-win-item { padding: 12px 10px !important; }
+      .daily-win-item label { font-size: 13px !important; }
+
+      /* Monthly target grid */
+      .monthly-grid { grid-template-columns: 1fr !important; }
+
+      /* Pipeline snapshot */
+      .pipeline-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+      /* Quote */
+      .quote-card { padding: 16px 14px !important; font-size: 14px !important; }
+
+      /* Footer */
+      .footer { padding: 20px 14px !important; font-size: 12px !important; }
+    }
+
       </style>
 
       <!-- ═══ YOUR GOALS ═══ -->
