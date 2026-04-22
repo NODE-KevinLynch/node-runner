@@ -537,7 +537,7 @@
           ).length;
 
           document.getElementById("agents-wrap").innerHTML =
-            "<table><thead><tr><th>Agent</th><th>Email</th><th>Assessment</th><th>Bottleneck</th><th>Coaching</th><th>Stage</th></tr></thead><tbody>" +
+            "<table><thead><tr><th>Agent</th><th>Email</th><th>Source</th><th>Score</th><th>State</th><th>Assessment</th><th>Bottleneck</th><th>Coaching</th><th>Stage</th></tr></thead><tbody>" +
             details
               .map(
                 (d) =>
@@ -551,6 +551,9 @@
                   '<td style="color:var(--muted)">' +
                   (d.agent.email || "—") +
                   "</td>" +
+                    '<td style="color:var(--muted)">' + (d.agent.source || "—") + '</td>' +
+                    '<td style="text-align:center">' + (d.agent.engagement_score || 0) + '</td>' +
+                    '<td style="color:var(--muted)">' + (d.agent.campaign_state || "—") + '</td>' +
                   "<td>" +
                   (d.assessment
                     ? '<span class="badge badge-sent">yes</span>'
