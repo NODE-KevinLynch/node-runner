@@ -124,6 +124,14 @@ async function dispatch(agentId) {
       };
     }
 
+      // Inject portal link into email
+      let portalLink = "";
+      try {
+        const { getTokenForAgent } = require("../utils/portalAuth");
+        const tok = await getTokenForAgent(agentId);
+        if (tok) portalLink = `<div style="text-align:center;margin:24px 0"><a href="https://node-runner.onrender.com/portal/${agentId}?token=${tok}" style="display:inline-block;padding:14px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">View My Coaching Portal</a></div>`;
+        if (emailContent && emailContent.html) emailContent.html += portalLink;
+      } catch(e) {}
     // Step 1 — Send email
     const sendResult = await sendEmail({
       to: row.email,
