@@ -89,4 +89,88 @@ async function logCampaignActivity(agentId, campaignData) {
   }
 }
 
-module.exports = { logCampaignActivity };
+
+
+// ── Assessment Completion → FUB Tags ─────────────────────────────────────────
+async function syncAssessmentToFub(agentId, agentEmail, assessmentData) {
+  try {
+    const fub = getFubClient();
+    if (!fub || !agentEmail) return { mirrored: false, reason: !fub ? "no_api_key" : "no_email" };
+
+    const person = await findFubPersonByEmail(fub, agentEmail);
+    if (!person) return { mirrored: false, reason: "person_not_found" };
+
+    const tags = ["Co.Pilot-Assessment-Complete"];
+    if (assessmentData?.bottleneck) tags.push("Bottleneck-" + assessmentData.bottleneck.replace(/\s+/g, "-"));
+    if (assessmentData?.phase) tags.push("Phase-" + assessmentData.phase.replace(/\s+/g, "-"));
+
+    // FUB tags API: merge with existing
+    const existing = person.tags || [];
+    const merged = [...new Set([...existing, ...tags])];
+
+    await fub.put("/people/" + person.id, { tags: merged });
+
+    console.log("FUB mirror: assessment tags set for person " + person.id + " → " + tags.join(", "));
+    return { mirrored: true, personId: person.id, tags };
+  } catch (err) {
+    console.error("FUB mirror assessment error (non-fatal):", err.message);
+    return { mirrored: false, reason: err.message };
+  }
+}
+
+// ── Coaching Generated → FUB Note ────────────────────────────────────────────
+async function syncCoachingToFub(agentId, agentEmail, coachingData) {
+  try {
+    const fub = getFubClient();
+    if (!fub || !agentEmail) return { mirrored: false, reason: !fub ? "no_api_key" : "no_email" };
+
+    const person = await findFubPersonByEmail(fub, agentEmail);
+    if (!person) return { mirrored: false, reason: "person_not_found" };
+
+    const noteBody = [
+      "[Node Runner — Coaching Generated]",
+      "Bottleneck    : " + (coachingData.primary_constraint || "—"),
+      "Directive     : " + (coachingData.coaching_directive || "—"),
+      "Truth Preview : " + (coachingData.the_truth || "").slice(0, 200),
+      "Strategy      : " + (coachingData.the_strategy || "").slice(0, 200),
+      "Generated At  : " + new Date().toISOString(),
+    ].join("\n");
+
+    await fub.post("/notes", {
+      personId: person.id,
+      body: noteBody,
+      isHtml: false,
+    });
+
+    console.log("FUB mirror: coaching note created for person " + person.id);
+    return { mirrored: true, personId: person.id };
+  } catch (err) {
+    console.error("FUB mirror coaching error (non-fatal):", err.message);
+    return { mirrored: false, reason: err.message };
+  }
+}
+
+// ── Engagement / Phase Change → FUB Tag Update ──────────────────────────────
+async function syncEngagementToFub(agentId, agentEmail, score, phase) {
+  try {
+    const fub = getFubClient();
+    if (!fub || !agentEmail) return { mirrored: false, reason: !fub ? "no_api_key" : "no_email" };
+
+    const person = await findFubPersonByEmail(fub, agentEmail);
+    if (!person) return { mirrored: false, reason: "person_not_found" };
+
+    // Remove old phase tags, add current one
+    const existing = (person.tags || []).filter(t => !t.startsWith("Phase-"));
+    if (phase) existing.push("Phase-" + phase.replace(/\s+/g, "-"));
+
+    await fub.put("/people/" + person.id, { tags: existing });
+
+    console.log("FUB mirror: phase tag updated for person " + person.id + " → Phase-" + phase);
+    return { mirrored: true, personId: person.id, phase };
+  } catch (err) {
+    console.error("FUB mirror engagement error (non-fatal):", err.message);
+    return { mirrored: false, reason: err.message };
+  }
+}
+
+module.exports = { logCampaignActivity, syncAssessmentToFub, syncCoachingToFub, syncEngagementToFub };

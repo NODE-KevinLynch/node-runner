@@ -7,6 +7,7 @@
 
 const { v4: uuidv4 } = require("uuid");
 const { runCoachingPipeline } = require("../lib/coachingGenerator");
+const { syncAssessmentToFub, syncCoachingToFub } = require("../services/fubMirrorService");
 
 function registerOnboardingRoutes(app, db) {
   // ── GET /api/lookup-agent ─────────────────────────────────────────────
@@ -266,6 +267,7 @@ function registerOnboardingRoutes(app, db) {
         console.log("Coaching generated for:", agent_id);
             try { const { trackEngagement } = require("../services/engagementEngine"); await trackEngagement(agent_id, "assessment_completed"); } catch(engErr) { console.error("Engagement track failed:", engErr.message); }
             try { const { generateToken } = require("../utils/portalAuth"); const token = await generateToken(agent_id); console.log("Portal token generated for:", agent_id); } catch(tokErr) { console.error("Token generation failed:", tokErr.message); }
+            try { const coaching = await db.prepare("SELECT * FROM coaching_outputs WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1").get(agent_id); const agentRow = await db.prepare("SELECT email FROM agents WHERE id = $1").get(agent_id); if (agentRow?.email) { await syncAssessmentToFub(agent_id, agentRow.email, { bottleneck, phase: "Discovery" }); if (coaching) await syncCoachingToFub(agent_id, agentRow.email, coaching); } } catch(fubErr) { console.error("FUB sync failed (non-fatal):", fubErr.message); }
       } catch (coachErr) {
         console.error("Coaching generation failed (non-fatal):", coachErr.message);
       }

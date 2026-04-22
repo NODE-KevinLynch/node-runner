@@ -1,5 +1,5 @@
 run = "node src/server.js"
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "python-3.11"]
 
 [deployment]
 router = "application"

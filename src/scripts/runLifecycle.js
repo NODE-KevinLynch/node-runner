@@ -1,4 +1,5 @@
 require("dotenv").config();
+const { syncEngagementToFub } = require("../services/fubMirrorService");
 
 const db = require("../db/db");
 const { sendEmail } = require("../services/notificationService");
@@ -56,6 +57,7 @@ async function runLifecycle() {
         phase: newPhase,
         extra: { from_phase: agent.stage },
       });
+      try { await syncEngagementToFub(agent.id, agent.email, agent.engagement_score, newPhase); } catch(fubErr) { console.error("FUB phase sync failed (non-fatal):", fubErr.message); }
     }
   }
 
