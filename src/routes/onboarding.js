@@ -259,6 +259,23 @@ function registerOnboardingRoutes(app, db) {
              VALUES ($1, $2, $3, $4, NOW())`,
         )
         .run(agent_id, bottleneck, profile, JSON.stringify(signals));
+      // 8.5 Save assessment answers to assessments table
+      const assessmentFields = {
+        primary_challenge, has_budget, has_business_plan, has_accountability,
+        prospecting_hours, avg_dom, has_listing_pres, repeat_client_pct,
+        tracks_activities, has_morning_routine, income_goal: String(income_goal),
+        transaction_goal: String(transaction_goal), net_income: String(net_income),
+        units_y1: String(units_y1), gci_y1: String(gci_y1)
+      };
+      for (const [qKey, qVal] of Object.entries(assessmentFields)) {
+        if (qVal) {
+          try {
+            await db.prepare(
+              "INSERT INTO assessments (id, agent_id, question_key, answer, score, created_at) VALUES ($1, $2, $3, $4, 0, NOW())"
+            ).run(require("uuid").v4(), agent_id, qKey, qVal);
+          } catch(aErr) { console.error("Assessment save error:", aErr.message); }
+        }
+      }
 
 
       // 9. Auto-generate coaching content so portal is ready immediately
