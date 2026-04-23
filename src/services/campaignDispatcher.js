@@ -99,6 +99,21 @@ async function dispatch(agentId) {
         campaignState,
       };
     }
+    // Frequency gating: control send cadence per campaign type and step
+    const lastSend = await db.prepare(
+      "SELECT sent_at FROM campaign_send_log WHERE agent_id = $1 AND send_status = 'sent' ORDER BY sent_at DESC LIMIT 1"
+    ).get(agentId);
+    if (lastSend && lastSend.sent_at) {
+      const daysSince = (Date.now() - new Date(lastSend.sent_at).getTime()) / 86400000;
+      let minDays = 1;
+      if (campaignState === "pre_activation") minDays = 7;
+      else if (campaignState === "post_analysis" && nextStep <= 12) minDays = 2;
+      else if (campaignState === "post_analysis" && nextStep <= 20) minDays = 3;
+      else if (campaignState === "post_analysis" && nextStep >= 21) minDays = 28;
+      if (daysSince < minDays) {
+        return { success: false, reason: "frequency_gated", agentId, campaignState, nextStep, daysSince: Math.round(daysSince), minDays };
+      }
+    }
 
     // Generate the correct email
     let emailContent = null;
