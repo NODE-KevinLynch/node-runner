@@ -642,6 +642,10 @@ app.listen(PORT, () => {
       `,
         )
         .all(agentId);
+      // Fetch agent goals for portal
+      const agentGoals = await db.prepare("SELECT gci_goal, transaction_goal FROM agent_goals WHERE agent_id = $1 AND goal_year = 2026").get(agentId);
+      const gciGoal = agentGoals?.gci_goal || 0;
+      const txnGoal = agentGoals?.transaction_goal || 0;
 
       // No supporting_actions_json column exists — use empty array
       const supporting = [];
@@ -767,8 +771,8 @@ app.listen(PORT, () => {
           /__CREATED_AT__/g,
           agent.created_at || coaching?.created_at || "—",
         )
-        .replace(/__GCI_GOAL__/g, "0")
-        .replace(/__TXN_GOAL__/g, "0")
+        .replace(/__GCI_GOAL__/g, String(gciGoal))
+        .replace(/__TXN_GOAL__/g, String(txnGoal))
         .replace(/__TOP_ACTION__/g, coaching?.coaching_directive || "—")
         .replace(/__DAILY_RITUAL__/g, "—")
         .replace(/__WEEKLY_TARGET__/g, "—")

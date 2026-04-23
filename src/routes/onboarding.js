@@ -206,6 +206,15 @@ function registerOnboardingRoutes(app, db) {
           }
         }
       }
+      // 3.5 Save goals to agent_goals table for portal
+      try {
+        await db.prepare(
+          `INSERT INTO agent_goals (agent_id, gci_goal, transaction_goal, goal_year)
+           VALUES ($1, $2, $3, 2026)
+           ON CONFLICT (agent_id, goal_year)
+           DO UPDATE SET gci_goal=$2, transaction_goal=$3, updated_at=NOW()`
+        ).run(agent_id, income_goal || 0, transaction_goal || 0);
+      } catch(goalErr) { console.error("Goals save error:", goalErr.message); }
 
       // 4. Create agent_lifecycle record if it doesn't exist
       const lifecycle = await db
