@@ -8,7 +8,7 @@ const { sendEmail } = require("./notificationService");
 const { determineCampaignState } = require("./campaignStateService");
 const { getPreActivationEmail } = require("./preActivationCampaign");
 const { getPostAnalysisEmail } = require("./postAnalysisCampaign");
-const { getCoachingActiveEmail } = require("./coachingActiveCampaign");
+const { getDynamicCoachingEmail } = require("./dynamicCoachingEmail");
 const { logCampaignActivity } = require("./fubMirrorService");
 
 function generateId() {
@@ -89,7 +89,7 @@ async function dispatch(agentId) {
     const currentStep = row.campaign_step || 0;
     const nextStep = currentStep + 1;
 
-    // Campaign step limits per type (pre_activation = 26 weeks / 6 months)
+    // Campaign step limits per type
     const maxSteps = { pre_activation: 26, post_analysis: 21, coaching_active: 130 };
     const limit = maxSteps[campaignState] || 3;
     if (nextStep > limit) {
@@ -100,6 +100,7 @@ async function dispatch(agentId) {
         campaignState,
       };
     }
+
     // Frequency gating: control send cadence per campaign type and step
     const lastSend = await db.prepare(
       "SELECT sent_at FROM campaign_send_log WHERE agent_id = $1 AND send_status = 'sent' ORDER BY sent_at DESC LIMIT 1"
@@ -116,6 +117,7 @@ async function dispatch(agentId) {
         return { success: false, reason: "frequency_gated", agentId, campaignState, nextStep, daysSince: Math.round(daysSince), minDays };
       }
     }
+
     // Skip weekends for coaching_active (except first email)
     if (campaignState === "coaching_active" && nextStep > 1) {
       const dayOfWeek = new Date().getDay();
@@ -130,9 +132,14 @@ async function dispatch(agentId) {
     } else if (campaignState === "post_analysis") {
       emailContent = getPostAnalysisEmail(agentId, row.first_name, nextStep);
     } else if (campaignState === "coaching_active") {
+      // ── DYNAMIC COACHING EMAIL ─────────────────────────────────────────
       let portalUrl = null;
-      try { const { getTokenForAgent } = require("../utils/portalAuth"); const t = await getTokenForAgent(agentId); if (t) portalUrl = "https://node-runner.onrender.com/portal/" + agentId + "?token=" + t; } catch(e) {}
-      emailContent = getCoachingActiveEmail(nextStep, portalUrl);
+      try {
+        const { getTokenForAgent } = require("../utils/portalAuth");
+        const t = await getTokenForAgent(agentId);
+        if (t) portalUrl = "https://node-runner.onrender.com/portal/" + agentId + "?token=" + t;
+      } catch(e) {}
+      emailContent = await getDynamicCoachingEmail(agentId, nextStep, portalUrl);
     } else {
       return {
         success: false,
@@ -152,7 +159,8 @@ async function dispatch(agentId) {
       };
     }
 
-      // Inject portal link into email
+    // Inject portal link into non-coaching emails (coaching already has it built in)
+    if (campaignState !== "coaching_active") {
       let portalLink = "";
       try {
         const { getTokenForAgent } = require("../utils/portalAuth");
@@ -160,6 +168,8 @@ async function dispatch(agentId) {
         if (tok) portalLink = `<div style="text-align:center;margin:24px 0"><a href="https://node-runner.onrender.com/portal/${agentId}?token=${tok}" style="display:inline-block;padding:14px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">View My Coaching Portal</a></div>`;
         if (emailContent && emailContent.html) emailContent.html += portalLink;
       } catch(e) {}
+    }
+
     // Step 1 — Send email
     const sendResult = await sendEmail({
       to: row.email,
@@ -176,7 +186,7 @@ async function dispatch(agentId) {
         ? "blocked"
         : "failed";
 
-    // Step 2 — Log send to SQLite (always runs)
+    // Step 2 — Log send
     logSend({
       agentId,
       campaignType: campaignState,
@@ -186,10 +196,16 @@ async function dispatch(agentId) {
       sendMode,
     });
 
-      // Track engagement on successful send
-      if (sendStatus === "sent") {
-        try { const { trackEngagement } = require("./engagementEngine"); trackEngagement(agentId, "email_open"); } catch(engErr) { console.error("Engagement track failed:", engErr.message); }
+    // Track engagement on successful send
+    if (sendStatus === "sent") {
+      try {
+        const { trackEngagement } = require("./engagementEngine");
+        trackEngagement(agentId, "email_open");
+      } catch(engErr) {
+        console.error("Engagement track failed:", engErr.message);
       }
+    }
+
     // Step 3 — Advance campaign step
     if (sendResult.sent || sendResult.blocked) {
       advanceCampaignStep(agentId, nextStep);
@@ -215,6 +231,8 @@ async function dispatch(agentId) {
       subject: emailContent.subject,
       sendStatus,
       sendResult,
+      tone: emailContent.tone || null,
+      daysDark: emailContent.daysDark || null,
     };
   } catch (err) {
     console.error("Dispatcher error (non-fatal):", err.message);
