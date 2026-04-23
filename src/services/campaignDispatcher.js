@@ -89,7 +89,7 @@ async function dispatch(agentId) {
     const nextStep = currentStep + 1;
 
     // Campaign step limits per type (pre_activation = 26 weeks / 6 months)
-    const maxSteps = { pre_activation: 26, post_analysis: 3 };
+    const maxSteps = { pre_activation: 26, post_analysis: 21 };
     const limit = maxSteps[campaignState] || 3;
     if (nextStep > limit) {
       return {
