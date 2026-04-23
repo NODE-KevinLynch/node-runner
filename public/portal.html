@@ -1839,8 +1839,8 @@
         // ── Stats ──
         document.getElementById("stat-emails").textContent = totalEmails;
         if (CREATED && CREATED !== "—") {
-          document.getElementById("stat-days").textContent = Math.floor(
-            (now - new Date(CREATED)) / 86400000,
+          document.getElementById("stat-days").textContent = Math.max(0, Math.floor(
+            (now - new Date(CREATED)) / 86400000),
           );
         }
         document.getElementById("stat-streak").textContent =
