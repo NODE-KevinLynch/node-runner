@@ -6,6 +6,11 @@ function determineCampaignState(agentId) {
     .prepare("SELECT id FROM assessments WHERE agent_id = $1 LIMIT 1")
     .get(agentId);
 
+  // Check if coaching has been generated (agent completed Co.Pilot assessment)
+  const coaching = db
+    .prepare("SELECT id FROM coaching_outputs WHERE agent_id = $1 LIMIT 1")
+    .get(agentId);
+  if (coaching) return "coaching_active";
   if (!assessment) return "pre_activation";
 
   const lifecycle = db
@@ -31,11 +36,9 @@ function assignCampaignState(agentId) {
 
   if (!current) return null;
 
-  // If moving into post_analysis, reset step to 1
+  // If moving into a new campaign state, reset step to 1
   const newStep =
-    newState === "post_analysis" && current.campaign_state !== "post_analysis"
-      ? 1
-      : current.campaign_step;
+    (newState !== current.campaign_state) ? 1 : current.campaign_step;
 
   db.prepare(
     `UPDATE agent_lifecycle

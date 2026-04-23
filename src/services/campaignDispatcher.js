@@ -8,6 +8,7 @@ const { sendEmail } = require("./notificationService");
 const { determineCampaignState } = require("./campaignStateService");
 const { getPreActivationEmail } = require("./preActivationCampaign");
 const { getPostAnalysisEmail } = require("./postAnalysisCampaign");
+const { getCoachingActiveEmail } = require("./coachingActiveCampaign");
 const { logCampaignActivity } = require("./fubMirrorService");
 
 function generateId() {
@@ -89,7 +90,7 @@ async function dispatch(agentId) {
     const nextStep = currentStep + 1;
 
     // Campaign step limits per type (pre_activation = 26 weeks / 6 months)
-    const maxSteps = { pre_activation: 26, post_analysis: 21 };
+    const maxSteps = { pre_activation: 26, post_analysis: 21, coaching_active: 130 };
     const limit = maxSteps[campaignState] || 3;
     if (nextStep > limit) {
       return {
@@ -107,12 +108,18 @@ async function dispatch(agentId) {
       const daysSince = (Date.now() - new Date(lastSend.sent_at).getTime()) / 86400000;
       let minDays = 1;
       if (campaignState === "pre_activation") minDays = 7;
+      else if (campaignState === "coaching_active") minDays = 1;
       else if (campaignState === "post_analysis" && nextStep <= 12) minDays = 2;
       else if (campaignState === "post_analysis" && nextStep <= 20) minDays = 3;
       else if (campaignState === "post_analysis" && nextStep >= 21) minDays = 28;
       if (daysSince < minDays) {
         return { success: false, reason: "frequency_gated", agentId, campaignState, nextStep, daysSince: Math.round(daysSince), minDays };
       }
+    }
+    // Skip weekends for coaching_active (except first email)
+    if (campaignState === "coaching_active" && nextStep > 1) {
+      const dayOfWeek = new Date().getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) return { success: false, reason: "weekend_skip", agentId, campaignState };
     }
 
     // Generate the correct email
@@ -122,6 +129,10 @@ async function dispatch(agentId) {
       emailContent = getPreActivationEmail(nextStep);
     } else if (campaignState === "post_analysis") {
       emailContent = getPostAnalysisEmail(agentId, row.first_name, nextStep);
+    } else if (campaignState === "coaching_active") {
+      let portalUrl = null;
+      try { const { getTokenForAgent } = require("../utils/portalAuth"); const t = await getTokenForAgent(agentId); if (t) portalUrl = "https://node-runner.onrender.com/portal/" + agentId + "?token=" + t; } catch(e) {}
+      emailContent = getCoachingActiveEmail(nextStep, portalUrl);
     } else {
       return {
         success: false,
