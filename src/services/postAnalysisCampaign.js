@@ -95,7 +95,7 @@ function buildEmails(firstName, insight) {
         <p>Most agents in your position lose somewhere between 20 and 40 percent of their potential income every year because of this exact gap. Not because they are not working hard. Because they are working hard in the wrong direction.</p>
         <p>I have built a coaching program specifically designed to close this gap — fast, with a clear roadmap and real accountability.</p>
         <p>The next step is a strategy session where we look at your numbers together and build a 90-day plan.</p>
-        <p><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab;font-weight:bold">Book your strategy session here.</a></p>
+        <p><a href="https://node-runner.onrender.com/assessment.html" style="color:#1a0dab;font-weight:bold">Start your free coaching portal here.</a></p>
         <p>No pressure. Just clarity.</p>
       `),
     },
@@ -108,7 +108,7 @@ function buildEmails(firstName, insight) {
         <p>I have helped agents with this exact profile add six figures to their business within 12 months. Not by doing more. By doing the right things consistently.</p>
         <p>You are capable of significantly more than your current numbers show. The gap between where you are and where you want to be is not as wide as it feels. It just requires ${insight.opportunity}.</p>
         <p>That is exactly what we build together in the coaching program.</p>
-        <p><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab;font-weight:bold">Book your free strategy session.</a></p>
+        <p><a href="https://node-runner.onrender.com/assessment.html" style="color:#1a0dab;font-weight:bold">Activate your free coaching portal.</a></p>
       `),
     },
     3: {
@@ -122,7 +122,7 @@ function buildEmails(firstName, insight) {
         <p>The difference is not talent. It is not even effort. It is the decision to get the right support at the right time.</p>
         <p>Your analysis showed that ${insight.truth}. That is a solvable problem. I solve it with agents every week.</p>
         <p>But I cannot help you if you do not take the next step.</p>
-        <p><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab;font-weight:bold">Book your strategy session now.</a> It is free. It is focused. And it might be the decision that changes your year.</p>
+        <p><a href="https://node-runner.onrender.com/assessment.html" style="color:#1a0dab;font-weight:bold">Activate your coaching portal now.</a> It is free. It is focused. And it might be the decision that changes your year.</p>
         <p>I hope to talk soon.</p>
       `),
     },
@@ -145,7 +145,7 @@ function getPostAnalysisEmail(agentId, firstName, step) {
   return {
     subject: email.subject,
     html: email.body,
-    ctaUrl: "https://calendar.app.google/Mvs8PimcWXHYQjY17",
+    ctaUrl: "https://node-runner.onrender.com/assessment.html",
     campaignType: "post_analysis",
     campaignStep: step,
     insight,
