@@ -149,6 +149,15 @@ async function getDynamicCoachingEmail(agentId, step, portalUrl) {
     WHERE agent_id = $1
   `).get(agentId);
 
+  // ── Load onboarding signals (for welcome email) ────────────────────────
+  const onboarding = await db.prepare(`
+    SELECT primary_challenge, has_business_plan, has_accountability,
+           prospecting_hours, has_listing_pres, repeat_client_pct,
+           tracks_activities, has_morning_routine, units_2024, gci_2024
+    FROM business_onboarding
+    WHERE agent_id = $1
+  `).get(agentId);
+
   // ── Calculate days dark ────────────────────────────────────────────────
   let daysDark = 3; // default if no engagement data
   if (agent.last_engaged_at) {
@@ -196,17 +205,66 @@ async function getDynamicCoachingEmail(agentId, step, portalUrl) {
   let body = "";
 
   if (tone === "welcome") {
+    // Build gaps list from onboarding signals
+    const gaps = [];
+    if (onboarding) {
+      if (onboarding.has_business_plan === "no") gaps.push("No written business plan");
+      if (onboarding.tracks_activities === "no") gaps.push("Not tracking daily activities");
+      if (onboarding.has_morning_routine === "no") gaps.push("No structured morning routine");
+      if (onboarding.has_listing_pres === "no") gaps.push("No listing presentation system");
+      if (onboarding.has_accountability === "no") gaps.push("No accountability partner");
+      if (onboarding.prospecting_hours === "0-2") gaps.push("Under 2 hours prospecting per week");
+      if (onboarding.repeat_client_pct === "under-10") gaps.push("Under 10% repeat/referral business");
+    }
+    const gapItems = gaps.length > 0
+      ? gaps.slice(0, 4).map((g, i) => `<tr><td style="padding:4px 0;color:#555;font-size:14px">${i + 1}. ${g}</td></tr>`).join("")
+      : "";
+    const gapSection = gapItems
+      ? `<div style="margin:16px 0"><p style="font-weight:bold;color:#1a2b4a;margin-bottom:6px;font-size:14px">Key Gaps Identified:</p><table style="width:100%">${gapItems}</table></div>`
+      : "";
+
+    // Business snapshot line
+    let snapshotLine = "";
+    if (onboarding && (onboarding.units_2024 || onboarding.gci_2024)) {
+      snapshotLine = `<p style="color:#555;font-size:13px">Last year: ${onboarding.units_2024 || 0} units / $${Number(onboarding.gci_2024 || 0).toLocaleString()} GCI</p>`;
+    }
+
     body = `
 <p>Hi ${firstName},</p>
-<p>Your Co.Pilot coaching portal is now active.</p>
-<p>Inside you will find your personalized coaching plan — built around your specific bottleneck (<strong>${bottleneckDisplay}</strong>), with daily actions, a scorecard, and a clear roadmap to hit your income goal.</p>
-<p>Here is what I want you to do this week: log in, review your coaching directive, and complete your daily scorecard at least 3 times. That is it. Three days. Start building the habit.</p>
-${portalButton(portalUrl)}
-<div style="background:#f0f4f8;border-radius:8px;padding:16px 20px;margin:20px 0">
+
+<p>Thank you for completing your Co.Pilot assessment. Your coaching portal is now active and I have reviewed your results personally.</p>
+
+<div style="background:#f0f4f8;border-radius:8px;padding:20px 24px;margin:20px 0">
+  <p style="margin:0 0 6px;font-weight:bold;color:#1a2b4a;font-size:16px">Your Primary Bottleneck</p>
+  <p style="margin:0;font-size:18px;color:#c0392b;font-weight:bold">${bottleneckDisplay}</p>
+  <p style="margin:8px 0 0;color:#555;font-size:14px">This is the single area holding your business back. Your entire coaching plan is built around fixing this.</p>
+</div>
+
+${snapshotLine}
+${gapSection}
+
+<p>Here is your personalized coaching plan:</p>
+
+<div style="background:#f8f6f0;border-left:4px solid #1a2b4a;padding:16px 20px;margin:16px 0;border-radius:4px">
   <p style="margin:0 0 6px;font-weight:bold;color:#1a2b4a">Your Coaching Directive</p>
   <p style="margin:0">${directive}</p>
 </div>
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0">
+  <tr><td style="padding:8px 12px;background:#1a2b4a;color:#fff;font-weight:bold;border-radius:4px 4px 0 0">RPM Plan — Result</td></tr>
+  <tr><td style="padding:10px 12px;border:1px solid #ddd">${rpmResult}</td></tr>
+  <tr><td style="padding:8px 12px;background:#1a2b4a;color:#fff;font-weight:bold">Purpose</td></tr>
+  <tr><td style="padding:10px 12px;border:1px solid #ddd">${rpmPurpose}</td></tr>
+  <tr><td style="padding:8px 12px;background:#1a2b4a;color:#fff;font-weight:bold">Massive Action</td></tr>
+  <tr><td style="padding:10px 12px;border:1px solid #ddd;border-radius:0 0 4px 4px">${rpmAction}</td></tr>
+</table>
+
 ${goalLine}
+
+<p><strong>Your first week challenge:</strong> Log in, review your coaching directive, and complete your daily scorecard at least 3 times. That is it. Three days. Start building the habit.</p>
+
+${portalButton(portalUrl)}
+
 <p>Let us get to work.</p>`;
   }
 

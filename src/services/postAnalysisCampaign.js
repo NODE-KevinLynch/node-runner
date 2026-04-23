@@ -1,7 +1,8 @@
 // src/services/postAnalysisCampaign.js
-// 3-email sequence for agents who completed the Agent Analysis
-// Goal: move them to Coaching App and Sutton Group
-// Uses real analysis data from assessments table
+// 21-email sequence for agents who completed the Agent Analysis
+// Email 1: Rich "Thank you + here's what we found" insights overview
+// Emails 2-21: Coaching-oriented nudges toward Co.Pilot activation
+// Uses real analysis data from diagnoses table
 
 const db = require("../db/db");
 
@@ -61,6 +62,10 @@ function interpretAnalysis(diagnosis) {
     time_management: "time and priority management",
     accountability: "accountability structure",
     cold_call_aversion: "prospecting comfort and confidence",
+    follow_up_consistency: "follow-up consistency",
+    sphere_saturation: "sphere of influence development",
+    conversion_deficit: "conversion and presentation skills",
+    mindset_foundation: "mindset and daily discipline",
   };
 
   if (!diagnosis || !diagnosis.bottleneck) {
@@ -81,22 +86,99 @@ function interpretAnalysis(diagnosis) {
   };
 }
 
+// ── Format profile tier for display ──────────────────────────────────────────
+function formatProfileTier(profile) {
+  if (!profile) return null;
+  const parts = profile.split("_");
+  const tier = parts[0];
+  const trend = parts[1];
+  const tierMap = { emerging: "Emerging", developing: "Developing", established: "Established", elite: "Elite" };
+  const trendMap = { growing: "Growing", declining: "Declining", flat: "Stable" };
+  return { tier: tierMap[tier] || tier, trend: trendMap[trend] || trend };
+}
+
+// ── Build the rich thank-you insights email (Step 1) ─────────────────────────
+function buildInsightsEmail(firstName, diagnosis, insight) {
+  const bottleneckDisplay = (diagnosis?.bottleneck || "pipeline_volume").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const profileInfo = formatProfileTier(diagnosis?.profile);
+
+  // Parse signals for gap identification
+  let signals = {};
+  try { signals = JSON.parse(diagnosis?.signals || "{}"); } catch(e) {}
+
+  const gaps = [];
+  if (signals.has_business_plan === "no") gaps.push("No written business plan");
+  if (signals.tracks_activities === "no") gaps.push("Not tracking daily activities");
+  if (signals.has_morning_routine === "no") gaps.push("No structured morning routine");
+  if (signals.has_listing_pres === "no") gaps.push("No listing presentation system");
+  if (signals.has_accountability === "no") gaps.push("No accountability partner or coach");
+  if (signals.prospecting_hours === "0-2") gaps.push("Under 2 hours of prospecting per week");
+  if (signals.repeat_client_pct === "under-10") gaps.push("Under 10% repeat and referral business");
+
+  // Build gap list HTML
+  let gapHtml = "";
+  if (gaps.length > 0) {
+    const gapItems = gaps.slice(0, 5).map((g, i) => `<tr><td style="padding:4px 0;color:#555">${i + 1}. ${g}</td></tr>`).join("");
+    gapHtml = `
+    <div style="margin:20px 0">
+      <p style="font-weight:bold;color:#1a2b4a;margin-bottom:8px">Key Gaps Identified:</p>
+      <table style="width:100%;font-size:14px">${gapItems}</table>
+    </div>`;
+  }
+
+  // Profile badge
+  let profileBadge = "";
+  if (profileInfo) {
+    const trendColor = profileInfo.trend === "Growing" ? "#27ae60" : profileInfo.trend === "Declining" ? "#c0392b" : "#7f8c8d";
+    profileBadge = `
+    <div style="display:inline-block;margin:16px 0">
+      <span style="background:#1a2b4a;color:#fff;padding:6px 14px;border-radius:4px 0 0 4px;font-size:13px;font-weight:bold">${profileInfo.tier}</span><span style="background:${trendColor};color:#fff;padding:6px 14px;border-radius:0 4px 4px 0;font-size:13px">${profileInfo.trend}</span>
+    </div>`;
+  }
+
+  const body = `
+<p>${firstName},</p>
+
+<p>Thank you for completing your Agent Analysis. I have reviewed your results personally and I want to share what the data is telling me.</p>
+
+${profileBadge}
+
+<div style="background:#f0f4f8;border-radius:8px;padding:20px 24px;margin:20px 0">
+  <p style="margin:0 0 6px;font-weight:bold;color:#1a2b4a;font-size:16px">Your Primary Bottleneck</p>
+  <p style="margin:0;font-size:18px;color:#c0392b;font-weight:bold">${bottleneckDisplay}</p>
+  <p style="margin:8px 0 0;color:#555">This is the single area in your business that, if addressed, would unlock the most growth. Everything else improves when this gets fixed.</p>
+</div>
+
+${gapHtml}
+
+<div style="background:#f8f6f0;border-left:4px solid #1a2b4a;padding:16px 20px;margin:20px 0;border-radius:4px">
+  <p style="margin:0 0 6px;font-weight:bold;color:#1a2b4a">What This Means</p>
+  <p style="margin:0">Your analysis identified ${insight.gap} as your primary growth constraint. This is not a character flaw and it is not a talent issue. It is a systems issue — and systems can be fixed. Most agents in your position lose 20 to 40 percent of their potential income every year because of this exact gap.</p>
+</div>
+
+<p>Here is what I recommend as your next step:</p>
+
+<p><strong>Activate your free Co.Pilot coaching portal.</strong> It takes about 5 minutes and gives you a personalized coaching plan built around your specific bottleneck — with daily actions, a scorecard, and a clear roadmap to hit your income goal.</p>
+
+<div style="text-align:center;margin:28px 0">
+  <a href="https://node-runner.onrender.com/assessment.html" style="display:inline-block;padding:16px 36px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px">Activate My Free Co.Pilot Portal</a>
+</div>
+
+<p style="color:#555;font-size:13px;text-align:center">Free for 30 days. Personalized to your business. No credit card required.</p>
+
+<p>If you prefer to start with a conversation, I am happy to do that too:</p>
+<p><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab">Book a free 30-minute strategy session</a></p>
+
+<p>Either way — the data is clear and the opportunity is real. I hope to help you close the gap.</p>`;
+
+  return {
+    subject: firstName + ", your Agent Analysis results are in — here is what I found",
+    body: wrapHtml(body),
+  };
+}
+
 function buildEmails(firstName, insight) {
   return {
-    1: {
-      subject: `${firstName}, I reviewed your analysis`,
-      body: wrapHtml(`
-        <p>${firstName},</p>
-        <p>I took a look at your Agent Analysis results and I want to be direct with you.</p>
-        <p>The data shows that ${insight.truth}.</p>
-        <p>This is not a character flaw. It is not a talent issue. It is a systems issue — and systems can be fixed.</p>
-        <p>Most agents in your position lose somewhere between 20 and 40 percent of their potential income every year because of this exact gap. Not because they are not working hard. Because they are working hard in the wrong direction.</p>
-        <p>I have built a coaching program specifically designed to close this gap — fast, with a clear roadmap and real accountability.</p>
-        <p>The next step is a strategy session where we look at your numbers together and build a 90-day plan.</p>
-        <p><a href="https://node-runner.onrender.com/assessment.html" style="color:#1a0dab;font-weight:bold">Start your free coaching portal here.</a></p>
-        <p>No pressure. Just clarity.</p>
-      `),
-    },
     2: {
       subject: `The roadmap for your ${insight.gap}`,
       body: wrapHtml(`
@@ -207,7 +289,23 @@ function getPostAnalysisEmail(agentId, firstName, step) {
     .get(agentId);
 
   const insight = interpretAnalysis(diagnosis);
-  const emails = buildEmails(firstName || "there", insight);
+  const name = firstName || "there";
+
+  // Step 1: Rich thank-you insights email
+  if (step === 1) {
+    const email1 = buildInsightsEmail(name, diagnosis, insight);
+    return {
+      subject: email1.subject,
+      html: email1.body,
+      ctaUrl: "https://node-runner.onrender.com/assessment.html",
+      campaignType: "post_analysis",
+      campaignStep: step,
+      insight,
+    };
+  }
+
+  // Steps 2-21: Regular campaign emails
+  const emails = buildEmails(name, insight);
   const email = emails[step];
 
   if (!email) return null;
