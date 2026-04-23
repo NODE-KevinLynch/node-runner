@@ -670,7 +670,28 @@ app.listen(PORT, () => {
             .join("")
         : "<tr><td colspan='5' style='text-align:center;color:#888'>No emails sent yet</td></tr>";
 
-      const supportingItems = "<li>Coaching actions will appear here</li>";
+      const actionMap = {
+        pipeline_volume: ["Block 2 hours for prospecting calls every morning before 10 AM","Track daily dials, connects, and appointments in your scorecard","Set a non-negotiable minimum of 10 outbound contacts per day","Schedule 3 listing appointments this week","Review your pipeline math every Friday"],
+        lead_volume: ["Identify your top 3 lead sources and double down on the best performer","Add 5 new contacts to your database every day","Launch one new lead generation campaign this week","Ask every client for 2 referrals at closing","Attend one networking event or community activity per week"],
+        lead_conversion: ["Respond to every new lead within 5 minutes","Create a 7-touch follow-up sequence for all new leads","Role-play your initial consultation script 3 times this week","Track your lead-to-appointment conversion rate daily","Pre-qualify leads with a standard set of discovery questions"],
+        database_size: ["Add 5 new contacts to your CRM every day","Tag and segment your database by relationship strength","Send a personal check-in to 10 sphere contacts this week","Set up a monthly newsletter or market update","Audit your database and remove duplicates"],
+        conversion: ["Practice your listing presentation without notes","Prepare 3 client success stories for consultations","Follow up with every showing within 2 hours","Track your appointment-to-close ratio weekly","Ask for the commitment at every meeting"],
+        time_management: ["Time-block your calendar every Sunday evening","Protect your morning power hours from email and admin","Batch similar tasks together","Do your top 3 revenue-producing activities first","Say no to one time-wasting activity this week"],
+        follow_up: ["Build a 30-day follow-up plan for every active lead","Set CRM reminders so no lead goes 48 hours untouched","Send a handwritten note to your last 5 closed clients","Create email templates for your 5 most common follow-ups","Review your follow-up pipeline every morning"],
+        referral_quality: ["Identify your top 20 referral partners and meet one this week","Send a thank-you gift within 24 hours of any referral","Create a referral rewards program for your sphere","Ask every satisfied client who they know thinking about moving","Host a client appreciation event this quarter"],
+        relationship_deficit: ["Call 5 past clients this week just to check in","Acknowledge birthdays, anniversaries, and milestones","Join a local business group or community organization","Volunteer for one community event this month","Send a personalized market update to your top 25 contacts"],
+        mindset_state: ["Start each morning with 10 minutes of visualization","Write down 3 wins from yesterday before starting today","Replace one negative self-talk pattern with a power statement","Read 10 pages of a growth-mindset book daily","Schedule a weekly reflection session"],
+        consistency_habits: ["Set 3 non-negotiable daily habits and track completion","Use a visible habit tracker on your desk","Never break the chain — do a minimum version if needed","Pair a new habit with an existing routine","Review your habit scorecard every Sunday"],
+        accountability: ["Find an accountability partner and check in daily","Share your weekly targets with your broker or team lead","Post your daily scorecard where you can see it","Join a mastermind group of 3-5 serious agents","Report your numbers to someone every Friday"],
+        prospecting_consistency: ["Set a daily prospecting alarm that never gets snoozed","Track your prospecting streak and never break it","Make your first 5 calls before checking email","Schedule prospecting blocks as non-cancellable meetings","Celebrate every prospecting session completed"],
+        online_conversion: ["Audit your online profiles and update all photos and bios","Respond to every online inquiry within 5 minutes","Add a video introduction to your website and social profiles","Create a lead magnet that captures contact info","Track your online lead to conversation conversion rate"],
+        low_conversion: ["Record and review your last 3 listing presentations","Prepare a pre-consultation package for every prospect","Practice handling the top 5 objections until automatic","Send a post-consultation follow-up within 1 hour","Track why you lose deals and fix the top pattern"],
+        overwhelm: ["Write down your top 3 priorities every morning","Delegate or eliminate one task that drains your energy","Set a hard stop time for work each day","Break large projects into 15-minute action steps","Clear your desk and inbox before leaving each day"],
+        high_stress: ["Schedule 30 minutes of exercise or movement daily","Practice box breathing between appointments","Set boundaries on client availability hours","Take one full day off per week with no exceptions","Identify your top stress trigger and create a protocol for it"],
+      };
+      const bottleneckKey = diagnosis?.bottleneck || "";
+      const actions = actionMap[bottleneckKey] || actionMap.pipeline_volume || [];
+      const supportingItems = actions.map(a => "<li>" + a + "</li>").join("");
 
       const fs = require("fs");
       let html = fs.readFileSync(
