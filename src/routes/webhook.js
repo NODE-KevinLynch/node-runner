@@ -78,4 +78,63 @@ router.post("/analysis", async (req, res) => {
   }
 });
 
+
+// POST /api/webhook/fub — receive new lead events from Follow Up Boss
+router.post("/fub", async (req, res) => {
+  try {
+    const data = req.body;
+    const event = data.event || "unknown";
+
+    // Only process new person events
+    if (event !== "peopleCreated" && event !== "peopleUpdated") {
+      return res.json({ status: "ignored", event, message: "Event type not handled" });
+    }
+
+    const person = data.person || data.people?.[0] || {};
+    const email = person.emails?.[0]?.value || person.email;
+    if (!email) return res.status(400).json({ error: "No email in FUB payload" });
+
+    // Check if agent already exists
+    const existing = await db.prepare(
+      "SELECT id FROM agents WHERE email = $1"
+    ).get(email);
+
+    if (existing) {
+      return res.json({ status: "exists", agent_id: existing.id, message: "Agent already in system" });
+    }
+
+    // Create new agent from FUB data
+    const firstName = person.firstName || person.name || "";
+    const lastName = person.lastName || "";
+    const phone = person.phones?.[0]?.value || null;
+    const agent_id = "agent_" + firstName.toLowerCase().replace(/[^a-z0-9]/g, "_") + "_" + Date.now().toString(36);
+
+    await db.prepare(
+      `INSERT INTO agents (id, name, last_name, email, phone, source, campaign_state, trial_start_date, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'fub', 'pre_activation', NOW(), NOW())`
+    ).run(agent_id, firstName, lastName, email, phone);
+
+    // Create lifecycle record
+    await db.prepare(
+      `INSERT INTO agent_lifecycle (agent_id, stage, engagement_score, campaign_state, created_at, updated_at)
+       VALUES ($1, 'discovery', 0, 'pre_activation', NOW(), NOW())`
+    ).run(agent_id);
+
+    // Track engagement
+    try {
+      const { trackEngagement } = require("../services/engagementEngine");
+      await trackEngagement(agent_id, "manual_touch");
+    } catch (e) { console.error("FUB webhook engagement failed:", e.message); }
+
+    console.log("FUB webhook: new agent created:", agent_id, email);
+    res.json({
+      status: "created",
+      agent_id,
+      message: "Agent created from FUB. Pre-activation campaign will begin."
+    });
+  } catch (err) {
+    console.error("FUB webhook error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router;
