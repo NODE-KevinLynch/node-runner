@@ -140,7 +140,6 @@
         <div class="section-title">About You</div>
         <div class="section-subtitle">Let's get the basics locked in. Takes about 10 minutes total.</div>
         <div class="field-group"><label>First Name</label><input type="text" id="first_name" placeholder="e.g. Marcus"></div>
-        <div class="field-group"><label>Last Name</label><input type="text" id="last_name" placeholder="e.g. Jordan"></div>
         <div class="field-group"><label>Email <span class="hint">— use the same email you used in your Agent Assessment</span></label><input type="email" id="email" placeholder="you@example.com"><div id="lookup-msg" style="display:none; margin-top:6px; padding:8px 12px; background:#DBEAFE; color:#1B2A4A; border-radius:6px; font-size:13px;"></div></div>
         <div class="field-group"><label>Phone <span class="hint">(optional)</span></label><input type="tel" id="phone" placeholder="(555) 123-4567"></div>
         <div class="field-group"><label>Brokerage</label><input type="text" id="brokerage" placeholder="e.g. Sutton Group"></div>
@@ -382,7 +381,6 @@
         if (data.found && data.agent) {
           const a = data.agent;
           if (a.name) document.getElementById('first_name').value = a.name;
-          if (a.last_name) document.getElementById('last_name').value = a.last_name;
           if (a.phone) document.getElementById('phone').value = a.phone;
           if (a.brokerage) document.getElementById('brokerage').value = a.brokerage;
           if (a.region) document.getElementById('region').value = a.region;
@@ -430,10 +428,8 @@
       hideError(); clearFieldErrors();
       if (step === 1) {
         const first = document.getElementById('first_name').value.trim();
-        const last = document.getElementById('last_name').value.trim();
         const email = document.getElementById('email').value.trim();
         if (!first) { showError('Please enter your first name.'); highlightField('first_name'); return false; }
-        if (!last) { showError('Please enter your last name.'); highlightField('last_name'); return false; }
         if (!email || !email.includes('@')) { showError('Please enter a valid email address.'); highlightField('email'); return false; }
         return true;
       }
@@ -464,10 +460,8 @@
       const params = new URLSearchParams(window.location.search);
       const email = params.get('email');
       const name = params.get('name');
-      const lastName = params.get('last_name');
       const phone = params.get('phone');
       if (name) document.getElementById('first_name').value = name;
-      if (lastName) document.getElementById('last_name').value = lastName;
       if (email) document.getElementById('email').value = email;
       if (phone) document.getElementById('phone').value = phone;
       if (email) {
@@ -477,7 +471,6 @@
           if (data.found && data.agent) {
             const a = data.agent;
             if (a.name) document.getElementById('first_name').value = a.name;
-            if (a.last_name) document.getElementById('last_name').value = a.last_name;
             if (a.phone) document.getElementById('phone').value = a.phone;
             if (a.brokerage) document.getElementById('brokerage').value = a.brokerage;
             if (a.region) document.getElementById('region').value = a.region;
@@ -500,7 +493,7 @@
 
       const payload = {
         first_name: getVal('first_name').trim(),
-        last_name: getVal('last_name').trim(),
+        last_name: '',
         email: getVal('email').trim(),
         phone: getVal('phone').trim(),
         brokerage: getVal('brokerage').trim(),
