@@ -4,7 +4,7 @@ const db = require("../db/db");
 async function generateToken(agentId) {
   const token = crypto.randomBytes(32).toString("hex");
   await db.prepare(
-    "INSERT INTO portal_tokens (agent_id, token) VALUES ($1, $2)"
+    "INSERT INTO portal_tokens (agent_id, token, expires_at) VALUES ($1, $2, NOW() + INTERVAL '90 days') ON CONFLICT (agent_id) DO UPDATE SET token = EXCLUDED.token, expires_at = EXCLUDED.expires_at"
   ).run(agentId, token);
   return token;
 }
