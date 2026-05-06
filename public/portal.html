@@ -1924,13 +1924,13 @@
               totalListTaken += parseInt(sc.list_taken) || 0;
               totalListSold += parseInt(sc.list_sold) || 0;
             });
-            document.getElementById("pipe-active").textContent = Math.max(
+            document.getElementById("pipe-active").textContent = "__ACTIVE_LISTINGS__"; //
               totalListTaken - totalListSold,
               0,
             );
-            document.getElementById("pipe-pending").textContent = "—";
-            document.getElementById("pipe-closed").textContent = ytdClosed;
-            document.getElementById("pipe-remaining").textContent = Math.max(
+            document.getElementById("pipe-pending").textContent = "__PENDING_SALES__";
+            document.getElementById("pipe-closed").textContent = "__CLOSED_YTD__";
+            document.getElementById("pipe-remaining").textContent = "__REMAINING__"; //
               txnGoal - ytdClosed,
               0,
             );
