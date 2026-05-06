@@ -7,7 +7,10 @@
 
 const { v4: uuidv4 } = require("uuid");
 const { runCoachingPipeline } = require("../lib/coachingGenerator");
-const { syncAssessmentToFub, syncCoachingToFub } = require("../services/fubMirrorService");
+const {
+  syncAssessmentToFub,
+  syncCoachingToFub,
+} = require("../services/fubMirrorService");
 
 function registerOnboardingRoutes(app, db) {
   // ── GET /api/lookup-agent ─────────────────────────────────────────────
@@ -70,7 +73,7 @@ function registerOnboardingRoutes(app, db) {
 
       const ford = body.ford;
 
-      if (!first_name || !last_name || !email) {
+      if (!first_name || !email) {
         return res.status(400).json({
           error:
             "Please fill in your first name, last name, and email to continue.",
@@ -208,13 +211,17 @@ function registerOnboardingRoutes(app, db) {
       }
       // 3.5 Save goals to agent_goals table for portal
       try {
-        await db.prepare(
-          `INSERT INTO agent_goals (agent_id, gci_goal, transaction_goal, goal_year)
+        await db
+          .prepare(
+            `INSERT INTO agent_goals (agent_id, gci_goal, transaction_goal, goal_year)
            VALUES ($1, $2, $3, 2026)
            ON CONFLICT (agent_id, goal_year)
-           DO UPDATE SET gci_goal=$2, transaction_goal=$3, updated_at=NOW()`
-        ).run(agent_id, income_goal || 0, transaction_goal || 0);
-      } catch(goalErr) { console.error("Goals save error:", goalErr.message); }
+           DO UPDATE SET gci_goal=$2, transaction_goal=$3, updated_at=NOW()`,
+          )
+          .run(agent_id, income_goal || 0, transaction_goal || 0);
+      } catch (goalErr) {
+        console.error("Goals save error:", goalErr.message);
+      }
 
       // 4. Create agent_lifecycle record if it doesn't exist
       const lifecycle = await db
@@ -231,7 +238,11 @@ function registerOnboardingRoutes(app, db) {
       }
 
       // Set trial start date
-      await db.prepare("UPDATE agents SET trial_start_date = NOW() WHERE id = $1 AND trial_start_date IS NULL").run(agent_id);
+      await db
+        .prepare(
+          "UPDATE agents SET trial_start_date = NOW() WHERE id = $1 AND trial_start_date IS NULL",
+        )
+        .run(agent_id);
       // 5. Determine bottleneck from ALL responses (enhanced diagnosis)
       const bottleneck = diagnoseBottleneck({
         gci_y1,
@@ -270,42 +281,100 @@ function registerOnboardingRoutes(app, db) {
         .run(agent_id, bottleneck, profile, JSON.stringify(signals));
       // 8.5 Save assessment answers to assessments table
       const assessmentFields = {
-        primary_challenge, has_budget, has_business_plan, has_accountability,
-        prospecting_hours, avg_dom, has_listing_pres, repeat_client_pct,
-        tracks_activities, has_morning_routine, income_goal: String(income_goal),
-        transaction_goal: String(transaction_goal), net_income: String(net_income),
-        units_y1: String(units_y1), gci_y1: String(gci_y1)
+        primary_challenge,
+        has_budget,
+        has_business_plan,
+        has_accountability,
+        prospecting_hours,
+        avg_dom,
+        has_listing_pres,
+        repeat_client_pct,
+        tracks_activities,
+        has_morning_routine,
+        income_goal: String(income_goal),
+        transaction_goal: String(transaction_goal),
+        net_income: String(net_income),
+        units_y1: String(units_y1),
+        gci_y1: String(gci_y1),
       };
       for (const [qKey, qVal] of Object.entries(assessmentFields)) {
         if (qVal) {
           try {
-            await db.prepare(
-              "INSERT INTO assessments (id, agent_id, question_key, answer, score, created_at) VALUES ($1, $2, $3, $4, 0, NOW())"
-            ).run(require("uuid").v4(), agent_id, qKey, qVal);
-          } catch(aErr) { console.error("Assessment save error:", aErr.message); }
+            await db
+              .prepare(
+                "INSERT INTO assessments (id, agent_id, question_key, answer, score, created_at) VALUES ($1, $2, $3, $4, 0, NOW())",
+              )
+              .run(require("uuid").v4(), agent_id, qKey, qVal);
+          } catch (aErr) {
+            console.error("Assessment save error:", aErr.message);
+          }
         }
       }
-
 
       // 9. Auto-generate coaching content so portal is ready immediately
       try {
         await runCoachingPipeline(db, agent_id);
         console.log("Coaching generated for:", agent_id);
-            try { const { trackEngagement } = require("../services/engagementEngine"); await trackEngagement(agent_id, "assessment_completed"); } catch(engErr) { console.error("Engagement track failed:", engErr.message); }
-            try { const { generateToken } = require("../utils/portalAuth"); const token = await generateToken(agent_id); console.log("Portal token generated for:", agent_id); } catch(tokErr) { console.error("Token generation failed:", tokErr.message); }
-            try { const coaching = await db.prepare("SELECT * FROM coaching_outputs WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1").get(agent_id); const agentRow = await db.prepare("SELECT email FROM agents WHERE id = $1").get(agent_id); if (agentRow?.email) { await syncAssessmentToFub(agent_id, agentRow.email, { bottleneck, phase: "Discovery", firstName: first_name, lastName: last_name, phone }); if (coaching) await syncCoachingToFub(agent_id, agentRow.email, coaching); } } catch(fubErr) { console.error("FUB sync failed (non-fatal):", fubErr.message); }
+        try {
+          const { trackEngagement } = require("../services/engagementEngine");
+          await trackEngagement(agent_id, "assessment_completed");
+        } catch (engErr) {
+          console.error("Engagement track failed:", engErr.message);
+        }
+        try {
+          const { generateToken } = require("../utils/portalAuth");
+          const token = await generateToken(agent_id);
+          console.log("Portal token generated for:", agent_id);
+        } catch (tokErr) {
+          console.error("Token generation failed:", tokErr.message);
+        }
+        try {
+          const coaching = await db
+            .prepare(
+              "SELECT * FROM coaching_outputs WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1",
+            )
+            .get(agent_id);
+          const agentRow = await db
+            .prepare("SELECT email FROM agents WHERE id = $1")
+            .get(agent_id);
+          if (agentRow?.email) {
+            await syncAssessmentToFub(agent_id, agentRow.email, {
+              bottleneck,
+              phase: "Discovery",
+              firstName: first_name,
+              lastName: last_name,
+              phone,
+            });
+            if (coaching)
+              await syncCoachingToFub(agent_id, agentRow.email, coaching);
+          }
+        } catch (fubErr) {
+          console.error("FUB sync failed (non-fatal):", fubErr.message);
+        }
       } catch (coachErr) {
-        console.error("Coaching generation failed (non-fatal):", coachErr.message);
+        console.error(
+          "Coaching generation failed (non-fatal):",
+          coachErr.message,
+        );
       }
 
-        let portal_url = null;
-        try { const { getTokenForAgent } = require("../utils/portalAuth"); const t = await getTokenForAgent(agent_id); if (t) portal_url = "https://node-runner.onrender.com/portal/" + agent_id + "?token=" + t; } catch(e) {}
+      let portal_url = null;
+      try {
+        const { getTokenForAgent } = require("../utils/portalAuth");
+        const t = await getTokenForAgent(agent_id);
+        if (t)
+          portal_url =
+            "https://node-runner.onrender.com/portal/" +
+            agent_id +
+            "?token=" +
+            t;
+      } catch (e) {}
       res.json({
         status: "onboarded",
         agent_id,
         bottleneck,
         profile,
-            portal_url,
+        portal_url,
         message: "Assessment saved. Coaching pipeline ready.",
       });
     } catch (err) {
