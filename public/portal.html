@@ -418,12 +418,38 @@
         letter-spacing: 0.08em;
         font-weight: 600;
       }
-    .ford-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 600px) { .ford-grid { grid-template-columns: 1fr; } }
-    .ford-card { background: var(--bg-card, #f8f9fa); border: 1px solid var(--border, #e0e0e0); border-radius: 10px; padding: 16px; }
-    .ford-cat { font-weight: 700; font-size: 16px; margin-bottom: 10px; color: var(--navy, #1a2a3a); }
-    .ford-row { font-size: 14px; margin-bottom: 6px; color: var(--grey-warm, #555); }
-    .ford-lbl { font-weight: 600; color: var(--navy, #1a2a3a); margin-right: 6px; }
+      .ford-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      @media (max-width: 600px) {
+        .ford-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .ford-card {
+        background: var(--bg-card, #f8f9fa);
+        border: 1px solid var(--border, #e0e0e0);
+        border-radius: 10px;
+        padding: 16px;
+      }
+      .ford-cat {
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: var(--navy, #1a2a3a);
+      }
+      .ford-row {
+        font-size: 14px;
+        margin-bottom: 6px;
+        color: var(--grey-warm, #555);
+      }
+      .ford-lbl {
+        font-weight: 600;
+        color: var(--navy, #1a2a3a);
+        margin-right: 6px;
+      }
     </style>
   </head>
   <body>
@@ -678,68 +704,160 @@
           border-radius: 50%;
           background: var(--muted);
         }
-    .ford-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 600px) { .ford-grid { grid-template-columns: 1fr; } }
-    .ford-card { background: var(--bg-card, #f8f9fa); border: 1px solid var(--border, #e0e0e0); border-radius: 10px; padding: 16px; }
-    .ford-cat { font-weight: 700; font-size: 16px; margin-bottom: 10px; color: var(--navy, #1a2a3a); }
-    .ford-row { font-size: 14px; margin-bottom: 6px; color: var(--grey-warm, #555); }
-    .ford-lbl { font-weight: 600; color: var(--navy, #1a2a3a); margin-right: 6px; }
+        .ford-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        @media (max-width: 600px) {
+          .ford-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+        .ford-card {
+          background: var(--bg-card, #f8f9fa);
+          border: 1px solid var(--border, #e0e0e0);
+          border-radius: 10px;
+          padding: 16px;
+        }
+        .ford-cat {
+          font-weight: 700;
+          font-size: 16px;
+          margin-bottom: 10px;
+          color: var(--navy, #1a2a3a);
+        }
+        .ford-row {
+          font-size: 14px;
+          margin-bottom: 6px;
+          color: var(--grey-warm, #555);
+        }
+        .ford-lbl {
+          font-weight: 600;
+          color: var(--navy, #1a2a3a);
+          margin-right: 6px;
+        }
 
-    /* ═══ MOBILE RESPONSIVE FIX ═══ */
-    @media (max-width: 640px) {
-      body, html { overflow-x: hidden; }
-      main { padding: 0 12px !important; max-width: 100vw !important; overflow-x: hidden; }
-      .card { padding: 16px 14px !important; word-wrap: break-word; overflow-wrap: break-word; }
-      .header { padding: 20px 14px !important; }
-      .header h1 { font-size: 1.6em !important; }
+        /* ═══ MOBILE RESPONSIVE FIX ═══ */
+        @media (max-width: 640px) {
+          body,
+          html {
+            overflow-x: hidden;
+          }
+          main {
+            padding: 0 12px !important;
+            max-width: 100vw !important;
+            overflow-x: hidden;
+          }
+          .card {
+            padding: 16px 14px !important;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+          }
+          .header {
+            padding: 20px 14px !important;
+          }
+          .header h1 {
+            font-size: 1.6em !important;
+          }
 
-      /* Journey timeline */
-      .funnel-row { gap: 4px !important; overflow-x: auto; }
-      .funnel-step { min-width: 56px !important; font-size: 9px !important; }
+          /* Journey timeline */
+          .funnel-row {
+            gap: 4px !important;
+            overflow-x: auto;
+          }
+          .funnel-step {
+            min-width: 56px !important;
+            font-size: 9px !important;
+          }
 
-      /* Scorecard grid */
-      .sc-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
-      .sc-item { padding: 10px !important; }
+          /* Scorecard grid */
+          .sc-grid {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
+          .sc-item {
+            padding: 10px !important;
+          }
 
-      /* RPM plan */
-      .rpm-grid { grid-template-columns: 1fr !important; }
-      .rpm-card { padding: 16px !important; }
+          /* RPM plan */
+          .rpm-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .rpm-card {
+            padding: 16px !important;
+          }
 
-      /* Email/Activity tables */
-      .card table { font-size: 12px !important; }
-      .card:has(table) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .email-table table { min-width: 500px; }
+          /* Email/Activity tables */
+          .card table {
+            font-size: 12px !important;
+          }
+          .card:has(table) {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .email-table table {
+            min-width: 500px;
+          }
 
-      /* Truth/Strategy text */
-      .truth-card, .strategy-card { padding: 16px 14px !important; font-size: 14px !important; line-height: 1.6 !important; }
-      .truth-card p, .strategy-card p { word-wrap: break-word; overflow-wrap: break-word; }
+          /* Truth/Strategy text */
+          .truth-card,
+          .strategy-card {
+            padding: 16px 14px !important;
+            font-size: 14px !important;
+            line-height: 1.6 !important;
+          }
+          .truth-card p,
+          .strategy-card p {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+          }
 
-      /* Constraint card */
-      .constraint-card { flex-direction: column !important; text-align: center; }
+          /* Constraint card */
+          .constraint-card {
+            flex-direction: column !important;
+            text-align: center;
+          }
 
-      /* Stat cards row */
-      .stat-row { grid-template-columns: 1fr !important; }
+          /* Stat cards row */
+          .stat-row {
+            grid-template-columns: 1fr !important;
+          }
 
-      /* Goal cards */
-      .goal-cards { grid-template-columns: 1fr !important; }
+          /* Goal cards */
+          .goal-cards {
+            grid-template-columns: 1fr !important;
+          }
 
-      /* Daily win items */
-      .daily-win-item { padding: 12px 10px !important; }
-      .daily-win-item label { font-size: 13px !important; }
+          /* Daily win items */
+          .daily-win-item {
+            padding: 12px 10px !important;
+          }
+          .daily-win-item label {
+            font-size: 13px !important;
+          }
 
-      /* Monthly target grid */
-      .monthly-grid { grid-template-columns: 1fr !important; }
+          /* Monthly target grid */
+          .monthly-grid {
+            grid-template-columns: 1fr !important;
+          }
 
-      /* Pipeline snapshot */
-      .pipeline-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          /* Pipeline snapshot */
+          .pipeline-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
 
-      /* Quote */
-      .quote-card { padding: 16px 14px !important; font-size: 14px !important; }
+          /* Quote */
+          .quote-card {
+            padding: 16px 14px !important;
+            font-size: 14px !important;
+          }
 
-      /* Footer */
-      .footer { padding: 20px 14px !important; font-size: 12px !important; }
-    }
-
+          /* Footer */
+          .footer {
+            padding: 20px 14px !important;
+            font-size: 12px !important;
+          }
+        }
       </style>
 
       <!-- ═══ YOUR GOALS ═══ -->
@@ -1716,14 +1834,14 @@
       </div>
     </main>
 
-
     <!-- F.O.R.D. Dream Board -->
     <div class="section-label">Your Great Life — Dream Board</div>
     <div class="card" style="padding: 20px 28px">
-      <p style="color:var(--grey-warm);font-size:14px;margin-bottom:16px">Business is a vehicle, not a destination. These are the targets that keep you focused, inspired, and motivated.</p>
-      <div class="ford-grid">
-        __FORD_SECTION__
-      </div>
+      <p style="color: var(--grey-warm); font-size: 14px; margin-bottom: 16px">
+        Business is a vehicle, not a destination. These are the targets that
+        keep you focused, inspired, and motivated.
+      </p>
+      <div class="ford-grid">__FORD_SECTION__</div>
     </div>
     <div class="footer">
       <strong>Kevin Lynch</strong> &nbsp;·&nbsp; Performance Architect
@@ -1839,8 +1957,9 @@
         // ── Stats ──
         document.getElementById("stat-emails").textContent = totalEmails;
         if (CREATED && CREATED !== "—") {
-          document.getElementById("stat-days").textContent = Math.max(0, Math.floor(
-            (now - new Date(CREATED)) / 86400000),
+          document.getElementById("stat-days").textContent = Math.max(
+            0,
+            Math.floor((now - new Date(CREATED)) / 86400000),
           );
         }
         document.getElementById("stat-streak").textContent =
@@ -1924,16 +2043,14 @@
               totalListTaken += parseInt(sc.list_taken) || 0;
               totalListSold += parseInt(sc.list_sold) || 0;
             });
-            document.getElementById("pipe-active").textContent = Math.max(
-              totalListTaken - totalListSold,
-              0,
-            );
-            document.getElementById("pipe-pending").textContent = "—";
-            document.getElementById("pipe-closed").textContent = ytdClosed;
-            document.getElementById("pipe-remaining").textContent = Math.max(
-              txnGoal - ytdClosed,
-              0,
-            );
+            document.getElementById("pipe-active").textContent =
+              "__ACTIVE_LISTINGS__";
+            document.getElementById("pipe-pending").textContent =
+              "__PENDING_SALES__";
+            document.getElementById("pipe-closed").textContent =
+              "__CLOSED_YTD__";
+            document.getElementById("pipe-remaining").textContent =
+              "__REMAINING__";
             // ── Monthly Goal Tracker ──
             var monthNames = [
               "Jan",
