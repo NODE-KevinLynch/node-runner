@@ -176,6 +176,40 @@
       </div>
 
       <div class="section-card">
+        <div class="section-title">Your Pipeline Right Now</div>
+        <div class="section-subtitle">Where does your business stand today? These numbers power your portal's pipeline snapshot and daily math.</div>
+        <div class="field-group">
+          <label>Active Listings <span class="hint">(currently on the market)</span></label>
+          <input type="number" id="active_listings" placeholder="0">
+        </div>
+        <div class="field-group">
+          <label>Pending Sales <span class="hint">(accepted offers, not yet closed)</span></label>
+          <input type="number" id="pending_sales" placeholder="0">
+        </div>
+        <div class="field-group">
+          <label>Closed Transactions — Year to Date <span class="hint">(2026 so far)</span></label>
+          <input type="number" id="closed_ytd" placeholder="0">
+        </div>
+        <div class="field-group">
+          <label>Average Sale Price <span class="hint">(your typical transaction)</span></label>
+          <input type="text" id="avg_sale_price" placeholder="$0">
+        </div>
+        <div class="field-group">
+          <label>Average List Price <span class="hint">(your typical listing)</span></label>
+          <input type="text" id="avg_list_price" placeholder="$0">
+        </div>
+        <div class="field-group">
+          <label>Listing-to-Sale Ratio <span class="hint">(what % of your list price do you typically sell for?)</span></label>
+          <div class="option-group" data-field="list_to_sale_ratio">
+            <div class="option-btn" data-value="under-40">Under 40%</div>
+            <div class="option-btn" data-value="41-70">41–70%</div>
+            <div class="option-btn" data-value="71-90">71–90%</div>
+            <div class="option-btn" data-value="over-90">Over 90%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
         <div class="section-title">Your Daily Operations</div>
         <div class="section-subtitle">These questions help us understand how you run your business day-to-day — so your coaching plan fits your reality.</div>
         <div class="field-group">
@@ -448,7 +482,7 @@
     function hideError() { document.getElementById('error-box').classList.remove('visible'); }
 
     function setupCurrencyFields() {
-      ['net_income','income_goal','gci_'+YEAR1,'gci_'+YEAR2,'gci_'+YEAR3].forEach(id => {
+      ['net_income','income_goal','avg_sale_price','avg_list_price','gci_'+YEAR1,'gci_'+YEAR2,'gci_'+YEAR3].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('blur', () => { let v = el.value.replace(/[^0-9.]/g,''); if (v) el.value = '$' + Number(v).toLocaleString(); });
       });
@@ -516,6 +550,12 @@
         tracks_activities: optionSelections.tracks_activities || '',
         has_morning_routine: optionSelections.has_morning_routine || '',
         primary_challenge: optionSelections.primary_challenge || '',
+        list_to_sale_ratio: optionSelections.list_to_sale_ratio || '',
+        active_listings: Number(getVal('active_listings')) || 0,
+        pending_sales: Number(getVal('pending_sales')) || 0,
+        closed_ytd: Number(getVal('closed_ytd')) || 0,
+        avg_sale_price: parseCurrency(getVal('avg_sale_price')),
+        avg_list_price: parseCurrency(getVal('avg_list_price')),
         income_goal: parseCurrency(getVal('income_goal')),
         transaction_goal: Number(getVal('transaction_goal')) || 0,
         ford: {

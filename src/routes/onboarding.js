@@ -38,7 +38,7 @@ function registerOnboardingRoutes(app, db) {
     try {
       const body = req.body;
       const first_name = body.first_name;
-      const last_name = body.last_name;
+      const last_name = body.last_name || "";
       const email = body.email;
       const phone = body.phone;
       const brokerage = body.brokerage;
@@ -61,7 +61,7 @@ function registerOnboardingRoutes(app, db) {
       const income_goal = body.income_goal || 0;
       const transaction_goal = body.transaction_goal || 0;
 
-      // 8 new coaching intelligence fields
+      // 8 coaching intelligence fields
       const has_business_plan = body.has_business_plan || "";
       const has_accountability = body.has_accountability || "";
       const prospecting_hours = body.prospecting_hours || "";
@@ -71,12 +71,19 @@ function registerOnboardingRoutes(app, db) {
       const tracks_activities = body.tracks_activities || "";
       const has_morning_routine = body.has_morning_routine || "";
 
+      // Pipeline snapshot fields
+      const active_listings = Number(body.active_listings) || 0;
+      const pending_sales = Number(body.pending_sales) || 0;
+      const closed_ytd = Number(body.closed_ytd) || 0;
+      const avg_sale_price = Number(body.avg_sale_price) || 0;
+      const avg_list_price = Number(body.avg_list_price) || 0;
+      const list_to_sale_ratio = body.list_to_sale_ratio || "";
+
       const ford = body.ford;
 
       if (!first_name || !email) {
         return res.status(400).json({
-          error:
-            "Please fill in your first name, last name, and email to continue.",
+          error: "Please fill in your first name and email to continue.",
         });
       }
 
@@ -106,9 +113,8 @@ function registerOnboardingRoutes(app, db) {
       } else {
         const baseId =
           "agent_" +
-          first_name.toLowerCase() +
-          "_" +
-          last_name.toLowerCase().replace(/\s+/g, "_");
+          first_name.toLowerCase().replace(/\s+/g, "_") +
+          (last_name ? "_" + last_name.toLowerCase().replace(/\s+/g, "_") : "");
         const suffix = "_" + Date.now().toString(36);
         agent_id = baseId + suffix;
         try {
@@ -140,7 +146,7 @@ function registerOnboardingRoutes(app, db) {
         }
       }
 
-      // 2. Save business onboarding data
+      // 2. Save business onboarding data (including pipeline snapshot)
       await db
         .prepare(
           `INSERT INTO business_onboarding (
@@ -152,8 +158,10 @@ function registerOnboardingRoutes(app, db) {
            avg_dom, has_listing_pres, repeat_client_pct,
            tracks_activities, has_morning_routine,
            primary_challenge, income_goal, transaction_goal,
+           active_listings, pending_sales, closed_ytd,
+           avg_sale_price, avg_list_price, list_to_sale_ratio,
            created_at
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,NOW())
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,NOW())
          ON CONFLICT (agent_id) DO UPDATE SET
            units_2024=$2, units_2023=$3, units_2022=$4,
            gci_2024=$5, gci_2023=$6, gci_2022=$7,
@@ -162,6 +170,8 @@ function registerOnboardingRoutes(app, db) {
            avg_dom=$13, has_listing_pres=$14, repeat_client_pct=$15,
            tracks_activities=$16, has_morning_routine=$17,
            primary_challenge=$18, income_goal=$19, transaction_goal=$20,
+           active_listings=$21, pending_sales=$22, closed_ytd=$23,
+           avg_sale_price=$24, avg_list_price=$25, list_to_sale_ratio=$26,
            updated_at=NOW()`,
         )
         .run(
@@ -185,6 +195,12 @@ function registerOnboardingRoutes(app, db) {
           primary_challenge,
           income_goal || 0,
           transaction_goal || 0,
+          active_listings,
+          pending_sales,
+          closed_ytd,
+          avg_sale_price,
+          avg_list_price,
+          list_to_sale_ratio,
         );
       // 3. Save F.O.R.D. goals
       if (ford) {
@@ -271,6 +287,7 @@ function registerOnboardingRoutes(app, db) {
         tracks_activities,
         has_morning_routine,
         primary_challenge,
+        list_to_sale_ratio,
       };
 
       await db
@@ -291,6 +308,12 @@ function registerOnboardingRoutes(app, db) {
         repeat_client_pct,
         tracks_activities,
         has_morning_routine,
+        list_to_sale_ratio,
+        active_listings: String(active_listings),
+        pending_sales: String(pending_sales),
+        closed_ytd: String(closed_ytd),
+        avg_sale_price: String(avg_sale_price),
+        avg_list_price: String(avg_list_price),
         income_goal: String(income_goal),
         transaction_goal: String(transaction_goal),
         net_income: String(net_income),
@@ -440,7 +463,6 @@ function diagnoseBottleneck({
   const gci = Number(gci_y1) || 0;
   const units = Number(units_y1) || 0;
 
-  // Score each bottleneck category based on signals
   const scores = {
     pipeline_volume: 0,
     conversion_deficit: 0,
@@ -450,7 +472,6 @@ function diagnoseBottleneck({
     mindset_foundation: 0,
   };
 
-  // Primary challenge is the strongest signal
   const challengeMap = {
     lead_gen: "pipeline_volume",
     conversion: "conversion_deficit",
@@ -463,26 +484,22 @@ function diagnoseBottleneck({
     scores[challengeMap[primary_challenge]] += 5;
   }
 
-  // Prospecting hours — low hours = pipeline problem
   if (prospecting_hours === "0-2") {
     scores.pipeline_volume += 3;
   } else if (prospecting_hours === "3-5") {
     scores.pipeline_volume += 1;
   }
 
-  // Repeat client % — low = sphere underworked
   if (repeat_client_pct === "under-10") {
     scores.sphere_saturation += 3;
   } else if (repeat_client_pct === "10-25") {
     scores.sphere_saturation += 1;
   }
 
-  // Listing presentation — no deck = conversion gap
   if (has_listing_pres === "no") {
     scores.conversion_deficit += 2;
   }
 
-  // Activity tracking — not tracking = follow-up/time issue
   if (tracks_activities === "no") {
     scores.follow_up_consistency += 2;
     scores.time_management += 1;
@@ -490,27 +507,23 @@ function diagnoseBottleneck({
     scores.follow_up_consistency += 1;
   }
 
-  // Morning routine — no routine = mindset signal
   if (has_morning_routine === "no") {
     scores.mindset_foundation += 2;
   } else if (has_morning_routine === "inconsistent") {
     scores.mindset_foundation += 1;
   }
 
-  // Business plan — no plan = time/mindset signal
   if (has_business_plan === "no") {
     scores.time_management += 2;
     scores.mindset_foundation += 1;
   }
 
-  // Production fallback
   if (gci < 40000 || units < 4) {
     scores.pipeline_volume += 2;
   } else if (gci < 80000) {
     scores.conversion_deficit += 1;
   }
 
-  // Return highest scoring bottleneck
   let maxKey = "pipeline_volume";
   let maxVal = 0;
   for (const [key, val] of Object.entries(scores)) {
@@ -522,7 +535,6 @@ function diagnoseBottleneck({
   return maxKey;
 }
 
-// ── Profile Builder ─────────────────────────────────────────────────────────
 function buildProfile({ gci_y1, gci_y2, gci_y3, units_y1 }) {
   const gci = Number(gci_y1) || 0;
   let tier;
