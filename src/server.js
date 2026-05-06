@@ -646,6 +646,12 @@ app.listen(PORT, () => {
       const agentGoals = await db.prepare("SELECT gci_goal, transaction_goal FROM agent_goals WHERE agent_id = $1 AND goal_year = 2026").get(agentId);
       const gciGoal = agentGoals?.gci_goal || 0;
       const txnGoal = agentGoals?.transaction_goal || 0;
+      // Fetch pipeline snapshot from business_onboarding
+      const pipelineData = await db.prepare("SELECT active_listings, pending_sales, closed_ytd, avg_sale_price, avg_list_price, list_to_sale_ratio FROM business_onboarding WHERE agent_id = $1").get(agentId);
+      const activeLst = pipelineData?.active_listings || 0;
+      const pendingSls = pipelineData?.pending_sales || 0;
+      const closedYtd = pipelineData?.closed_ytd || 0;
+      const remaining = Math.max(0, txnGoal - closedYtd);
 
       // No supporting_actions_json column exists — use empty array
       const supporting = [];
@@ -776,6 +782,10 @@ app.listen(PORT, () => {
         .replace(/__TOP_ACTION__/g, coaching?.coaching_directive || "—")
         .replace(/__DAILY_RITUAL__/g, "—")
         .replace(/__WEEKLY_TARGET__/g, "—")
+        .replace(/__ACTIVE_LISTINGS__/g, String(activeLst))
+        .replace(/__PENDING_SALES__/g, String(pendingSls))
+        .replace(/__CLOSED_YTD__/g, String(closedYtd))
+        .replace(/__REMAINING__/g, String(remaining))
         .replace(/__SUPPORTING_ITEMS__/g, supportingItems)
         .replace(/__EMAIL_ROWS__/g, emailRows)
         .replace(
