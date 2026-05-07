@@ -165,7 +165,7 @@ async function syncCoachingToFub(agentId, agentEmail, coachingData) {
     ).get(agentId);
 
     const onboarding = await db.prepare(
-      "SELECT units_2024, gci_2024, primary_challenge, prospecting_hours, has_business_plan, has_accountability, tracks_activities, has_morning_routine, has_listing_pres, repeat_client_pct FROM business_onboarding WHERE agent_id = $1"
+      "SELECT units_2024, gci_2024, primary_challenge, prospecting_hours, has_business_plan, has_accountability, tracks_activities, has_morning_routine, has_listing_pres, repeat_client_pct, active_listings, pending_sales, closed_ytd, avg_sale_price FROM business_onboarding WHERE agent_id = $1"
     ).get(agentId);
 
     const agent = await db.prepare(
@@ -245,6 +245,14 @@ async function syncCoachingToFub(agentId, agentEmail, coachingData) {
       "Income Goal: " + (goals?.gci_goal ? "$" + Number(goals.gci_goal).toLocaleString() : "—"),
       "Transaction Goal: " + (goals?.transaction_goal || "—") + " units",
       "Primary Challenge: " + (onboarding?.primary_challenge || "—").replace(/_/g, " "),
+      "",
+      "----------------------------------------",
+      "PIPELINE SNAPSHOT",
+      "----------------------------------------",
+      "Active Listings:  " + (onboarding?.active_listings ?? "—"),
+      "Pending Sales:    " + (onboarding?.pending_sales ?? "—"),
+      "Closed YTD:       " + (onboarding?.closed_ytd ?? "—"),
+      "Avg Sale Price:   " + (onboarding?.avg_sale_price ? "$" + Number(onboarding.avg_sale_price).toLocaleString() : "—"),
       "",
       "----------------------------------------",
       "DIAGNOSIS",
