@@ -574,6 +574,54 @@ app.use((err, req, res, next) => {
   logError("express", err.message, err.stack);
   res.status(500).json({ error: "Internal server error" });
 });
+
+
+// ── GET /api/agents/:id/transactions ─────────────────────────────────────────
+app.get("/api/agents/:id/transactions", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const rows = await db.prepare(`
+      SELECT * FROM agent_transactions
+      WHERE agent_id = $1
+      ORDER BY closed_date DESC
+    `).all(id);
+    const totalGci = rows.reduce((sum, r) => sum + Number(r.gci), 0);
+    const ytdRows = rows.filter(r => new Date(r.closed_date).getFullYear() === new Date().getFullYear());
+    const ytdGci = ytdRows.reduce((sum, r) => sum + Number(r.gci), 0);
+    res.json({ transactions: rows, total_gci: totalGci, ytd_gci: ytdGci, ytd_count: ytdRows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/agents/:id/transactions ────────────────────────────────────────
+app.post("/api/agents/:id/transactions", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sale_price, gci, closed_date, property_address, transaction_type } = req.body;
+    if (!sale_price || !gci || !closed_date) {
+      return res.status(400).json({ error: "sale_price, gci, and closed_date are required" });
+    }
+    const txId = "tx_" + id + "_" + Date.now();
+    await db.prepare(`
+      INSERT INTO agent_transactions (id, agent_id, closed_date, sale_price, gci, property_address, transaction_type)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `).run(txId, id, closed_date, sale_price, gci, property_address || "", transaction_type || "buyer");
+
+    // Update closed_ytd in business_onboarding
+    await db.prepare(`
+      UPDATE business_onboarding SET closed_ytd = (
+        SELECT COUNT(*) FROM agent_transactions
+        WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())
+      ) WHERE agent_id = $1
+    `).run(id);
+
+    res.json({ success: true, transaction_id: txId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   // ── GET /portal/:agentId ─────────────────────────────────────────────────────
   // Real coaching_outputs columns: id, agent_id, the_truth, the_strategy, rpm_plan,
