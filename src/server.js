@@ -1,13 +1,14 @@
 const express = require("express");
 const path = require("path");
 const db = require("./db/db");
-
+const unsubscribeRouter = require("./routes/unsubscribe");
 const generateRoutes = require("./routes/generate");
 const onboardingRoutes = require("./routes/onboarding");
 const engagementRoutes = require("./routes/engagement");
 const webhookRoutes = require("./routes/webhook");
 const emailPreviewRoutes = require("./routes/emailPreview");
 const adminImportRoutes = require("./routes/adminImport");
+const unsubscribeRouter = require("./routes/unsubscribe");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -19,6 +20,7 @@ app.use("/api/engagement", engagementRoutes);
 app.use("/api/webhook", webhookRoutes);
 app.use("/admin/emails", emailPreviewRoutes);
 app.use("/admin/import", adminImportRoutes);
+app.use("/unsubscribe", unsubscribeRouter);
 const adminCleanupRoutes = require("./routes/adminCleanup");
 app.use("/admin/cleanup-cold-import", adminCleanupRoutes);
 // Health check
