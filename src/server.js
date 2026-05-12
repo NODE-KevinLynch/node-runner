@@ -8,7 +8,6 @@ const engagementRoutes = require("./routes/engagement");
 const webhookRoutes = require("./routes/webhook");
 const emailPreviewRoutes = require("./routes/emailPreview");
 const adminImportRoutes = require("./routes/adminImport");
-const unsubscribeRouter = require("./routes/unsubscribe");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
