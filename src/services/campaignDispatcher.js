@@ -7,6 +7,9 @@ const db = require("../db/db");
 const { sendEmail } = require("./notificationService");
 const { determineCampaignState } = require("./campaignStateService");
 const { getPreActivationEmail } = require("./preActivationCampaign");
+const {
+  getSuttonPreActivationEmail,
+} = require("./suttonPreActivationCampaign");
 const { getPostAnalysisEmail } = require("./postAnalysisCampaign");
 const { getDynamicCoachingEmail } = require("./dynamicCoachingEmail");
 const { logCampaignActivity } = require("./fubMirrorService");
@@ -150,7 +153,16 @@ async function dispatch(agentId) {
     let emailContent = null;
 
     if (campaignState === "pre_activation") {
-      emailContent = getPreActivationEmail(nextStep);
+      // Route by source: Sutton agents get the Sutton-branded sequence
+      // Everyone else (cold imports, agent_analysis) gets the standard sequence
+      const agentRow = await db
+        .prepare("SELECT source, name FROM agents WHERE id = $1")
+        .get(agentId);
+      if (agentRow && agentRow.source === "sutton_import") {
+        emailContent = getSuttonPreActivationEmail(nextStep, agentRow.name);
+      } else {
+        emailContent = getPreActivationEmail(nextStep);
+      }
     } else if (campaignState === "post_analysis") {
       emailContent = getPostAnalysisEmail(agentId, row.first_name, nextStep);
     } else if (campaignState === "coaching_active") {
