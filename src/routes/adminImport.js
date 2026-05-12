@@ -3,13 +3,22 @@
 // GET  /admin/import — upload form
 // POST /admin/import — process the uploaded CSV
 //
-// Uses the same logic as src/scripts/importRealtors.js but runs on Render
-// where the Node environment is healthy. No file system writes — CSV is
-// parsed from the POST body directly.
+// Uses multer for multipart parsing. Multer is the standard Node.js library
+// for handling file uploads and form fields — battle-tested and reliable.
+// The previous hand-rolled parser failed to honor the dryRun checkbox,
+// which caused 3,414 unintended inserts. This replacement fixes that.
 
 const express = require("express");
+const multer = require("multer");
 const router = express.Router();
 const db = require("../db/db");
+
+// Multer config: keep uploaded file in memory (we never write to disk),
+// 10 MB limit which is plenty for a CSV of tens of thousands of rows.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 // ── Generic local-parts that don't map to a person's first name ──────────────
 const GENERIC_LOCAL_PARTS = new Set([
@@ -243,55 +252,28 @@ router.get("/", (req, res) => {
 });
 
 // ── POST /admin/import — process the CSV ─────────────────────────────────────
-// Uses busboy for multipart parsing (already a dependency of express in newer versions)
-router.post("/", async (req, res) => {
-  // Manually parse multipart/form-data — minimal implementation, no extra deps
-  let csvContent = "";
-  let source = "cold_import";
-  let isDryRun = false;
-
-  try {
-    // Read raw body
-    const rawBody = await new Promise((resolve, reject) => {
-      const chunks = [];
-      req.on("data", (chunk) => chunks.push(chunk));
-      req.on("end", () => resolve(Buffer.concat(chunks)));
-      req.on("error", reject);
-    });
-
-    const contentType = req.headers["content-type"] || "";
-    const boundaryMatch = contentType.match(/boundary=(.+)$/);
-    if (!boundaryMatch) {
-      return res.status(400).send("Missing multipart boundary");
-    }
-    const boundary = "--" + boundaryMatch[1];
-    const bodyStr = rawBody.toString("binary");
-    const parts = bodyStr.split(boundary).slice(1, -1);
-
-    for (const part of parts) {
-      const headerEnd = part.indexOf("\r\n\r\n");
-      if (headerEnd === -1) continue;
-      const headerStr = part.slice(0, headerEnd);
-      const valueStr = part.slice(headerEnd + 4, part.length - 2); // strip trailing \r\n
-
-      const nameMatch = headerStr.match(/name="([^"]+)"/);
-      if (!nameMatch) continue;
-      const fieldName = nameMatch[1];
-
-      if (fieldName === "csvFile") {
-        csvContent = Buffer.from(valueStr, "binary").toString("utf8");
-      } else if (fieldName === "source") {
-        source = valueStr.trim();
-      } else if (fieldName === "dryRun") {
-        isDryRun = valueStr.trim() === "1";
-      }
-    }
-  } catch (err) {
-    return res.status(500).send("Upload parse error: " + err.message);
+// Multer parses multipart/form-data: req.file = CSV, req.body = text fields.
+// The dryRun checkbox is now reliably detected — if the box is checked,
+// req.body.dryRun === "1"; if unchecked, it's absent. No more silent failures.
+router.post("/", upload.single("csvFile"), async (req, res) => {
+  if (!req.file || !req.file.buffer) {
+    return res.status(400).send(
+      renderResult({
+        error: "No CSV file received. Please select a file and try again.",
+      }),
+    );
   }
 
-  if (!csvContent) {
-    return res.status(400).send("No CSV content received");
+  const csvContent = req.file.buffer.toString("utf8");
+  const source = (req.body.source || "cold_import").trim();
+  const isDryRun = req.body.dryRun === "1";
+
+  if (!csvContent.trim()) {
+    return res.status(400).send(
+      renderResult({
+        error: "The uploaded CSV file is empty.",
+      }),
+    );
   }
 
   // ── Process the CSV ────────────────────────────────────────────────────────
