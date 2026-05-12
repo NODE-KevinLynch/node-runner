@@ -19,6 +19,8 @@ app.use("/api/engagement", engagementRoutes);
 app.use("/api/webhook", webhookRoutes);
 app.use("/admin/emails", emailPreviewRoutes);
 app.use("/admin/import", adminImportRoutes);
+const adminCleanupRoutes = require("./routes/adminCleanup");
+app.use("/admin/cleanup-cold-import", adminCleanupRoutes);
 // Health check
 app.get("/api/health", async (req, res) => {
   try {
