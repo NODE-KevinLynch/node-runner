@@ -6,6 +6,7 @@ const generateRoutes = require("./routes/generate");
 const onboardingRoutes = require("./routes/onboarding");
 const engagementRoutes = require("./routes/engagement");
 const webhookRoutes = require("./routes/webhook");
+const emailPreviewRoutes = require("./routes/emailPreview");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -15,6 +16,7 @@ app.use(express.json());
 onboardingRoutes(app, db);
 app.use("/api/engagement", engagementRoutes);
 app.use("/api/webhook", webhookRoutes);
+app.use("/admin/emails", emailPreviewRoutes);
 // Health check
 app.get("/api/health", async (req, res) => {
   try {
@@ -561,7 +563,9 @@ app.post("/api/daily-wins", async (req, res) => {
 // Error log endpoint
 app.get("/api/errors", async (req, res) => {
   try {
-    const rows = await db.prepare("SELECT * FROM error_log ORDER BY created_at DESC LIMIT 50").all();
+    const rows = await db
+      .prepare("SELECT * FROM error_log ORDER BY created_at DESC LIMIT 50")
+      .all();
     res.json({ errors: rows, count: rows.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -575,20 +579,30 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-
 // ── GET /api/agents/:id/transactions ─────────────────────────────────────────
 app.get("/api/agents/:id/transactions", async (req, res) => {
   try {
     const { id } = req.params;
-    const rows = await db.prepare(`
+    const rows = await db
+      .prepare(
+        `
       SELECT * FROM agent_transactions
       WHERE agent_id = $1
       ORDER BY closed_date DESC
-    `).all(id);
+    `,
+      )
+      .all(id);
     const totalGci = rows.reduce((sum, r) => sum + Number(r.gci), 0);
-    const ytdRows = rows.filter(r => new Date(r.closed_date).getFullYear() === new Date().getFullYear());
+    const ytdRows = rows.filter(
+      (r) => new Date(r.closed_date).getFullYear() === new Date().getFullYear(),
+    );
     const ytdGci = ytdRows.reduce((sum, r) => sum + Number(r.gci), 0);
-    res.json({ transactions: rows, total_gci: totalGci, ytd_gci: ytdGci, ytd_count: ytdRows.length });
+    res.json({
+      transactions: rows,
+      total_gci: totalGci,
+      ytd_gci: ytdGci,
+      ytd_count: ytdRows.length,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -598,23 +612,42 @@ app.get("/api/agents/:id/transactions", async (req, res) => {
 app.post("/api/agents/:id/transactions", async (req, res) => {
   try {
     const { id } = req.params;
-    const { sale_price, gci, closed_date, property_address, transaction_type } = req.body;
+    const { sale_price, gci, closed_date, property_address, transaction_type } =
+      req.body;
     if (!sale_price || !gci || !closed_date) {
-      return res.status(400).json({ error: "sale_price, gci, and closed_date are required" });
+      return res
+        .status(400)
+        .json({ error: "sale_price, gci, and closed_date are required" });
     }
     const txId = "tx_" + id + "_" + Date.now();
-    await db.prepare(`
+    await db
+      .prepare(
+        `
       INSERT INTO agent_transactions (id, agent_id, closed_date, sale_price, gci, property_address, transaction_type)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `).run(txId, id, closed_date, sale_price, gci, property_address || "", transaction_type || "buyer");
+    `,
+      )
+      .run(
+        txId,
+        id,
+        closed_date,
+        sale_price,
+        gci,
+        property_address || "",
+        transaction_type || "buyer",
+      );
 
     // Update closed_ytd in business_onboarding
-    await db.prepare(`
+    await db
+      .prepare(
+        `
       UPDATE business_onboarding SET closed_ytd = (
         SELECT COUNT(*) FROM agent_transactions
         WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())
       ) WHERE agent_id = $1
-    `).run(id);
+    `,
+      )
+      .run(id);
 
     res.json({ success: true, transaction_id: txId });
   } catch (err) {
@@ -644,19 +677,48 @@ app.listen(PORT, () => {
         .get(agentId);
 
       if (!agent) return res.status(404).send("<h2>Agent not found</h2>");
-      try { const { trackEngagement } = require("./services/engagementEngine"); await trackEngagement(agentId, "login"); } catch(engErr) { console.error("Portal engagement track failed:", engErr.message); }
-      try { const { syncPortalActivityToFub } = require("./services/fubMirrorService"); const agentRow = await db.prepare("SELECT email FROM agents WHERE id = $1").get(agentId); if (agentRow?.email) await syncPortalActivityToFub(agentId, agentRow.email, "portal_visit"); } catch(fubErr) { console.error("FUB portal sync failed (non-fatal):", fubErr.message); }
+      try {
+        const { trackEngagement } = require("./services/engagementEngine");
+        await trackEngagement(agentId, "login");
+      } catch (engErr) {
+        console.error("Portal engagement track failed:", engErr.message);
+      }
+      try {
+        const {
+          syncPortalActivityToFub,
+        } = require("./services/fubMirrorService");
+        const agentRow = await db
+          .prepare("SELECT email FROM agents WHERE id = $1")
+          .get(agentId);
+        if (agentRow?.email)
+          await syncPortalActivityToFub(
+            agentId,
+            agentRow.email,
+            "portal_visit",
+          );
+      } catch (fubErr) {
+        console.error("FUB portal sync failed (non-fatal):", fubErr.message);
+      }
       // Portal auth check
       const { validateToken } = require("./utils/portalAuth");
       const token = req.query.token;
       const isValid = await validateToken(agentId, token);
       if (!isValid) {
-        return res.status(401).send(`<html><head><title>Access Required</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8f9fa;margin:0}.box{text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{color:#1a2b4a}p{color:#666;line-height:1.6}</style></head><body><div class="box"><h1>Access Required</h1><p>This portal requires a valid access link. Check your email for your personalized Co.Pilot portal link, or complete the assessment to get started.</p><a style="display:inline-block;margin-top:20px;padding:12px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px" href="/assessment.html">Take the Assessment</a></div></body></html>`);
+        return res
+          .status(401)
+          .send(
+            `<html><head><title>Access Required</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8f9fa;margin:0}.box{text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{color:#1a2b4a}p{color:#666;line-height:1.6}</style></head><body><div class="box"><h1>Access Required</h1><p>This portal requires a valid access link. Check your email for your personalized Co.Pilot portal link, or complete the assessment to get started.</p><a style="display:inline-block;margin-top:20px;padding:12px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px" href="/assessment.html">Take the Assessment</a></div></body></html>`,
+          );
       }
       // Trial gating check
-      const { isTrialExpired, getTrialDaysRemaining } = require("./utils/trialGating");
+      const {
+        isTrialExpired,
+        getTrialDaysRemaining,
+      } = require("./utils/trialGating");
       if (isTrialExpired(agent)) {
-        return res.send(`<html><head><title>Trial Expired</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8f9fa;margin:0}.box{text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{color:#1a2b4a}p{color:#666;line-height:1.6}.btn{display:inline-block;margin-top:20px;padding:12px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px}</style></head><body><div class="box"><h1>Your 30-Day Trial Has Ended</h1><p>Your free trial of Co.Pilot by Sutton has expired. To continue accessing your personalized coaching portal, upgrade to a paid plan.</p><a class="btn" href="mailto:kevin@sutton.com?subject=Co.Pilot Upgrade">Contact Us to Upgrade</a></div></body></html>`);
+        return res.send(
+          `<html><head><title>Trial Expired</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8f9fa;margin:0}.box{text-align:center;max-width:500px;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{color:#1a2b4a}p{color:#666;line-height:1.6}.btn{display:inline-block;margin-top:20px;padding:12px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px}</style></head><body><div class="box"><h1>Your 30-Day Trial Has Ended</h1><p>Your free trial of Co.Pilot by Sutton has expired. To continue accessing your personalized coaching portal, upgrade to a paid plan.</p><a class="btn" href="mailto:kevin@sutton.com?subject=Co.Pilot Upgrade">Contact Us to Upgrade</a></div></body></html>`,
+        );
       }
       const trialDaysLeft = getTrialDaysRemaining(agent);
 
@@ -691,11 +753,19 @@ app.listen(PORT, () => {
         )
         .all(agentId);
       // Fetch agent goals for portal
-      const agentGoals = await db.prepare("SELECT gci_goal, transaction_goal FROM agent_goals WHERE agent_id = $1 AND goal_year = 2026").get(agentId);
+      const agentGoals = await db
+        .prepare(
+          "SELECT gci_goal, transaction_goal FROM agent_goals WHERE agent_id = $1 AND goal_year = 2026",
+        )
+        .get(agentId);
       const gciGoal = agentGoals?.gci_goal || 0;
       const txnGoal = agentGoals?.transaction_goal || 0;
       // Fetch pipeline snapshot from business_onboarding
-      const pipelineData = await db.prepare("SELECT active_listings, pending_sales, closed_ytd, avg_sale_price, avg_list_price, list_to_sale_ratio FROM business_onboarding WHERE agent_id = $1").get(agentId);
+      const pipelineData = await db
+        .prepare(
+          "SELECT active_listings, pending_sales, closed_ytd, avg_sale_price, avg_list_price, list_to_sale_ratio FROM business_onboarding WHERE agent_id = $1",
+        )
+        .get(agentId);
       const activeLst = pipelineData?.active_listings || 0;
       const pendingSls = pipelineData?.pending_sales || 0;
       const closedYtd = pipelineData?.closed_ytd || 0;
@@ -711,7 +781,9 @@ app.listen(PORT, () => {
         )
         .all(agentId);
       const fordMap = {};
-      fordGoals.forEach((r) => { fordMap[r.category] = r; });
+      fordGoals.forEach((r) => {
+        fordMap[r.category] = r;
+      });
 
       const emailRows = recentEmails.length
         ? recentEmails
@@ -729,27 +801,130 @@ app.listen(PORT, () => {
         : "<tr><td colspan='5' style='text-align:center;color:#888'>No emails sent yet</td></tr>";
 
       const actionMap = {
-        pipeline_volume: ["Block 2 hours for prospecting calls every morning before 10 AM","Track daily dials, connects, and appointments in your scorecard","Set a non-negotiable minimum of 10 outbound contacts per day","Schedule 3 listing appointments this week","Review your pipeline math every Friday"],
-        lead_volume: ["Identify your top 3 lead sources and double down on the best performer","Add 5 new contacts to your database every day","Launch one new lead generation campaign this week","Ask every client for 2 referrals at closing","Attend one networking event or community activity per week"],
-        lead_conversion: ["Respond to every new lead within 5 minutes","Create a 7-touch follow-up sequence for all new leads","Role-play your initial consultation script 3 times this week","Track your lead-to-appointment conversion rate daily","Pre-qualify leads with a standard set of discovery questions"],
-        database_size: ["Add 5 new contacts to your CRM every day","Tag and segment your database by relationship strength","Send a personal check-in to 10 sphere contacts this week","Set up a monthly newsletter or market update","Audit your database and remove duplicates"],
-        conversion: ["Practice your listing presentation without notes","Prepare 3 client success stories for consultations","Follow up with every showing within 2 hours","Track your appointment-to-close ratio weekly","Ask for the commitment at every meeting"],
-        time_management: ["Time-block your calendar every Sunday evening","Protect your morning power hours from email and admin","Batch similar tasks together","Do your top 3 revenue-producing activities first","Say no to one time-wasting activity this week"],
-        follow_up: ["Build a 30-day follow-up plan for every active lead","Set CRM reminders so no lead goes 48 hours untouched","Send a handwritten note to your last 5 closed clients","Create email templates for your 5 most common follow-ups","Review your follow-up pipeline every morning"],
-        referral_quality: ["Identify your top 20 referral partners and meet one this week","Send a thank-you gift within 24 hours of any referral","Create a referral rewards program for your sphere","Ask every satisfied client who they know thinking about moving","Host a client appreciation event this quarter"],
-        relationship_deficit: ["Call 5 past clients this week just to check in","Acknowledge birthdays, anniversaries, and milestones","Join a local business group or community organization","Volunteer for one community event this month","Send a personalized market update to your top 25 contacts"],
-        mindset_state: ["Start each morning with 10 minutes of visualization","Write down 3 wins from yesterday before starting today","Replace one negative self-talk pattern with a power statement","Read 10 pages of a growth-mindset book daily","Schedule a weekly reflection session"],
-        consistency_habits: ["Set 3 non-negotiable daily habits and track completion","Use a visible habit tracker on your desk","Never break the chain — do a minimum version if needed","Pair a new habit with an existing routine","Review your habit scorecard every Sunday"],
-        accountability: ["Find an accountability partner and check in daily","Share your weekly targets with your broker or team lead","Post your daily scorecard where you can see it","Join a mastermind group of 3-5 serious agents","Report your numbers to someone every Friday"],
-        prospecting_consistency: ["Set a daily prospecting alarm that never gets snoozed","Track your prospecting streak and never break it","Make your first 5 calls before checking email","Schedule prospecting blocks as non-cancellable meetings","Celebrate every prospecting session completed"],
-        online_conversion: ["Audit your online profiles and update all photos and bios","Respond to every online inquiry within 5 minutes","Add a video introduction to your website and social profiles","Create a lead magnet that captures contact info","Track your online lead to conversation conversion rate"],
-        low_conversion: ["Record and review your last 3 listing presentations","Prepare a pre-consultation package for every prospect","Practice handling the top 5 objections until automatic","Send a post-consultation follow-up within 1 hour","Track why you lose deals and fix the top pattern"],
-        overwhelm: ["Write down your top 3 priorities every morning","Delegate or eliminate one task that drains your energy","Set a hard stop time for work each day","Break large projects into 15-minute action steps","Clear your desk and inbox before leaving each day"],
-        high_stress: ["Schedule 30 minutes of exercise or movement daily","Practice box breathing between appointments","Set boundaries on client availability hours","Take one full day off per week with no exceptions","Identify your top stress trigger and create a protocol for it"],
+        pipeline_volume: [
+          "Block 2 hours for prospecting calls every morning before 10 AM",
+          "Track daily dials, connects, and appointments in your scorecard",
+          "Set a non-negotiable minimum of 10 outbound contacts per day",
+          "Schedule 3 listing appointments this week",
+          "Review your pipeline math every Friday",
+        ],
+        lead_volume: [
+          "Identify your top 3 lead sources and double down on the best performer",
+          "Add 5 new contacts to your database every day",
+          "Launch one new lead generation campaign this week",
+          "Ask every client for 2 referrals at closing",
+          "Attend one networking event or community activity per week",
+        ],
+        lead_conversion: [
+          "Respond to every new lead within 5 minutes",
+          "Create a 7-touch follow-up sequence for all new leads",
+          "Role-play your initial consultation script 3 times this week",
+          "Track your lead-to-appointment conversion rate daily",
+          "Pre-qualify leads with a standard set of discovery questions",
+        ],
+        database_size: [
+          "Add 5 new contacts to your CRM every day",
+          "Tag and segment your database by relationship strength",
+          "Send a personal check-in to 10 sphere contacts this week",
+          "Set up a monthly newsletter or market update",
+          "Audit your database and remove duplicates",
+        ],
+        conversion: [
+          "Practice your listing presentation without notes",
+          "Prepare 3 client success stories for consultations",
+          "Follow up with every showing within 2 hours",
+          "Track your appointment-to-close ratio weekly",
+          "Ask for the commitment at every meeting",
+        ],
+        time_management: [
+          "Time-block your calendar every Sunday evening",
+          "Protect your morning power hours from email and admin",
+          "Batch similar tasks together",
+          "Do your top 3 revenue-producing activities first",
+          "Say no to one time-wasting activity this week",
+        ],
+        follow_up: [
+          "Build a 30-day follow-up plan for every active lead",
+          "Set CRM reminders so no lead goes 48 hours untouched",
+          "Send a handwritten note to your last 5 closed clients",
+          "Create email templates for your 5 most common follow-ups",
+          "Review your follow-up pipeline every morning",
+        ],
+        referral_quality: [
+          "Identify your top 20 referral partners and meet one this week",
+          "Send a thank-you gift within 24 hours of any referral",
+          "Create a referral rewards program for your sphere",
+          "Ask every satisfied client who they know thinking about moving",
+          "Host a client appreciation event this quarter",
+        ],
+        relationship_deficit: [
+          "Call 5 past clients this week just to check in",
+          "Acknowledge birthdays, anniversaries, and milestones",
+          "Join a local business group or community organization",
+          "Volunteer for one community event this month",
+          "Send a personalized market update to your top 25 contacts",
+        ],
+        mindset_state: [
+          "Start each morning with 10 minutes of visualization",
+          "Write down 3 wins from yesterday before starting today",
+          "Replace one negative self-talk pattern with a power statement",
+          "Read 10 pages of a growth-mindset book daily",
+          "Schedule a weekly reflection session",
+        ],
+        consistency_habits: [
+          "Set 3 non-negotiable daily habits and track completion",
+          "Use a visible habit tracker on your desk",
+          "Never break the chain — do a minimum version if needed",
+          "Pair a new habit with an existing routine",
+          "Review your habit scorecard every Sunday",
+        ],
+        accountability: [
+          "Find an accountability partner and check in daily",
+          "Share your weekly targets with your broker or team lead",
+          "Post your daily scorecard where you can see it",
+          "Join a mastermind group of 3-5 serious agents",
+          "Report your numbers to someone every Friday",
+        ],
+        prospecting_consistency: [
+          "Set a daily prospecting alarm that never gets snoozed",
+          "Track your prospecting streak and never break it",
+          "Make your first 5 calls before checking email",
+          "Schedule prospecting blocks as non-cancellable meetings",
+          "Celebrate every prospecting session completed",
+        ],
+        online_conversion: [
+          "Audit your online profiles and update all photos and bios",
+          "Respond to every online inquiry within 5 minutes",
+          "Add a video introduction to your website and social profiles",
+          "Create a lead magnet that captures contact info",
+          "Track your online lead to conversation conversion rate",
+        ],
+        low_conversion: [
+          "Record and review your last 3 listing presentations",
+          "Prepare a pre-consultation package for every prospect",
+          "Practice handling the top 5 objections until automatic",
+          "Send a post-consultation follow-up within 1 hour",
+          "Track why you lose deals and fix the top pattern",
+        ],
+        overwhelm: [
+          "Write down your top 3 priorities every morning",
+          "Delegate or eliminate one task that drains your energy",
+          "Set a hard stop time for work each day",
+          "Break large projects into 15-minute action steps",
+          "Clear your desk and inbox before leaving each day",
+        ],
+        high_stress: [
+          "Schedule 30 minutes of exercise or movement daily",
+          "Practice box breathing between appointments",
+          "Set boundaries on client availability hours",
+          "Take one full day off per week with no exceptions",
+          "Identify your top stress trigger and create a protocol for it",
+        ],
       };
       const bottleneckKey = diagnosis?.bottleneck || "";
-      const actions = actionMap[bottleneckKey] || actionMap.pipeline_volume || [];
-      const supportingItems = actions.map(a => "<li>" + a + "</li>").join("");
+      const actions =
+        actionMap[bottleneckKey] || actionMap.pipeline_volume || [];
+      const supportingItems = actions.map((a) => "<li>" + a + "</li>").join("");
 
       const fs = require("fs");
       let html = fs.readFileSync(
@@ -843,17 +1018,35 @@ app.listen(PORT, () => {
             : "—",
         );
 
-
       // Build F.O.R.D. section
-      const fordCards = fordGoals.length ? fordGoals.map(function(f) {
-        var icons = { family: "Family", occupation: "Occupation", recreation: "Recreation", dreams: "Dreams" };
-        return "<div class=\"ford-card\">"
-          + "<div class=\"ford-cat\">" + (icons[f.category] || f.category) + "</div>"
-          + "<div class=\"ford-row\"><span class=\"ford-lbl\">5-Year Vision:</span> " + (f.five_year || "—") + "</div>"
-          + "<div class=\"ford-row\"><span class=\"ford-lbl\">1-Year Target:</span> " + (f.one_year || "—") + "</div>"
-          + "<div class=\"ford-row\"><span class=\"ford-lbl\">This Month:</span> " + (f.one_month || "—") + "</div>"
-          + "</div>";
-      }).join("") : "<p style=\"color:#888;text-align:center\">Dream Board not yet completed</p>";
+      const fordCards = fordGoals.length
+        ? fordGoals
+            .map(function (f) {
+              var icons = {
+                family: "Family",
+                occupation: "Occupation",
+                recreation: "Recreation",
+                dreams: "Dreams",
+              };
+              return (
+                '<div class="ford-card">' +
+                '<div class="ford-cat">' +
+                (icons[f.category] || f.category) +
+                "</div>" +
+                '<div class="ford-row"><span class="ford-lbl">5-Year Vision:</span> ' +
+                (f.five_year || "—") +
+                "</div>" +
+                '<div class="ford-row"><span class="ford-lbl">1-Year Target:</span> ' +
+                (f.one_year || "—") +
+                "</div>" +
+                '<div class="ford-row"><span class="ford-lbl">This Month:</span> ' +
+                (f.one_month || "—") +
+                "</div>" +
+                "</div>"
+              );
+            })
+            .join("")
+        : '<p style="color:#888;text-align:center">Dream Board not yet completed</p>';
       html = html.replace(/__FORD_SECTION__/g, fordCards);
       res.send(html);
     } catch (err) {
