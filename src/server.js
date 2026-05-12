@@ -7,6 +7,7 @@ const onboardingRoutes = require("./routes/onboarding");
 const engagementRoutes = require("./routes/engagement");
 const webhookRoutes = require("./routes/webhook");
 const emailPreviewRoutes = require("./routes/emailPreview");
+const adminImportRoutes = require("./routes/adminImport");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -17,6 +18,7 @@ onboardingRoutes(app, db);
 app.use("/api/engagement", engagementRoutes);
 app.use("/api/webhook", webhookRoutes);
 app.use("/admin/emails", emailPreviewRoutes);
+app.use("/admin/import", adminImportRoutes);
 // Health check
 app.get("/api/health", async (req, res) => {
   try {
