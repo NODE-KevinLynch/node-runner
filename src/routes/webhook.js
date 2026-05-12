@@ -11,50 +11,84 @@ router.post("/analysis", async (req, res) => {
     if (!email) return res.status(400).json({ error: "email required" });
 
     // Check if agent already exists
-    const existing = await db.prepare(
-      "SELECT id FROM agents WHERE email = $1"
-    ).get(email);
+    const existing = await db
+      .prepare("SELECT id FROM agents WHERE email = $1")
+      .get(email);
 
     if (existing) {
-      return res.json({ status: "exists", agent_id: existing.id, message: "Agent already in system" });
+      return res.json({
+        status: "exists",
+        agent_id: existing.id,
+        message: "Agent already in system",
+      });
     }
 
     // Create new agent from analysis data
-    const agent_id = "agent_" + (data.first_name || "unknown").toLowerCase().replace(/\s+/g, "_") + "_" + Date.now().toString(36);
+    const agent_id =
+      "agent_" +
+      (data.first_name || "unknown").toLowerCase().replace(/\s+/g, "_") +
+      "_" +
+      Date.now().toString(36);
 
-    await db.prepare(
-      `INSERT INTO agents (id, name, last_name, email, phone, brokerage, region, source, campaign_state, trial_start_date, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'agent_analysis', 'pre_activation', NOW(), NOW())`
-    ).run(
-      agent_id,
-      data.first_name || "",
-      data.last_name || "",
-      email,
-      data.phone || null,
-      data.brokerage || null,
-      data.region || null
-    );
+    await db
+      .prepare(
+        `INSERT INTO agents (id, name, last_name, email, phone, brokerage, region, source, campaign_state, trial_start_date, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'agent_analysis', 'pre_activation', NOW(), NOW())`,
+      )
+      .run(
+        agent_id,
+        data.first_name || "",
+        data.last_name || "",
+        email,
+        data.phone || null,
+        data.brokerage || null,
+        data.region || null,
+      );
 
     // Create lifecycle record
-    await db.prepare(
-      `INSERT INTO agent_lifecycle (agent_id, stage, engagement_score, campaign_state, created_at, updated_at)
-       VALUES ($1, 'discovery', 0, 'pre_activation', NOW(), NOW())`
-    ).run(agent_id);
+    await db
+      .prepare(
+        `INSERT INTO agent_lifecycle (agent_id, stage, engagement_score, campaign_state, created_at, updated_at)
+       VALUES ($1, 'discovery', 0, 'pre_activation', NOW(), NOW())`,
+      )
+      .run(agent_id);
 
     // Store analysis responses as assessments
     const analysisFields = [
-      "annual_gci", "units_closed", "avg_commission", "years_in_re",
-      "agent_type", "lead_source", "monthly_leads", "referral_pct",
-      "crm_platform", "followup_frequency", "database_size",
-      "conversion_rate", "marketing_budget", "active_channels",
-      "income_goal", "biggest_challenges", "top_priority", "timeline"
+      "annual_gci",
+      "units_closed",
+      "avg_commission",
+      "years_in_re",
+      "agent_type",
+      "lead_source",
+      "monthly_leads",
+      "referral_pct",
+      "crm_platform",
+      "followup_frequency",
+      "database_size",
+      "conversion_rate",
+      "marketing_budget",
+      "active_channels",
+      "income_goal",
+      "biggest_challenges",
+      "top_priority",
+      "timeline",
     ];
 
     for (const key of analysisFields) {
       if (data[key]) {
-        await db.prepare(
-          "INSERT INTO assessments (id, agent_id, question_key, answer, score, created_at) VALUES ($1, $2, $3, $4, 0, NOW())"
-        ).run(uuidv4(), agent_id, key, typeof data[key] === "object" ? JSON.stringify(data[key]) : String(data[key]));
+        await db
+          .prepare(
+            "INSERT INTO assessments (id, agent_id, question_key, answer, score, created_at) VALUES ($1, $2, $3, $4, 0, NOW())",
+          )
+          .run(
+            uuidv4(),
+            agent_id,
+            key,
+            typeof data[key] === "object"
+              ? JSON.stringify(data[key])
+              : String(data[key]),
+          );
       }
     }
 
@@ -62,22 +96,26 @@ router.post("/analysis", async (req, res) => {
     try {
       const { trackEngagement } = require("../services/engagementEngine");
       await trackEngagement(agent_id, "assessment_started");
-    } catch (e) { console.error("Engagement track failed:", e.message); }
+    } catch (e) {
+      console.error("Engagement track failed:", e.message);
+    }
 
     console.log("Webhook: new agent from analysis:", agent_id, email);
 
     res.json({
       status: "created",
       agent_id,
-      message: "Agent created from analysis. Pre-activation campaign will begin.",
-      next_step: "https://node-runner.onrender.com/assessment.html?email=" + encodeURIComponent(email)
+      message:
+        "Agent created from analysis. Pre-activation campaign will begin.",
+      next_step:
+        "https://node-runner.onrender.com/assessment.html?email=" +
+        encodeURIComponent(email),
     });
   } catch (err) {
     console.error("Webhook error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // POST /api/webhook/fub — receive new lead events from Follow Up Boss
 router.post("/fub", async (req, res) => {
@@ -87,54 +125,107 @@ router.post("/fub", async (req, res) => {
 
     // Only process new person events
     if (event !== "peopleCreated" && event !== "peopleUpdated") {
-      return res.json({ status: "ignored", event, message: "Event type not handled" });
+      return res.json({
+        status: "ignored",
+        event,
+        message: "Event type not handled",
+      });
     }
 
     const person = data.person || data.people?.[0] || {};
     const email = person.emails?.[0]?.value || person.email;
-    if (!email) return res.status(400).json({ error: "No email in FUB payload" });
+    if (!email)
+      return res.status(400).json({ error: "No email in FUB payload" });
+
+    // ── DIAGNOSTIC: log full FUB payload structure so we can identify custom field keys ──
+    // Remove after first successful test contact
+    console.log("=== FUB WEBHOOK PAYLOAD DIAGNOSTIC ===");
+    console.log("Event:", event);
+    console.log("Person top-level keys:", Object.keys(person));
+    console.log("Source (native):", person.source);
+    console.log("customBrokerage:", person.customBrokerage);
+    console.log("custom object:", JSON.stringify(person.custom, null, 2));
+    console.log("Full person object:", JSON.stringify(person, null, 2));
+    console.log("=== END DIAGNOSTIC ===");
 
     // Check if agent already exists
-    const existing = await db.prepare(
-      "SELECT id FROM agents WHERE email = $1"
-    ).get(email);
+    const existing = await db
+      .prepare("SELECT id FROM agents WHERE email = $1")
+      .get(email);
 
     if (existing) {
-      return res.json({ status: "exists", agent_id: existing.id, message: "Agent already in system" });
+      return res.json({
+        status: "exists",
+        agent_id: existing.id,
+        message: "Agent already in system",
+      });
     }
 
     // Create new agent from FUB data
     const firstName = person.firstName || person.name || "";
     const lastName = person.lastName || "";
     const phone = person.phones?.[0]?.value || null;
-    const agent_id = "agent_" + firstName.toLowerCase().replace(/[^a-z0-9]/g, "_") + "_" + Date.now().toString(36);
 
-    await db.prepare(
-      `INSERT INTO agents (id, name, last_name, email, phone, source, campaign_state, trial_start_date, created_at)
-       VALUES ($1, $2, $3, $4, $5, 'fub', 'pre_activation', NOW(), NOW())`
-    ).run(agent_id, firstName, lastName, email, phone);
+    // Read FUB's native Source field (used for sutton_import / cold_import routing)
+    const fubSource = person.source || "fub";
+
+    // Read Brokerage custom field — FUB exposes custom fields under multiple possible keys
+    // We try the common variants; the diagnostic log above will confirm which one applies
+    const brokerage =
+      person.customBrokerage ||
+      person.custom?.Brokerage ||
+      person.custom?.brokerage ||
+      null;
+
+    const agent_id =
+      "agent_" +
+      firstName.toLowerCase().replace(/[^a-z0-9]/g, "_") +
+      "_" +
+      Date.now().toString(36);
+
+    await db
+      .prepare(
+        `INSERT INTO agents (id, name, last_name, email, phone, brokerage, source, campaign_state, trial_start_date, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pre_activation', NOW(), NOW())`,
+      )
+      .run(agent_id, firstName, lastName, email, phone, brokerage, fubSource);
 
     // Create lifecycle record
-    await db.prepare(
-      `INSERT INTO agent_lifecycle (agent_id, stage, engagement_score, campaign_state, created_at, updated_at)
-       VALUES ($1, 'discovery', 0, 'pre_activation', NOW(), NOW())`
-    ).run(agent_id);
+    await db
+      .prepare(
+        `INSERT INTO agent_lifecycle (agent_id, stage, engagement_score, campaign_state, created_at, updated_at)
+       VALUES ($1, 'discovery', 0, 'pre_activation', NOW(), NOW())`,
+      )
+      .run(agent_id);
 
     // Track engagement
     try {
       const { trackEngagement } = require("../services/engagementEngine");
       await trackEngagement(agent_id, "manual_touch");
-    } catch (e) { console.error("FUB webhook engagement failed:", e.message); }
+    } catch (e) {
+      console.error("FUB webhook engagement failed:", e.message);
+    }
 
-    console.log("FUB webhook: new agent created:", agent_id, email);
+    console.log(
+      "FUB webhook: new agent created:",
+      agent_id,
+      email,
+      "source=",
+      fubSource,
+      "brokerage=",
+      brokerage,
+    );
     res.json({
       status: "created",
       agent_id,
-      message: "Agent created from FUB. Pre-activation campaign will begin."
+      source: fubSource,
+      brokerage,
+      message: "Agent created from FUB. Pre-activation campaign will begin.",
     });
   } catch (err) {
     console.error("FUB webhook error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
 module.exports = router;
