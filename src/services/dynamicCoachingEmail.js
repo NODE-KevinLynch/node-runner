@@ -4,6 +4,7 @@
 // Queries live data per agent and adapts tone based on engagement behavior
 
 const db = require("../db/db");
+const { buildLegalFooter } = require("../utils/emailFooter");
 
 const SIGNATURE = `
 <br><br>
@@ -16,7 +17,8 @@ const SIGNATURE = `
 </table>
 `;
 
-function wrapHtml(body) {
+function wrapHtml(body, agentId) {
+  const footer = agentId ? buildLegalFooter(agentId) : "";
   return `
 <!DOCTYPE html>
 <html>
@@ -24,6 +26,7 @@ function wrapHtml(body) {
 <body style="font-family:Georgia,serif;font-size:15px;color:#222;line-height:1.7;max-width:600px;margin:0 auto;padding:24px">
   ${body}
   ${SIGNATURE}
+  ${footer}
 </body>
 </html>`;
 }
@@ -41,18 +44,16 @@ function bookingBlock() {
 // Returns: "celebration" | "momentum" | "encouragement" | "nudge" | "wakeup" | "welcome"
 function determineTone(step, daysDark) {
   if (step <= 1) return "welcome";
-  if (daysDark <= 0) return "celebration";   // active today or yesterday
-  if (daysDark === 1) return "momentum";     // 1 day since last activity
+  if (daysDark <= 0) return "celebration"; // active today or yesterday
+  if (daysDark === 1) return "momentum"; // 1 day since last activity
   if (daysDark === 2) return "encouragement"; // 2 days dark
-  if (daysDark <= 4) return "nudge";         // 3-4 days dark
-  return "wakeup";                           // 5+ days dark
+  if (daysDark <= 4) return "nudge"; // 3-4 days dark
+  return "wakeup"; // 5+ days dark
 }
 
 // ── Subject lines per tone ──────────────────────────────────────────────────
 const SUBJECT_POOLS = {
-  welcome: [
-    "Welcome to Co.Pilot — your coaching portal is live",
-  ],
+  welcome: ["Welcome to Co.Pilot — your coaching portal is live"],
   celebration: [
     "You showed up — and it is showing",
     "Your momentum is real — here is today's focus",
@@ -113,55 +114,77 @@ function fordBlock(firstName) {
 // ── Build the dynamic email ─────────────────────────────────────────────────
 async function getDynamicCoachingEmail(agentId, step, portalUrl) {
   // ── Load agent data ────────────────────────────────────────────────────
-  const agent = await db.prepare(`
+  const agent = await db
+    .prepare(
+      `
     SELECT a.name, a.last_name, a.email,
            al.engagement_score, al.last_engaged_at, al.stage, al.phase_entered_at
     FROM agents a
     LEFT JOIN agent_lifecycle al ON al.agent_id = a.id
     WHERE a.id = $1
-  `).get(agentId);
+  `,
+    )
+    .get(agentId);
 
   if (!agent) return null;
 
   const firstName = agent.name || "there";
 
   // ── Load coaching data ─────────────────────────────────────────────────
-  const coaching = await db.prepare(`
+  const coaching = await db
+    .prepare(
+      `
     SELECT the_truth, the_strategy, rpm_plan, primary_constraint,
            coaching_directive, quote_of_the_day
     FROM coaching_outputs
     WHERE agent_id = $1
     ORDER BY created_at DESC LIMIT 1
-  `).get(agentId);
+  `,
+    )
+    .get(agentId);
 
   // ── Load diagnosis ─────────────────────────────────────────────────────
-  const diagnosis = await db.prepare(`
+  const diagnosis = await db
+    .prepare(
+      `
     SELECT bottleneck, profile
     FROM diagnoses
     WHERE agent_id = $1
     ORDER BY created_at DESC LIMIT 1
-  `).get(agentId);
+  `,
+    )
+    .get(agentId);
 
   // ── Load goals ─────────────────────────────────────────────────────────
-  const goals = await db.prepare(`
+  const goals = await db
+    .prepare(
+      `
     SELECT gci_goal, transaction_goal
     FROM agent_goals
     WHERE agent_id = $1
-  `).get(agentId);
+  `,
+    )
+    .get(agentId);
 
   // ── Load onboarding signals (for welcome email) ────────────────────────
-  const onboarding = await db.prepare(`
+  const onboarding = await db
+    .prepare(
+      `
     SELECT primary_challenge, has_business_plan, has_accountability,
            prospecting_hours, has_listing_pres, repeat_client_pct,
            tracks_activities, has_morning_routine, units_2024, gci_2024
     FROM business_onboarding
     WHERE agent_id = $1
-  `).get(agentId);
+  `,
+    )
+    .get(agentId);
 
   // ── Calculate days dark ────────────────────────────────────────────────
   let daysDark = 3; // default if no engagement data
   if (agent.last_engaged_at) {
-    daysDark = Math.floor((Date.now() - new Date(agent.last_engaged_at).getTime()) / 86400000);
+    daysDark = Math.floor(
+      (Date.now() - new Date(agent.last_engaged_at).getTime()) / 86400000,
+    );
   }
 
   // ── Determine tone ─────────────────────────────────────────────────────
@@ -184,15 +207,21 @@ async function getDynamicCoachingEmail(agentId, step, portalUrl) {
   }
 
   // ── Extract coaching pieces ────────────────────────────────────────────
-  const directive = coaching?.coaching_directive || "Focus on your #1 revenue-generating activity before anything else today.";
+  const directive =
+    coaching?.coaching_directive ||
+    "Focus on your #1 revenue-generating activity before anything else today.";
   const bottleneck = diagnosis?.bottleneck || "business performance";
   const constraint = coaching?.primary_constraint || "Performance Foundation";
-  const quote = coaching?.quote_of_the_day || "It is not what we do once in a while that shapes our lives. It is what we do consistently.";
+  const quote =
+    coaching?.quote_of_the_day ||
+    "It is not what we do once in a while that shapes our lives. It is what we do consistently.";
   const truth = coaching?.the_truth || "";
   const strategy = coaching?.the_strategy || "";
 
   // ── Format bottleneck for display ──────────────────────────────────────
-  const bottleneckDisplay = bottleneck.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const bottleneckDisplay = bottleneck
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
   // ── Goal context ───────────────────────────────────────────────────────
   let goalLine = "";
@@ -208,17 +237,31 @@ async function getDynamicCoachingEmail(agentId, step, portalUrl) {
     // Build gaps list from onboarding signals
     const gaps = [];
     if (onboarding) {
-      if (onboarding.has_business_plan === "no") gaps.push("No written business plan");
-      if (onboarding.tracks_activities === "no") gaps.push("Not tracking daily activities");
-      if (onboarding.has_morning_routine === "no") gaps.push("No structured morning routine");
-      if (onboarding.has_listing_pres === "no") gaps.push("No listing presentation system");
-      if (onboarding.has_accountability === "no") gaps.push("No accountability partner");
-      if (onboarding.prospecting_hours === "0-2") gaps.push("Under 2 hours prospecting per week");
-      if (onboarding.repeat_client_pct === "under-10") gaps.push("Under 10% repeat/referral business");
+      if (onboarding.has_business_plan === "no")
+        gaps.push("No written business plan");
+      if (onboarding.tracks_activities === "no")
+        gaps.push("Not tracking daily activities");
+      if (onboarding.has_morning_routine === "no")
+        gaps.push("No structured morning routine");
+      if (onboarding.has_listing_pres === "no")
+        gaps.push("No listing presentation system");
+      if (onboarding.has_accountability === "no")
+        gaps.push("No accountability partner");
+      if (onboarding.prospecting_hours === "0-2")
+        gaps.push("Under 2 hours prospecting per week");
+      if (onboarding.repeat_client_pct === "under-10")
+        gaps.push("Under 10% repeat/referral business");
     }
-    const gapItems = gaps.length > 0
-      ? gaps.slice(0, 4).map((g, i) => `<tr><td style="padding:4px 0;color:#555;font-size:14px">${i + 1}. ${g}</td></tr>`).join("")
-      : "";
+    const gapItems =
+      gaps.length > 0
+        ? gaps
+            .slice(0, 4)
+            .map(
+              (g, i) =>
+                `<tr><td style="padding:4px 0;color:#555;font-size:14px">${i + 1}. ${g}</td></tr>`,
+            )
+            .join("")
+        : "";
     const gapSection = gapItems
       ? `<div style="margin:16px 0"><p style="font-weight:bold;color:#1a2b4a;margin-bottom:6px;font-size:14px">Key Gaps Identified:</p><table style="width:100%">${gapItems}</table></div>`
       : "";
@@ -266,9 +309,7 @@ ${goalLine}
 ${portalButton(portalUrl)}
 
 <p>Let us get to work.</p>`;
-  }
-
-  else if (tone === "celebration") {
+  } else if (tone === "celebration") {
     body = `
 <p>Hi ${firstName},</p>
 <p>You have been showing up — and I see it. Your engagement score is <strong>${agent.engagement_score || 0}</strong> and climbing. That is not luck. That is discipline.</p>
@@ -283,9 +324,7 @@ ${portalButton(portalUrl)}
 </div>
 ${goalLine}
 ${portalButton(portalUrl)}`;
-  }
-
-  else if (tone === "momentum") {
+  } else if (tone === "momentum") {
     body = `
 <p>Hi ${firstName},</p>
 <p>Good — you were active recently. That rhythm matters more than any single action you take.</p>
@@ -305,9 +344,7 @@ ${portalButton(portalUrl)}`;
 </table>
 ${goalLine}
 ${portalButton(portalUrl)}`;
-  }
-
-  else if (tone === "encouragement") {
+  } else if (tone === "encouragement") {
     body = `
 <p>Hi ${firstName},</p>
 <p>It has been a couple of days since you logged in. No judgment — life happens. But your business does not pause when you do.</p>
@@ -320,9 +357,7 @@ ${portalButton(portalUrl)}`;
 <p>Open your portal. Log one scorecard entry. That is the win for today.</p>
 ${goalLine}
 ${portalButton(portalUrl)}`;
-  }
-
-  else if (tone === "nudge") {
+  } else if (tone === "nudge") {
     body = `
 <p>${firstName},</p>
 <p>It has been ${daysDark} days since your last portal activity. I am going to be direct with you because that is what a coach does.</p>
@@ -335,9 +370,7 @@ ${portalButton(portalUrl)}`;
 ${goalLine}
 <p>Open your portal. Right now. Not later. Now.</p>
 ${portalButton(portalUrl)}`;
-  }
-
-  else if (tone === "wakeup") {
+  } else if (tone === "wakeup") {
     body = `
 <p>${firstName},</p>
 <p>Your portal has been dark for ${daysDark} days. Let me be honest with you.</p>
@@ -364,7 +397,7 @@ ${portalButton(portalUrl)}`;
     body += bookingBlock();
   }
 
-  const html = wrapHtml(body);
+  const html = wrapHtml(body, agentId);
 
   return {
     subject,

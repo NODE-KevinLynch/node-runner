@@ -66,11 +66,12 @@ function advanceCampaignStep(agentId, newStep) {
 
 async function dispatch(agentId) {
   try {
-    // Load agent
+    // Load agent — now also includes unsubscribed_at so we can gate sends
     const row = db
       .prepare(
         `
       SELECT a.id, a.name AS first_name, a.last_name, a.email,
+             a.unsubscribed_at,
              al.campaign_state, al.campaign_step
       FROM agents a
       JOIN agent_lifecycle al ON al.agent_id = a.id
@@ -85,6 +86,28 @@ async function dispatch(agentId) {
 
     if (!row.email) {
       return { success: false, reason: "no_email", agentId };
+    }
+
+    // ── LEGAL GATE ───────────────────────────────────────────────────────
+    // CASL/CAN-SPAM: never send to an unsubscribed recipient. This check
+    // must run before any campaign logic. Logged so we have a paper trail.
+    if (row.unsubscribed_at) {
+      try {
+        logSend({
+          agentId,
+          campaignType: "unsubscribed_skip",
+          campaignStep: row.campaign_step || 0,
+          subject: "(skipped — agent unsubscribed)",
+          sendStatus: "skipped_unsubscribed",
+          sendMode: process.env.EMAIL_MODE || "mock",
+        });
+      } catch (e) {}
+      return {
+        success: false,
+        reason: "unsubscribed",
+        agentId,
+        unsubscribedAt: row.unsubscribed_at,
+      };
     }
 
     // Determine live campaign state
@@ -159,9 +182,15 @@ async function dispatch(agentId) {
         .prepare("SELECT source, name FROM agents WHERE id = $1")
         .get(agentId);
       if (agentRow && agentRow.source === "sutton_import") {
-        emailContent = getSuttonPreActivationEmail(nextStep, agentRow.name);
+        // Pass agentId so the Sutton email includes its unsubscribe footer
+        emailContent = getSuttonPreActivationEmail(
+          nextStep,
+          agentRow.name,
+          agentId,
+        );
       } else {
-        emailContent = getPreActivationEmail(nextStep);
+        // Pass agentId so the cold email includes its unsubscribe footer
+        emailContent = getPreActivationEmail(nextStep, agentId);
       }
     } else if (campaignState === "post_analysis") {
       emailContent = getPostAnalysisEmail(agentId, row.first_name, nextStep);
