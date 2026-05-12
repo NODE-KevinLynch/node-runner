@@ -3,6 +3,13 @@ const router = express.Router();
 const db = require("../db/db");
 const { v4: uuidv4 } = require("uuid");
 
+// ── ALLOWED SOURCES ──────────────────────────────────────────────
+// Only FUB contacts with one of these source values will be ingested
+// into Node Runner. All other FUB contacts (buyer leads, sphere,
+// past clients, etc.) are ignored. To allow a new source, add it
+// to this array.
+const ALLOWED_FUB_SOURCES = ["sutton_import", "cold_import"];
+
 // POST /api/webhook/analysis — receive data from agentanalysis.kevinlynch.ca
 router.post("/analysis", async (req, res) => {
   try {
@@ -148,6 +155,25 @@ router.post("/fub", async (req, res) => {
     console.log("Full person object:", JSON.stringify(person, null, 2));
     console.log("=== END DIAGNOSTIC ===");
 
+    // Read FUB's native Source field (used for sutton_import / cold_import routing)
+    const fubSource = person.source || null;
+
+    // ── REALTOR FILTER ────────────────────────────────────────────
+    // Only ingest FUB contacts whose source matches one of our
+    // allowed realtor sources. Buyer leads, sphere, past clients,
+    // and all other contacts are ignored here.
+    if (!ALLOWED_FUB_SOURCES.includes(fubSource)) {
+      console.log(
+        `FUB webhook: skipping ${email} (source="${fubSource}" not in allowed list)`,
+      );
+      return res.json({
+        status: "ignored",
+        reason: "source_not_allowed",
+        source: fubSource,
+        message: "Contact source is not a Node Runner realtor source. Ignored.",
+      });
+    }
+
     // Check if agent already exists
     const existing = await db
       .prepare("SELECT id FROM agents WHERE email = $1")
@@ -166,11 +192,8 @@ router.post("/fub", async (req, res) => {
     const lastName = person.lastName || "";
     const phone = person.phones?.[0]?.value || null;
 
-    // Read FUB's native Source field (used for sutton_import / cold_import routing)
-    const fubSource = person.source || "fub";
-
     // Read Brokerage custom field — FUB exposes custom fields under multiple possible keys
-    // We try the common variants; the diagnostic log above will confirm which one applies
+    // The diagnostic log above will confirm which variant applies in this account
     const brokerage =
       person.customBrokerage ||
       person.custom?.Brokerage ||
