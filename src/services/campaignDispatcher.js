@@ -13,6 +13,7 @@ const {
 const { getPostAnalysisEmail } = require("./postAnalysisCampaign");
 const { getDynamicCoachingEmail } = require("./dynamicCoachingEmail");
 const { logCampaignActivity } = require("./fubMirrorService");
+const { checkColdSendAllowed } = require("../utils/dailySendCap");
 
 function generateId() {
   return "log_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
@@ -170,6 +171,37 @@ async function dispatch(agentId) {
           agentId,
           campaignState,
         };
+    }
+
+    // ── DAILY SEND CAP (DOMAIN WARMUP) ───────────────────────────────────
+    // Cold emails (pre_activation) are throttled per the warmup schedule
+    // in src/utils/dailySendCap.js. Transactional and active-user emails
+    // are NOT throttled — they protect the conversion funnel.
+    if (campaignState === "pre_activation") {
+      const capCheck = await checkColdSendAllowed();
+      if (!capCheck.allowed) {
+        // Log the rate-limit so we can see it in the dashboard
+        try {
+          logSend({
+            agentId,
+            campaignType: campaignState,
+            campaignStep: nextStep,
+            subject: `(rate limited — ${capCheck.reason})`,
+            sendStatus: "rate_limited",
+            sendMode: process.env.EMAIL_MODE || "mock",
+          });
+        } catch (e) {}
+        return {
+          success: false,
+          reason: capCheck.reason,
+          agentId,
+          campaignState,
+          nextStep,
+          sentToday: capCheck.sentToday,
+          dailyCap: capCheck.dailyCap,
+          launchAt: capCheck.launchAt,
+        };
+      }
     }
 
     // Generate the correct email

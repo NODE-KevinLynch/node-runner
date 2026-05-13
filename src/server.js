@@ -2,6 +2,10 @@ const express = require("express");
 const path = require("path");
 const db = require("./db/db");
 const unsubscribeRouter = require("./routes/unsubscribe");
+const {
+  router: capRouter,
+  apiRouter: capApiRouter,
+} = require("./routes/adminCap");
 const generateRoutes = require("./routes/generate");
 const onboardingRoutes = require("./routes/onboarding");
 const engagementRoutes = require("./routes/engagement");
@@ -20,6 +24,8 @@ app.use("/api/webhook", webhookRoutes);
 app.use("/admin/emails", emailPreviewRoutes);
 app.use("/admin/import", adminImportRoutes);
 app.use("/unsubscribe", unsubscribeRouter);
+app.use("/admin/cap", capRouter);
+app.use("/api/cap", capApiRouter);
 const adminCleanupRoutes = require("./routes/adminCleanup");
 app.use("/admin/cleanup-cold-import", adminCleanupRoutes);
 // Health check
