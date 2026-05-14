@@ -112,7 +112,7 @@ async function dispatch(agentId) {
     }
 
     // Determine live campaign state
-    const campaignState = determineCampaignState(agentId);
+    const campaignState = await determineCampaignState(agentId);
     const currentStep = row.campaign_step || 0;
     const nextStep = currentStep + 1;
 
