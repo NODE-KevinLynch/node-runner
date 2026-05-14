@@ -68,7 +68,7 @@ function advanceCampaignStep(agentId, newStep) {
 async function dispatch(agentId) {
   try {
     // Load agent — now also includes unsubscribed_at so we can gate sends
-    const row = db
+    const row = await db
       .prepare(
         `
       SELECT a.id, a.name AS first_name, a.last_name, a.email,
