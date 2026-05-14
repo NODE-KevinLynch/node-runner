@@ -32,7 +32,7 @@ function logSend({
       `
       INSERT INTO campaign_send_log
         (id, agent_id, campaign_type, campaign_step, subject, send_status, send_mode, sent_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `,
     ).run(
       generateId(),
