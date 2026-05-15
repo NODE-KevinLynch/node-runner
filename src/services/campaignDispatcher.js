@@ -51,15 +51,14 @@ function logSend({
 
 function advanceCampaignStep(agentId, newStep) {
   try {
-    db.prepare(
-      `
-      UPDATE agent_lifecycle
-      SET campaign_step = $1,
-          campaign_last_sent_at = $2,
-          last_sync_at = $3
-      WHERE agent_id = $4
-    `,
-    ).run(newStep, new Date().toISOString(), new Date().toISOString(), agentId);
+   db.prepare(
+        `
+        UPDATE agent_lifecycle
+        SET campaign_step = $1,
+            last_sync_at = $2
+        WHERE agent_id = $3
+      `,
+      ).run(newStep, new Date().toISOString(), agentId);
   } catch (err) {
     console.error("Step advance failed (non-fatal):", err.message);
   }
