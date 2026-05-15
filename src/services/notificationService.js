@@ -36,7 +36,7 @@ function parseAllowlist(value) {
 
 function isAllowedRecipient(to) {
   const allowlist = parseAllowlist(getEnv("EMAIL_ALLOWLIST", ""));
-  if (!allowlist.length) return false;
+  if (!allowlist.length) return true;
   return allowlist.includes(
     String(to || "")
       .trim()
