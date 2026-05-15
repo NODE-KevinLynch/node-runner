@@ -31,6 +31,7 @@ function getEligibleAgents() {
          AND NOT EXISTS (
            SELECT 1 FROM campaign_send_log
            WHERE agent_id = al.agent_id AND sent_at >= $1
+           AND send_status = 'sent'
          )
        ORDER BY al.engagement_score DESC`,
     )
