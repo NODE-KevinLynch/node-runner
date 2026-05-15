@@ -13,7 +13,7 @@ const SIGNATURE = `
 <table cellpadding="0" cellspacing="0" style="font-family:Georgia,serif;font-size:14px;color:#222;line-height:1.6">
   <tr><td><strong>Kevin Lynch</strong></td></tr>
   <tr><td>Performance Architect</td></tr>
-  <tr><td>National Coach | Sutton Group Canada</td></tr>
+  <tr><td>Co.Pilot for Agents</td></tr>        <tr><td>Sutton Centre Realty</td></tr>
   <tr><td><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab">Book a Strategy Session</a></td></tr>
   <tr><td>kevinlynch.ca</td></tr>
   <tr><td>&nbsp;</td></tr>
