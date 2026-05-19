@@ -11,9 +11,12 @@ const SIGNATURE = `
 <p style="margin-bottom:8px">Warm regards,</p>
 <table cellpadding="0" cellspacing="0" style="font-family:Georgia,serif;font-size:14px;color:#222;line-height:1.6">
   <tr><td><strong>Kevin Lynch</strong></td></tr>
-  <tr><td>Performance Architect</td></tr>
-  <tr><td>Co.Pilot for Agents</td></tr>        <tr><td>Sutton Centre Realty</td></tr>
-  <tr><td>kevinlynch.ca</td></tr>
+  <tr><td>Founder &middot; Performance Architect</td></tr>
+  <tr><td>Lynch Performance Systems</td></tr>
+  <tr><td style="font-style:italic;color:#555;padding-bottom:6px">Live Your Next Chapter Higher.</td></tr>
+  <tr><td>Sutton Centre Realty</td></tr>
+  <tr><td><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab">Book a Strategy Session</a></td></tr>
+  <tr><td><a href="https://www.lynchmethod.com" style="color:#1a0dab">www.lynchmethod.com</a></td></tr>
 </table>
 `;
 
@@ -33,7 +36,7 @@ function wrapHtml(body, agentId) {
 
 function portalButton(portalUrl) {
   if (!portalUrl) return "";
-  return `<div style="text-align:center;margin:24px 0"><a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">Open My Co.Pilot Portal</a></div>`;
+  return `<div style="text-align:center;margin:24px 0"><a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">Open My Lynch Method Portal</a></div>`;
 }
 
 function bookingBlock() {
@@ -53,7 +56,7 @@ function determineTone(step, daysDark) {
 
 // ── Subject lines per tone ──────────────────────────────────────────────────
 const SUBJECT_POOLS = {
-  welcome: ["Welcome to Co.Pilot — your coaching portal is live"],
+  welcome: ["Welcome to The Lynch Method — your coaching portal is live"],
   celebration: [
     "You showed up — and it is showing",
     "Your momentum is real — here is today's focus",
@@ -275,7 +278,7 @@ async function getDynamicCoachingEmail(agentId, step, portalUrl) {
     body = `
 <p>Hi ${firstName},</p>
 
-<p>Thank you for completing your Co.Pilot assessment. Your coaching portal is now active and I have reviewed your results personally.</p>
+<p>Thank you for completing your Lynch Method assessment. Your coaching portal is now active and I have reviewed your results personally.</p>
 
 <div style="background:#f0f4f8;border-radius:8px;padding:20px 24px;margin:20px 0">
   <p style="margin:0 0 6px;font-weight:bold;color:#1a2b4a;font-size:16px">Your Primary Bottleneck</p>
@@ -308,7 +311,7 @@ ${goalLine}
 
 ${portalButton(portalUrl)}
 
-<p>Let us get to work.</p>`;
+<p>Let us get to work — and live your next chapter higher.</p>`;
   } else if (tone === "celebration") {
     body = `
 <p>Hi ${firstName},</p>
@@ -402,7 +405,7 @@ ${portalButton(portalUrl)}`;
   return {
     subject,
     html,
-    ctaUrl: portalUrl || "https://node-runner.onrender.com/assessment.html",
+    ctaUrl: portalUrl || "https://analysis.lynchperformancesystems.com",
     campaignType: "coaching_active",
     campaignStep: step,
     tone,
