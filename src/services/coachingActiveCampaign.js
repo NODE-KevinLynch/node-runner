@@ -9,6 +9,7 @@ const SIGNATURE = `
   <tr><td><strong>Kevin Lynch</strong></td></tr>
   <tr><td>Founder &middot; Performance Architect</td></tr>
   <tr><td>Lynch Performance Systems</td></tr>
+  <tr><td style="font-style:italic;color:#555;padding-bottom:6px">Live Your Next Chapter Higher.</td></tr>
   <tr><td>Sutton Centre Realty</td></tr>
   <tr><td><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab">Book a Strategy Session</a></td></tr>
   <tr><td><a href="https://www.lynchmethod.com" style="color:#1a0dab">www.lynchmethod.com</a></td></tr>
@@ -30,7 +31,7 @@ function wrapHtml(body) {
 const EMAILS = {
   1: {
     subject: "Welcome to The Lynch Method — your coaching portal is live",
-    body: wrapHtml(`<p>Your Lynch Method coaching portal is now active.</p><p>Inside you will find your personalized coaching plan — built around your specific bottleneck, with daily actions, a scorecard, and a clear roadmap to hit your income goal.</p><p>Here is what I want you to do this week: log in, review your coaching directive, and complete your daily scorecard at least 3 times.</p><p>That is it. Three days. Start building the habit.</p><p>__PORTAL_LINK__</p><p>Let us get to work.</p>`),
+    body: wrapHtml(`<p>Your Lynch Method coaching portal is now active.</p><p>Inside you will find your personalized coaching plan — built around your specific bottleneck, with daily actions, a scorecard, and a clear roadmap to hit your income goal.</p><p>Here is what I want you to do this week: log in, review your coaching directive, and complete your daily scorecard at least 3 times.</p><p>That is it. Three days. Start building the habit.</p><p>__PORTAL_LINK__</p><p>Let us get to work — and live your next chapter higher.</p>`),
   },
   2: {
     subject: "Your first week — how did it go?",
@@ -66,7 +67,7 @@ const EMAILS = {
   },
   10: {
     subject: "The compound effect is real — keep pushing",
-    body: wrapHtml(`<p>You are into your second month with The Lynch Method. This is where things start to get interesting.</p><p>The calls you made in week one are starting to turn into conversations. The conversations are becoming appointments. The pipeline is filling.</p><p>This is the compound effect in action. Small daily actions, stacked consistently, creating results that feel disproportionate to the effort.</p><p>Do not ease up. This is the moment to push harder.</p><p>__PORTAL_LINK__</p>`),
+    body: wrapHtml(`<p>You are into your second month with The Lynch Method. This is where things start to get interesting.</p><p>The calls you made in week one are starting to turn into conversations. The conversations are becoming appointments. The pipeline is filling.</p><p>This is the compound effect in action. Small daily actions, stacked consistently, creating results that feel disproportionate to the effort.</p><p>Do not ease up. This is the moment to push harder — and live your next chapter higher.</p><p>__PORTAL_LINK__</p>`),
   },
   11: {
     subject: "Are you protecting your morning power hours?",
