@@ -7,9 +7,11 @@ const SIGNATURE = `
 <p style="margin-bottom:8px">Warm regards,</p>
 <table cellpadding="0" cellspacing="0" style="font-family:Georgia,serif;font-size:14px;color:#222;line-height:1.6">
   <tr><td><strong>Kevin Lynch</strong></td></tr>
-  <tr><td>Performance Architect</td></tr>
-  <tr><td>Co.Pilot for Agents</td></tr>        <tr><td>Sutton Centre Realty</td></tr>
-  <tr><td>kevinlynch.ca</td></tr>
+  <tr><td>Founder &middot; Performance Architect</td></tr>
+  <tr><td>Lynch Performance Systems</td></tr>
+  <tr><td>Sutton Centre Realty</td></tr>
+  <tr><td><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab">Book a Strategy Session</a></td></tr>
+  <tr><td><a href="https://www.lynchmethod.com" style="color:#1a0dab">www.lynchmethod.com</a></td></tr>
 </table>
 `;
 
@@ -27,12 +29,12 @@ function wrapHtml(body) {
 
 const EMAILS = {
   1: {
-    subject: "Welcome to Co.Pilot by Sutton — your coaching portal is live",
-    body: wrapHtml(`<p>Your Co.Pilot coaching portal is now active.</p><p>Inside you will find your personalized coaching plan — built around your specific bottleneck, with daily actions, a scorecard, and a clear roadmap to hit your income goal.</p><p>Here is what I want you to do this week: log in, review your coaching directive, and complete your daily scorecard at least 3 times.</p><p>That is it. Three days. Start building the habit.</p><p>__PORTAL_LINK__</p><p>Let us get to work.</p>`),
+    subject: "Welcome to The Lynch Method — your coaching portal is live",
+    body: wrapHtml(`<p>Your Lynch Method coaching portal is now active.</p><p>Inside you will find your personalized coaching plan — built around your specific bottleneck, with daily actions, a scorecard, and a clear roadmap to hit your income goal.</p><p>Here is what I want you to do this week: log in, review your coaching directive, and complete your daily scorecard at least 3 times.</p><p>That is it. Three days. Start building the habit.</p><p>__PORTAL_LINK__</p><p>Let us get to work.</p>`),
   },
   2: {
     subject: "Your first week — how did it go?",
-    body: wrapHtml(`<p>You have had your Co.Pilot portal for a week now. I am curious — did you log in? Did you look at your numbers?</p><p>If you did, you are already ahead of most agents. The ones who engage with the system in week one are the ones who see results by month three.</p><p>If you have not logged in yet, today is the day. Open your portal, check your coaching directive, and log one scorecard entry. Just one.</p><p>__PORTAL_LINK__</p><p>Momentum starts with one action.</p>`),
+    body: wrapHtml(`<p>You have had your Lynch Method portal for a week now. I am curious — did you log in? Did you look at your numbers?</p><p>If you did, you are already ahead of most agents. The ones who engage with the system in week one are the ones who see results by month three.</p><p>If you have not logged in yet, today is the day. Open your portal, check your coaching directive, and log one scorecard entry. Just one.</p><p>__PORTAL_LINK__</p><p>Momentum starts with one action.</p>`),
   },
   3: {
     subject: "The daily scorecard is your secret weapon",
@@ -52,11 +54,11 @@ const EMAILS = {
   },
   7: {
     subject: "The halfway point — time for a check-in",
-    body: wrapHtml(`<p>You are about halfway through your first month with Co.Pilot. Let us take stock.</p><p>How many days did you log your scorecard? How many times did you review your coaching directive? Are your daily numbers going up?</p><p>If yes — you are on the right track. Keep pushing.</p><p>If not — no judgment. But I want you to recommit right now. Open your portal, review your plan, and log today.</p><p>__PORTAL_LINK__</p>`),
+    body: wrapHtml(`<p>You are about halfway through your first month with The Lynch Method. Let us take stock.</p><p>How many days did you log your scorecard? How many times did you review your coaching directive? Are your daily numbers going up?</p><p>If yes — you are on the right track. Keep pushing.</p><p>If not — no judgment. But I want you to recommit right now. Open your portal, review your plan, and log today.</p><p>__PORTAL_LINK__</p>`),
   },
   8: {
     subject: "Ready to go deeper? Let us talk strategy",
-    body: wrapHtml(`<p>You have been using Co.Pilot for a few weeks now. You have your scorecard, your coaching directive, your RPM plan.</p><p>But there is only so much a system can do on its own. The agents who see the biggest breakthroughs are the ones who pair the system with a real conversation.</p><p>I would love to spend 30 minutes with you — looking at your numbers, talking through your bottleneck, and building a 90-day action plan together.</p><p>No pitch. No pressure. Just a focused strategy session between you and your Performance Architect.</p><p><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab;font-weight:bold">Book your free strategy session.</a></p><p>__PORTAL_LINK__</p>`),
+    body: wrapHtml(`<p>You have been using The Lynch Method for a few weeks now. You have your scorecard, your coaching directive, your RPM plan.</p><p>But there is only so much a system can do on its own. The agents who see the biggest breakthroughs are the ones who pair the system with a real conversation.</p><p>I would love to spend 30 minutes with you — looking at your numbers, talking through your bottleneck, and building a 90-day action plan together.</p><p>No pitch. No pressure. Just a focused strategy session between you and your Performance Architect.</p><p><a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab;font-weight:bold">Book your free strategy session.</a></p><p>__PORTAL_LINK__</p>`),
   },
   9: {
     subject: "What your numbers are telling you",
@@ -64,7 +66,7 @@ const EMAILS = {
   },
   10: {
     subject: "The compound effect is real — keep pushing",
-    body: wrapHtml(`<p>You are into your second month with Co.Pilot. This is where things start to get interesting.</p><p>The calls you made in week one are starting to turn into conversations. The conversations are becoming appointments. The pipeline is filling.</p><p>This is the compound effect in action. Small daily actions, stacked consistently, creating results that feel disproportionate to the effort.</p><p>Do not ease up. This is the moment to push harder.</p><p>__PORTAL_LINK__</p>`),
+    body: wrapHtml(`<p>You are into your second month with The Lynch Method. This is where things start to get interesting.</p><p>The calls you made in week one are starting to turn into conversations. The conversations are becoming appointments. The pipeline is filling.</p><p>This is the compound effect in action. Small daily actions, stacked consistently, creating results that feel disproportionate to the effort.</p><p>Do not ease up. This is the moment to push harder.</p><p>__PORTAL_LINK__</p>`),
   },
   11: {
     subject: "Are you protecting your morning power hours?",
@@ -72,7 +74,7 @@ const EMAILS = {
   },
   12: {
     subject: "Your 90-day review is coming up",
-    body: wrapHtml(`<p>In a few weeks you will hit your 90-day mark with Co.Pilot. That is a milestone.</p><p>When we get there, I want you to compare your numbers — before and after. Calls per day. Appointments per week. Pipeline value. GCI pace.</p><p>If you have been using the system, the difference will be measurable. Not because of magic. Because of math.</p><p>Keep logging. The data is building your case.</p><p>__PORTAL_LINK__</p><p>Want to do a formal 90-day review together? <a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab">Book your review session.</a></p>`),
+    body: wrapHtml(`<p>In a few weeks you will hit your 90-day mark with The Lynch Method. That is a milestone.</p><p>When we get there, I want you to compare your numbers — before and after. Calls per day. Appointments per week. Pipeline value. GCI pace.</p><p>If you have been using the system, the difference will be measurable. Not because of magic. Because of math.</p><p>Keep logging. The data is building your case.</p><p>__PORTAL_LINK__</p><p>Want to do a formal 90-day review together? <a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab">Book your review session.</a></p>`),
   },
 };
 
@@ -84,14 +86,14 @@ function getCoachingActiveEmail(step, portalUrl) {
 
   let html = email.body;
   const portalButton = portalUrl
-    ? `<div style="text-align:center;margin:24px 0"><a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">Open My Co.Pilot Portal</a></div>`
+    ? `<div style="text-align:center;margin:24px 0"><a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#1a2b4a;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">Open My Lynch Method Portal</a></div>`
     : "";
   html = html.replace(/__PORTAL_LINK__/g, portalButton);
 
   return {
     subject: email.subject,
     html,
-    ctaUrl: portalUrl || "https://node-runner.onrender.com/assessment.html",
+    ctaUrl: portalUrl || "https://analysis.lynchperformancesystems.com",
     campaignType: "coaching_active",
     campaignStep: step,
   };
