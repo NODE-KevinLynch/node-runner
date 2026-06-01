@@ -12,6 +12,8 @@ const engagementRoutes = require("./routes/engagement");
 const webhookRoutes = require("./routes/webhook");
 const emailPreviewRoutes = require("./routes/emailPreview");
 const adminImportRoutes = require("./routes/adminImport");
+const { runCoachingPipeline } = require("./lib/coachingGenerator");
+const { syncCoachingToFub } = require("./services/fubMirrorService");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -458,6 +460,16 @@ app.post("/api/log-activity", async (req, res) => {
         "UPDATE agent_lifecycle SET engagement_score = $1, updated_at = NOW() WHERE agent_id = $2",
       )
       .run(Math.min(total.pts, 100), agent_id);
+    // ── ADAPTIVE LOOP: regenerate coaching → refresh dashboard + emails → mirror to FUB ──
+    try {
+      const { output } = await runCoachingPipeline(db, agent_id);
+      const a = await db
+        .prepare("SELECT email FROM agents WHERE id = $1")
+        .get(agent_id);
+      if (a?.email) await syncCoachingToFub(agent_id, a.email, output);
+    } catch (loopErr) {
+      console.error("Adaptive loop (log-activity) non-fatal:", loopErr.message);
+    }
     res.json({ status: "logged", points: total.pts });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -659,6 +671,16 @@ app.post("/api/agents/:id/transactions", async (req, res) => {
     `,
       )
       .run(id);
+    // ── ADAPTIVE LOOP: regenerate coaching → refresh dashboard + emails → mirror to FUB ──
+    try {
+      const { output } = await runCoachingPipeline(db, id);
+      const a = await db
+        .prepare("SELECT email FROM agents WHERE id = $1")
+        .get(id);
+      if (a?.email) await syncCoachingToFub(id, a.email, output);
+    } catch (loopErr) {
+      console.error("Adaptive loop (transactions) non-fatal:", loopErr.message);
+    }
 
     res.json({ success: true, transaction_id: txId });
   } catch (err) {
