@@ -696,6 +696,9 @@ app.listen(PORT, () => {
   // Real assessments columns: id, agent_id, question_key, answer, score, created_at
   app.get("/portal/:agentId", async (req, res) => {
     const { agentId } = req.params;
+    const ytdRow = await db.prepare("SELECT COALESCE(SUM(gci),0) AS ytd FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())").get(agentId);
+    const ytdGciDollars = ytdRow ? ytdRow.ytd : 0;
+    
     try {
       const agent = await db
         .prepare(
@@ -1040,7 +1043,7 @@ app.listen(PORT, () => {
         .replace(/__WEEKLY_TARGET__/g, "—")
         .replace(/__ACTIVE_LISTINGS__/g, String(activeLst))
         .replace(/__PENDING_SALES__/g, String(pendingSls))
-        .replace(/__CLOSED_YTD__/g, String(closedYtd))
+        .replace(/__CLOSED_YTD__/g, "$" + Number(ytdGciDollars).toLocaleString())
         .replace(/__REMAINING__/g, String(remaining))
         .replace(/__SUPPORTING_ITEMS__/g, supportingItems)
         .replace(/__EMAIL_ROWS__/g, emailRows)
