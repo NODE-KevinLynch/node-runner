@@ -1981,7 +1981,7 @@
             var gciGoal = parseFloat(g.gci_goal) || 250000;
             var closeRate = parseFloat(g.close_rate) || 0.5;
             var apptRate = parseFloat(g.appt_conversion_rate) || 0.1;
-            var ytdClosed = parseInt(data.ytdClosed) || 0;
+            var ytdClosed = (data.ytdCount && data.ytdCount > 0) ? data.ytdCount : (parseInt(data.ytdClosed) || 0);
 
             // GCI
             var avgComm = parseFloat(g.avg_commission) || gciGoal / txnGoal;
@@ -2089,7 +2089,7 @@
                 parseFloat(mg.gci_goal) / parseInt(mg.transaction_goal) ||
                 10000;
               var mScCards = data.scorecards || [];
-              var mListSold = 0;
+              var mListSold = (data.monthCount && data.monthCount > 0) ? data.monthCount : 0;
               mScCards.forEach(function (sc) {
                 var d = new Date(sc.log_date || sc.created_at);
                 if (
@@ -2099,7 +2099,7 @@
                   mListSold += parseInt(sc.list_sold) || 0;
                 }
               });
-              var mGciEarned = mListSold * mAvgComm;
+              var mGciEarned = (data.monthGci && data.monthGci > 0) ? data.monthGci : (mListSold * mAvgComm);
               var dayOfMonth = now.getDate();
               var daysInMonth = new Date(
                 currentYear,
