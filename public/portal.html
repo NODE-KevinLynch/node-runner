@@ -1985,7 +1985,7 @@
 
             // GCI
             var avgComm = parseFloat(g.avg_commission) || gciGoal / txnGoal;
-            var gciYTD = ytdClosed * avgComm;
+            var gciYTD = (data.ytdGci && data.ytdGci > 0) ? data.ytdGci : (ytdClosed * avgComm);
             var dayOfYear = Math.floor(
               (now - new Date(now.getFullYear(), 0, 1)) / 86400000,
             );
