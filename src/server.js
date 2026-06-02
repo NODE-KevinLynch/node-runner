@@ -403,10 +403,14 @@ app.get("/api/goals/:agentId", async (req, res) => {
         "SELECT COALESCE(SUM(list_sold), 0) AS n FROM daily_scorecard WHERE agent_id = $1",
       )
       .get(req.params.agentId);
+    const ytdGciRow = await db
+      .prepare("SELECT COALESCE(SUM(gci), 0) AS g FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())")
+      .get(req.params.agentId);
     res.json({
       goals: goals || null,
       scorecards,
       ytdClosed: ytdClosed ? ytdClosed.n : 0,
+      ytdGci: ytdGciRow ? Number(ytdGciRow.g) : 0,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
