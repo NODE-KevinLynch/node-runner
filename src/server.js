@@ -406,11 +406,20 @@ app.get("/api/goals/:agentId", async (req, res) => {
     const ytdGciRow = await db
       .prepare("SELECT COALESCE(SUM(gci), 0) AS g FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())")
       .get(req.params.agentId);
+    const ytdCountRow = await db
+      .prepare("SELECT COUNT(*) AS c FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())")
+      .get(req.params.agentId);
+    const monthRow = await db
+      .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
+      .get(req.params.agentId);
     res.json({
       goals: goals || null,
       scorecards,
       ytdClosed: ytdClosed ? ytdClosed.n : 0,
       ytdGci: ytdGciRow ? Number(ytdGciRow.g) : 0,
+      ytdCount: ytdCountRow ? Number(ytdCountRow.c) : 0,
+      monthGci: monthRow ? Number(monthRow.g) : 0,
+      monthCount: monthRow ? Number(monthRow.c) : 0,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
