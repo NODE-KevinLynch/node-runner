@@ -431,16 +431,17 @@ function registerOnboardingRoutes(app, db) {
   app.put("/api/ford/:agentId", async (req, res) => {
     try {
       const { agentId } = req.params;
-      const { category, one_year, one_month } = req.body;
+      const { category, five_year, one_year, one_month } = req.body;
       if (!category)
         return res.status(400).json({ error: "category required" });
       await db
         .prepare(
-          `UPDATE ford_goals SET one_year = COALESCE($1, one_year),
-         one_month = COALESCE($2, one_month), updated_at = NOW()
-         WHERE agent_id = $3 AND category = $4`,
+          `UPDATE ford_goals SET five_year = COALESCE($1, five_year),
+         one_year = COALESCE($2, one_year),
+         one_month = COALESCE($3, one_month), updated_at = NOW()
+         WHERE agent_id = $4 AND category = $5`,
         )
-        .run(one_year || null, one_month || null, agentId, category);
+        .run(five_year || null, one_year || null, one_month || null, agentId, category);
       res.json({ status: "updated", agent_id: agentId, category });
     } catch (err) {
       res.status(500).json({ error: err.message });
