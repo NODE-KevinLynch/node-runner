@@ -1829,13 +1829,32 @@
     </main>
 
     <!-- F.O.R.D. Dream Board -->
-    <div class="section-label">Your Great Life — Dream Board</div>
+    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
+  <span>Your Great Life — Dream Board</span>
+  <button onclick="openFordModal()" style="font-size:12px;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer">Edit</button>
+</div>
     <div class="card" style="padding: 20px 28px">
       <p style="color: var(--grey-warm); font-size: 14px; margin-bottom: 16px">
         Business is a vehicle, not a destination. These are the targets that
         keep you focused, inspired, and motivated.
       </p>
       <div class="ford-grid">__FORD_SECTION__</div>
+    </div>
+    <!-- FORD Edit Modal -->
+    <div id="ford-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;overflow-y:auto;padding:40px 16px">
+      <div style="max-width:560px;margin:0 auto;background:var(--card,#1a1a1a);border-radius:16px;padding:28px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+          <h3 style="margin:0;font-size:18px">Edit Your Dream Board</h3>
+          <button onclick="closeFordModal()" style="background:none;border:none;color:var(--grey-warm,#999);font-size:22px;cursor:pointer">&times;</button>
+        </div>
+        <p style="color:var(--grey-warm,#999);font-size:13px;margin-bottom:18px">Update any goal below. Blank fields keep their current value.</p>
+        <div id="ford-form"></div>
+        <p id="ford-msg" style="margin:12px 0 0;font-size:13px;text-align:center;color:var(--green,#4ade80)"></p>
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button onclick="closeFordModal()" style="flex:1;padding:12px;border-radius:8px;border:1px solid var(--border,#333);background:none;color:var(--text,#fff);cursor:pointer">Cancel</button>
+          <button onclick="saveFord()" style="flex:1;padding:12px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer">Save Changes</button>
+        </div>
+      </div>
     </div>
     <div class="footer">
       <strong>Kevin Lynch</strong> &nbsp;·&nbsp; Founder &amp; Performance Architect
@@ -2484,7 +2503,86 @@
     </div>
 
     <script>
-    function openClosingModal() {
+    // ── FORD Dream Board edit ──────────────────────────────────────
+      var FORD_CATS = [
+        { key: "family",     label: "Family" },
+        { key: "occupation", label: "Occupation" },
+        { key: "recreation", label: "Recreation" },
+        { key: "dreams",     label: "Dreams" },
+      ];
+      function fordAgentId() { return "__AGENT_ID__"; }
+      function fordToken() { return new URLSearchParams(window.location.search).get("token"); }
+
+      function openFordModal() {
+        var modal = document.getElementById("ford-modal");
+        var form = document.getElementById("ford-form");
+        document.getElementById("ford-msg").textContent = "";
+        form.innerHTML = "<p style='color:var(--grey-warm,#999)'>Loading…</p>";
+        modal.style.display = "block";
+        fetch("/api/ford/" + fordAgentId())
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var ford = data.ford || {};
+            var html = "";
+            FORD_CATS.forEach(function (c) {
+              var f = ford[c.key] || {};
+              html +=
+                "<div style='margin-bottom:18px'>" +
+                "<div style='font-weight:600;margin-bottom:6px'>" + c.label + "</div>" +
+                fordRow(c.key, "five_year", "5-Year Vision", f.five_year) +
+                fordRow(c.key, "one_year",  "1-Year Target", f.one_year) +
+                fordRow(c.key, "one_month", "This Month",    f.one_month) +
+                "</div>";
+            });
+            form.innerHTML = html;
+          })
+          .catch(function () {
+            form.innerHTML = "<p style='color:var(--gold,#f59e0b)'>Could not load your Dream Board. Please try again.</p>";
+          });
+      }
+      function fordRow(cat, field, label, val) {
+        var id = "ford-" + cat + "-" + field;
+        return (
+          "<div style='display:flex;align-items:center;gap:8px;margin-bottom:6px'>" +
+          "<span style='width:110px;font-size:12px;color:var(--grey-warm,#999)'>" + label + "</span>" +
+          "<input id='" + id + "' value=\"" + (val ? String(val).replace(/"/g, "&quot;") : "") + "\" " +
+          "style='flex:1;padding:8px;border-radius:6px;border:1px solid var(--border,#333);background:var(--bg,#0f0f0f);color:var(--text,#fff);font-size:13px'/>" +
+          "</div>"
+        );
+      }
+      function closeFordModal() {
+        document.getElementById("ford-modal").style.display = "none";
+      }
+      function saveFord() {
+        var msg = document.getElementById("ford-msg");
+        msg.style.color = "var(--grey-warm,#999)";
+        msg.textContent = "Saving…";
+        var token = fordToken();
+        var agentId = fordAgentId();
+        var calls = FORD_CATS.map(function (c) {
+          return fetch("/api/ford/" + agentId + "?token=" + token, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              category: c.key,
+              five_year: document.getElementById("ford-" + c.key + "-five_year").value,
+              one_year:  document.getElementById("ford-" + c.key + "-one_year").value,
+              one_month: document.getElementById("ford-" + c.key + "-one_month").value,
+            }),
+          });
+        });
+        Promise.all(calls)
+          .then(function () {
+            msg.style.color = "var(--green,#4ade80)";
+            msg.textContent = "Saved! Refreshing…";
+            setTimeout(function () { window.location.reload(); }, 900);
+          })
+          .catch(function () {
+            msg.style.color = "var(--gold,#f59e0b)";
+            msg.textContent = "Something went wrong. Please try again.";
+          });
+      }
+      function openClosingModal() {
       var modal = document.getElementById('closing-modal');
       modal.style.display = 'flex';
       document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
