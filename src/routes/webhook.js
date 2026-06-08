@@ -99,6 +99,47 @@ router.post("/analysis", async (req, res) => {
       }
     }
 
+    // Seed agent_goals from intake data so portal shows real targets
+    try {
+      function parseGoalValue(val) {
+        if (!val) return null;
+        const str = String(val).replace(/[$,\s]/g, "");
+        if (str.includes("-")) {
+          const parts = str.split("-").map((p) => {
+            const n = parseFloat(p);
+            return p.toUpperCase().includes("K") ? n * 1000 : n;
+          });
+          return (parts[0] + parts[1]) / 2;
+        }
+        const n = parseFloat(str);
+        return isNaN(n) ? null : (str.toUpperCase().includes("K") ? n * 1000 : n);
+      }
+      const gciGoal = parseGoalValue(data.income_goal);
+      const avgCommission = parseGoalValue(data.avg_commission);
+      const closeRate = data.conversion_rate
+        ? parseFloat(String(data.conversion_rate).replace(/[^0-9.]/g, "")) / 100
+        : null;
+      const txnGoal =
+        gciGoal && avgCommission && avgCommission > 0
+          ? Math.round(gciGoal / avgCommission)
+          : null;
+      if (gciGoal) {
+        await db
+          .prepare(
+            `INSERT INTO agent_goals (agent_id, gci_goal, transaction_goal, avg_commission, close_rate, goal_year, updated_at)
+             VALUES ($1, $2, $3, $4, $5, 2026, NOW())
+             ON CONFLICT (agent_id) DO UPDATE
+             SET gci_goal = EXCLUDED.gci_goal,
+                 transaction_goal = EXCLUDED.transaction_goal,
+                 avg_commission = EXCLUDED.avg_commission,
+                 close_rate = EXCLUDED.close_rate,
+                 updated_at = NOW()`,
+          )
+          .run(agent_id, gciGoal, txnGoal, avgCommission, closeRate);
+      }
+    } catch (goalErr) {
+      console.error("Goal seed failed (non-fatal):", goalErr.message);
+    }
     // Track engagement
     try {
       const { trackEngagement } = require("../services/engagementEngine");
