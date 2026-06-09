@@ -311,7 +311,11 @@ function registerOnboardingRoutes(app, db) {
       await db
         .prepare(
           `INSERT INTO diagnoses (agent_id, bottleneck, profile, signals, created_at)
-             VALUES ($1, $2, $3, $4, NOW())`,
+             VALUES ($1, $2, $3, $4, NOW())
+             ON CONFLICT (agent_id) DO UPDATE SET
+               bottleneck = EXCLUDED.bottleneck,
+               profile = EXCLUDED.profile,
+               signals = EXCLUDED.signals`,
         )
         .run(agent_id, bottleneck, profile, JSON.stringify(signals));
       // 8.5 Save assessment answers to assessments table
