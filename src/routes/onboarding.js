@@ -75,6 +75,7 @@ function registerOnboardingRoutes(app, db) {
       const active_listings = Number(body.active_listings) || 0;
       const pending_sales = Number(body.pending_sales) || 0;
       const closed_ytd = Number(body.closed_ytd) || 0;
+      const gci_ytd = Number(body.gci_ytd) || 0;
       const avg_sale_price = Number(body.avg_sale_price) || 0;
       const avg_list_price = Number(body.avg_list_price) || 0;
       const list_to_sale_ratio = body.list_to_sale_ratio || "";
@@ -237,6 +238,23 @@ function registerOnboardingRoutes(app, db) {
           .run(agent_id, income_goal || 0, transaction_goal || 0);
       } catch (goalErr) {
         console.error("Goals save error:", goalErr.message);
+      }
+      // 3.6 Seed agent_transactions from YTD intake data
+      try {
+        if (gci_ytd > 0 && closed_ytd > 0) {
+          const avgGciPerDeal = Math.round(gci_ytd / closed_ytd);
+          for (let i = 0; i < closed_ytd; i++) {
+            await db
+              .prepare(
+                `INSERT INTO agent_transactions (id, agent_id, closed_date, sale_price, gci, transaction_type, created_at)
+                 VALUES ($1, $2, NOW(), $3, $4, 'intake_seed', NOW())`,
+              )
+              .run(uuidv4(), agent_id, avg_sale_price || 500000, avgGciPerDeal);
+          }
+          console.log(`Seeded ${closed_ytd} transactions for ${agent_id}`);
+        }
+      } catch (txErr) {
+        console.error("Transaction seed failed (non-fatal):", txErr.message);
       }
 
       // 4. Create agent_lifecycle record if it doesn't exist
