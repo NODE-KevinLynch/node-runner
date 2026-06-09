@@ -243,6 +243,11 @@ function registerOnboardingRoutes(app, db) {
       try {
         if (gci_ytd > 0 && closed_ytd > 0) {
           const avgGciPerDeal = Math.round(gci_ytd / closed_ytd);
+          await db
+            .prepare(
+              `DELETE FROM agent_transactions WHERE agent_id = $1 AND transaction_type = 'intake_seed'`,
+            )
+            .run(agent_id);
           for (let i = 0; i < closed_ytd; i++) {
             await db
               .prepare(
