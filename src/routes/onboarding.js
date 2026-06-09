@@ -247,9 +247,9 @@ function registerOnboardingRoutes(app, db) {
             await db
               .prepare(
                 `INSERT INTO agent_transactions (id, agent_id, closed_date, sale_price, gci, transaction_type, created_at)
-                 VALUES ($1, $2, NOW(), $3, $4, 'intake_seed', NOW())`,
+                 VALUES ($1, $2, NOW() - ($5 || ' months')::interval, $3, $4, 'intake_seed', NOW())`,
               )
-              .run(uuidv4(), agent_id, avg_sale_price || 500000, avgGciPerDeal);
+              .run(uuidv4(), agent_id, avg_sale_price || 500000, avgGciPerDeal, i);
           }
           console.log(`Seeded ${closed_ytd} transactions for ${agent_id}`);
         }
