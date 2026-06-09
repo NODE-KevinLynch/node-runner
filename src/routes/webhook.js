@@ -115,7 +115,9 @@ router.post("/analysis", async (req, res) => {
         return isNaN(n) ? null : (str.toUpperCase().includes("K") ? n * 1000 : n);
       }
       const gciGoal = parseGoalValue(data.income_goal);
-      const avgCommission = parseGoalValue(data.avg_commission);
+      const avgCommission = data.annual_gci && data.units_closed
+  ? parseGoalValue(data.annual_gci) / parseFloat(data.units_closed)
+  : null;
       const closeRate = data.conversion_rate
         ? parseFloat(String(data.conversion_rate).replace(/[^0-9.]/g, "")) / 100
         : null;
