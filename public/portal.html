@@ -1434,6 +1434,31 @@
       </div>
       <button onclick="openClosingModal()" style="display:block;margin:0 0 16px;padding:12px 24px;border-radius:8px;border:none;background:var(--green);color:#000;font-weight:700;font-size:14px;cursor:pointer">+ Log a Closing</button>
 
+      <!-- ═══ MONTHLY CLOSINGS GRID ═══ -->
+      <div class="section-label">Monthly Closings — Goal vs Actual</div>
+      <div style="background:var(--surface);border:1px solid var(--green);border-radius:12px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green)"></div>
+        <div style="padding-left:16px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Final outcomes. Sides closed and GCI earned, by month.</div>
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Sides</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Goal</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">GCI</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Goal</th>
+                </tr>
+              </thead>
+              <tbody id="closings-grid-body">
+                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div class="section-label">Daily Scorecard</div>
       <div
         style="
@@ -2191,6 +2216,35 @@
                   '</tr>';
               }
               actBody.innerHTML = actHtml;
+            }
+            // ── Monthly Closings Grid ──
+            var clMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            var clData = {};
+            (data.monthlyClosings || []).forEach(function (r) { clData[r.m] = r; });
+            var clTxnGoal = parseInt((data.goals||{}).transaction_goal) || 24;
+            var clGciGoal = parseFloat((data.goals||{}).gci_goal) || 250000;
+            var clMonthSidesGoal = clTxnGoal / 12;
+            var clMonthGciGoal = clGciGoal / 12;
+            var clBody = document.getElementById("closings-grid-body");
+            if (clBody) {
+              var clHtml = "";
+              for (var cm = 1; cm <= 12; cm++) {
+                var crow = clData[cm] || { sides:0, gci:0 };
+                var csides = parseInt(crow.sides) || 0;
+                var cgci = parseFloat(crow.gci) || 0;
+                var cIsCur = cm === (now.getMonth() + 1);
+                var sidesAhead = csides >= clMonthSidesGoal;
+                var gciAhead = cgci >= clMonthGciGoal;
+                clHtml +=
+                  '<tr style="' + (cIsCur ? "background:rgba(34,197,94,0.05)" : "") + '">' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);color:' + (cIsCur ? "var(--green)" : "var(--soft)") + ';font-weight:' + (cIsCur ? "700" : "400") + '">' + clMonths[cm-1] + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;color:' + (csides > 0 ? (sidesAhead ? "var(--green)" : "var(--gold)") : "var(--muted)") + '">' + csides + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;color:var(--muted);font-size:11px">' + clMonthSidesGoal.toFixed(1) + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;color:' + (cgci > 0 ? (gciAhead ? "var(--green)" : "var(--gold)") : "var(--muted)") + '">$' + Math.round(cgci).toLocaleString() + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;color:var(--muted);font-size:11px">$' + Math.round(clMonthGciGoal).toLocaleString() + '</td>' +
+                  '</tr>';
+              }
+              clBody.innerHTML = clHtml;
             }
           })
           .catch(function () {});
