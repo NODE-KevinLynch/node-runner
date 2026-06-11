@@ -2168,7 +2168,6 @@
                     Math.abs(mTxnDiff).toFixed(1) +
                     " behind pace</span>");
             }
-          })
           // ── Monthly Activity Grid ──
             var actMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             var actData = {};
@@ -2193,6 +2192,7 @@
               }
               actBody.innerHTML = actHtml;
             }
+          })
           .catch(function () {});
 
         // ── Scorecard logic ──
