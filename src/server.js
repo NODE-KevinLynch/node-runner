@@ -422,7 +422,17 @@ app.get("/api/goals/:agentId", async (req, res) => {
            GROUP BY m ORDER BY m`,
         )
         .all(req.params.agentId);
-    const monthRow = await db
+      const closingRows = await db
+        .prepare(
+          `SELECT EXTRACT(MONTH FROM closed_date)::int AS m,
+                  COALESCE(SUM(gci),0) AS gci,
+                  COUNT(*) AS sides
+             FROM agent_transactions
+            WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = 2026
+            GROUP BY m ORDER BY m`,
+        )
+        .all(req.params.agentId);
+      const monthRow = await db
       .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
       .get(req.params.agentId);
     res.json({
@@ -434,6 +444,7 @@ app.get("/api/goals/:agentId", async (req, res) => {
       monthGci: monthRow ? Number(monthRow.g) : 0,
       monthCount: monthRow ? Number(monthRow.c) : 0,
       monthlyActivity: activityRows,
+        monthlyClosings: closingRows,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
