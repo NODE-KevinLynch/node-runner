@@ -409,6 +409,19 @@ app.get("/api/goals/:agentId", async (req, res) => {
     const ytdCountRow = await db
       .prepare("SELECT COUNT(*) AS c FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())")
       .get(req.params.agentId);
+    const activityRows = await db
+        .prepare(
+          `SELECT EXTRACT(MONTH FROM log_date)::int AS m,
+                  COALESCE(SUM(calls),0) AS calls,
+                  COALESCE(SUM(contacts),0) AS contacts,
+                  COALESCE(SUM(appt_set),0) AS appt_set,
+                  COALESCE(SUM(appt_held),0) AS appt_held,
+                  COALESCE(SUM(list_taken),0) AS list_taken
+           FROM daily_scorecard
+           WHERE agent_id = $1 AND EXTRACT(YEAR FROM log_date) = 2026
+           GROUP BY m ORDER BY m`,
+        )
+        .all(req.params.agentId);
     const monthRow = await db
       .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
       .get(req.params.agentId);
@@ -420,6 +433,7 @@ app.get("/api/goals/:agentId", async (req, res) => {
       ytdCount: ytdCountRow ? Number(ytdCountRow.c) : 0,
       monthGci: monthRow ? Number(monthRow.g) : 0,
       monthCount: monthRow ? Number(monthRow.c) : 0,
+      monthlyActivity: activityRows,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
