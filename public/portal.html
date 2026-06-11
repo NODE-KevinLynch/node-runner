@@ -1408,6 +1408,30 @@
       </div>
 
       <!-- ═══ DAILY SCORECARD ═══ -->
+      <!-- ═══ MONTHLY ACTIVITY GRID ═══ -->
+      <div class="section-label">Monthly Activity — Goal vs Actual</div>
+      <div style="background:var(--surface);border:1px solid var(--accent);border-radius:12px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent)"></div>
+        <div style="padding-left:16px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Leading indicators. What you control daily, tracked by month.</div>
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Calls</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Contacts</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Appts Set</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Appts Held</th>
+                </tr>
+              </thead>
+              <tbody id="activity-grid-body">
+                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
       <button onclick="openClosingModal()" style="display:block;margin:0 0 16px;padding:12px 24px;border-radius:8px;border:none;background:var(--green);color:#000;font-weight:700;font-size:14px;cursor:pointer">+ Log a Closing</button>
 
       <div class="section-label">Daily Scorecard</div>
@@ -2145,6 +2169,30 @@
                     " behind pace</span>");
             }
           })
+          // ── Monthly Activity Grid ──
+            var actMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            var actData = {};
+            (data.monthlyActivity || []).forEach(function (r) {
+              actData[r.m] = r;
+            });
+            var actGoalCalls = Math.round((parseInt((data.goals||{}).transaction_goal) || 24) * 20 / 12);
+            var actBody = document.getElementById("activity-grid-body");
+            if (actBody) {
+              var actHtml = "";
+              for (var am = 1; am <= 12; am++) {
+                var row = actData[am] || { calls:0, contacts:0, appt_set:0, appt_held:0 };
+                var isCur = am === (now.getMonth() + 1);
+                actHtml +=
+                  '<tr style="' + (isCur ? "background:rgba(0,255,204,0.04)" : "") + '">' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);color:' + (isCur ? "var(--accent)" : "var(--soft)") + ';font-weight:' + (isCur ? "700" : "400") + '">' + actMonths[am-1] + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;color:var(--text)">' + (row.calls||0) + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;color:var(--text)">' + (row.contacts||0) + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;color:var(--text)">' + (row.appt_set||0) + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;color:var(--text)">' + (row.appt_held||0) + '</td>' +
+                  '</tr>';
+              }
+              actBody.innerHTML = actHtml;
+            }
           .catch(function () {});
 
         // ── Scorecard logic ──
