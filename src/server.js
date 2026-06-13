@@ -404,10 +404,10 @@ app.get("/api/goals/:agentId", async (req, res) => {
       )
       .get(req.params.agentId);
     const ytdGciRow = await db
-      .prepare("SELECT COALESCE(SUM(gci), 0) AS g FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())")
+      .prepare("SELECT COALESCE(SUM(gci), 0) AS g FROM deals WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())")
       .get(req.params.agentId);
     const ytdCountRow = await db
-      .prepare("SELECT COUNT(*) AS c FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())")
+      .prepare("SELECT COUNT(*) AS c FROM deals WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())")
       .get(req.params.agentId);
     const activityRows = await db
         .prepare(
@@ -427,13 +427,13 @@ app.get("/api/goals/:agentId", async (req, res) => {
           `SELECT EXTRACT(MONTH FROM closed_date)::int AS m,
                   COALESCE(SUM(gci),0) AS gci,
                   COUNT(*) AS sides
-             FROM agent_transactions
-            WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = 2026
+             FROM deals
+            WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = 2026
             GROUP BY m ORDER BY m`,
         )
         .all(req.params.agentId);
       const monthRow = await db
-      .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
+      .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM deals WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
       .get(req.params.agentId);
     res.json({
       goals: goals || null,
@@ -647,8 +647,8 @@ app.get("/api/agents/:id/transactions", async (req, res) => {
     const rows = await db
       .prepare(
         `
-      SELECT * FROM agent_transactions
-      WHERE agent_id = $1
+      SELECT * FROM deals
+      WHERE agent_id = $1 AND status = 'closed'
       ORDER BY closed_date DESC
     `,
       )
@@ -684,8 +684,8 @@ app.post("/api/agents/:id/transactions", async (req, res) => {
     await db
       .prepare(
         `
-      INSERT INTO agent_transactions (id, agent_id, closed_date, sale_price, gci, property_address, transaction_type)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO deals (id, agent_id, closed_date, sale_price, gci, property_address, type, status)
+      VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $7 = 'seller' THEN 'listing' ELSE 'cps' END, 'closed')
     `,
       )
       .run(
@@ -703,8 +703,8 @@ app.post("/api/agents/:id/transactions", async (req, res) => {
       .prepare(
         `
       UPDATE business_onboarding SET closed_ytd = (
-        SELECT COUNT(*) FROM agent_transactions
-        WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())
+        SELECT COUNT(*) FROM deals
+        WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())
       ) WHERE agent_id = $1
     `,
       )
@@ -734,7 +734,7 @@ app.listen(PORT, () => {
   // Real assessments columns: id, agent_id, question_key, answer, score, created_at
   app.get("/portal/:agentId", async (req, res) => {
     const { agentId } = req.params;
-    const ytdRow = await db.prepare("SELECT COALESCE(SUM(gci),0) AS ytd FROM agent_transactions WHERE agent_id = $1 AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())").get(agentId);
+    const ytdRow = await db.prepare("SELECT COALESCE(SUM(gci),0) AS ytd FROM deals WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())").get(agentId);
     const ytdGciDollars = ytdRow ? ytdRow.ytd : 0;
     
     try {
