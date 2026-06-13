@@ -432,6 +432,18 @@ app.get("/api/goals/:agentId", async (req, res) => {
             GROUP BY m ORDER BY m`,
         )
         .all(req.params.agentId);
+      const contractRows = await db
+        .prepare(
+          `SELECT EXTRACT(MONTH FROM signed_date)::int AS m,
+                  COUNT(*) FILTER (WHERE type = 'listing') AS listings,
+                  COUNT(*) FILTER (WHERE type = 'cps') AS cps,
+                  COUNT(*) AS total
+             FROM deals
+            WHERE agent_id = $1 AND signed_date IS NOT NULL
+              AND EXTRACT(YEAR FROM signed_date) = 2026
+            GROUP BY m ORDER BY m`,
+        )
+        .all(req.params.agentId);
       const monthRow = await db
       .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM deals WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
       .get(req.params.agentId);
@@ -445,6 +457,7 @@ app.get("/api/goals/:agentId", async (req, res) => {
       monthCount: monthRow ? Number(monthRow.c) : 0,
       monthlyActivity: activityRows,
         monthlyClosings: closingRows,
+        monthlyContracts: contractRows,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -664,6 +677,40 @@ app.get("/api/agents/:id/transactions", async (req, res) => {
       ytd_gci: ytdGci,
       ytd_count: ytdRows.length,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/agents/:id/contracts ───────────────────────────────────────────
+// Logs a PENDING deal (Listing or CPS) — a contract written, not yet closed.
+app.post("/api/agents/:id/contracts", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { property_address, type, signed_date, est_value } = req.body;
+    if (!property_address || !type || !signed_date) {
+      return res
+        .status(400)
+        .json({ error: "property_address, type, and signed_date are required" });
+    }
+    const dealType = type === "listing" ? "listing" : "cps";
+    const dealId = "deal_" + id + "_" + Date.now();
+    await db
+      .prepare(
+        `
+      INSERT INTO deals (id, agent_id, property_address, type, status, signed_date, est_value)
+      VALUES ($1, $2, $3, $4, 'pending', $5, $6)
+    `,
+      )
+      .run(
+        dealId,
+        id,
+        property_address,
+        dealType,
+        signed_date,
+        est_value || null,
+      );
+    res.json({ success: true, deal_id: dealId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
