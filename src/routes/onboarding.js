@@ -239,28 +239,10 @@ function registerOnboardingRoutes(app, db) {
       } catch (goalErr) {
         console.error("Goals save error:", goalErr.message);
       }
-      // 3.6 Seed agent_transactions from YTD intake data
-      try {
-        if (gci_ytd > 0 && closed_ytd > 0) {
-          const avgGciPerDeal = Math.round(gci_ytd / closed_ytd);
-          await db
-            .prepare(
-              `DELETE FROM agent_transactions WHERE agent_id = $1 AND transaction_type = 'intake_seed'`,
-            )
-            .run(agent_id);
-          for (let i = 0; i < closed_ytd; i++) {
-            await db
-              .prepare(
-                `INSERT INTO agent_transactions (id, agent_id, closed_date, sale_price, gci, transaction_type, created_at)
-                 VALUES ($1, $2, NOW() - ($5 || ' months')::interval, $3, $4, 'intake_seed', NOW())`,
-              )
-              .run(uuidv4(), agent_id, avg_sale_price || 500000, avgGciPerDeal, i);
-          }
-          console.log(`Seeded ${closed_ytd} transactions for ${agent_id}`);
-        }
-      } catch (txErr) {
-        console.error("Transaction seed failed (non-fatal):", txErr.message);
-      }
+      // 3.6 Intake transaction-seeding DISABLED (Option B, Jun 13 2026)
+      // agent_transactions now holds ONLY real "+ Log a Closing" entries with accurate dates.
+      // YTD figure remains a display stat via agent_goals / summed API values.
+      // Closings grid shows empty-state prompt until agent logs real closings.
 
       // 4. Create agent_lifecycle record if it doesn't exist
       const lifecycle = await db
