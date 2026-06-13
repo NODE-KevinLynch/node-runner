@@ -437,13 +437,25 @@ app.get("/api/goals/:agentId", async (req, res) => {
           `SELECT EXTRACT(MONTH FROM signed_date)::int AS m,
                   COUNT(*) FILTER (WHERE type = 'listing') AS listings,
                   COUNT(*) FILTER (WHERE type = 'cps') AS cps,
-                  COUNT(*) AS total
+                  COUNT(*) AS total,
+                  COALESCE(SUM(est_value) FILTER (WHERE type = 'listing'), 0) AS listing_value,
+                  COALESCE(SUM(est_value) FILTER (WHERE type = 'cps'), 0) AS sale_value,
+                  COALESCE(SUM(est_gci), 0) AS potential_gci
              FROM deals
             WHERE agent_id = $1 AND signed_date IS NOT NULL
               AND EXTRACT(YEAR FROM signed_date) = 2026
             GROUP BY m ORDER BY m`,
         )
         .all(req.params.agentId);
+      const pipelineRow = await db
+        .prepare(
+          `SELECT COALESCE(SUM(est_value), 0) AS pipeline_value,
+                  COALESCE(SUM(est_gci), 0) AS pipeline_gci,
+                  COUNT(*) AS pipeline_count
+             FROM deals
+            WHERE agent_id = $1 AND status = 'pending'`,
+        )
+        .get(req.params.agentId);
       const monthRow = await db
       .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM deals WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
       .get(req.params.agentId);
@@ -458,6 +470,9 @@ app.get("/api/goals/:agentId", async (req, res) => {
       monthlyActivity: activityRows,
         monthlyClosings: closingRows,
         monthlyContracts: contractRows,
+        pipelineValue: pipelineRow ? Number(pipelineRow.pipeline_value) : 0,
+        pipelineGci: pipelineRow ? Number(pipelineRow.pipeline_gci) : 0,
+        pipelineCount: pipelineRow ? Number(pipelineRow.pipeline_count) : 0,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -687,7 +702,7 @@ app.get("/api/agents/:id/transactions", async (req, res) => {
 app.post("/api/agents/:id/contracts", async (req, res) => {
   try {
     const { id } = req.params;
-    const { property_address, type, signed_date, est_value } = req.body;
+    const { property_address, type, signed_date, est_value, est_gci } = req.body;
     if (!property_address || !type || !signed_date) {
       return res
         .status(400)
@@ -698,8 +713,8 @@ app.post("/api/agents/:id/contracts", async (req, res) => {
     await db
       .prepare(
         `
-      INSERT INTO deals (id, agent_id, property_address, type, status, signed_date, est_value)
-      VALUES ($1, $2, $3, $4, 'pending', $5, $6)
+      INSERT INTO deals (id, agent_id, property_address, type, status, signed_date, est_value, est_gci)
+      VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7)
     `,
       )
       .run(
@@ -709,6 +724,7 @@ app.post("/api/agents/:id/contracts", async (req, res) => {
         dealType,
         signed_date,
         est_value || null,
+        est_gci || null,
       );
     res.json({ success: true, deal_id: dealId });
   } catch (err) {
