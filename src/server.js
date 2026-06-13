@@ -464,6 +464,14 @@ app.get("/api/goals/:agentId", async (req, res) => {
             ORDER BY signed_date DESC`,
         )
         .all(req.params.agentId);
+      const closedDeals = await db
+        .prepare(
+          `SELECT id, property_address, type, closed_date, gci, sale_price, funded
+             FROM deals
+            WHERE agent_id = $1 AND status = 'closed'
+            ORDER BY closed_date DESC`,
+        )
+        .all(req.params.agentId);
       const monthRow = await db
       .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM deals WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
       .get(req.params.agentId);
@@ -482,6 +490,7 @@ app.get("/api/goals/:agentId", async (req, res) => {
         pipelineGci: pipelineRow ? Number(pipelineRow.pipeline_gci) : 0,
         pipelineCount: pipelineRow ? Number(pipelineRow.pipeline_count) : 0,
         pendingDeals: pendingDeals || [],
+        closedDeals: closedDeals || [],
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -793,6 +802,90 @@ app.post("/api/agents/:id/transactions", async (req, res) => {
     }
 
     res.json({ success: true, transaction_id: txId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/agents/:id/deals/:dealId/close ──────────────────────────────────
+// Drag-to-Close: flips a pending deal to 'closed' with expected close date + GCI.
+app.post("/api/agents/:id/deals/:dealId/close", async (req, res) => {
+  try {
+    const { id, dealId } = req.params;
+    const { closed_date, gci, sale_price } = req.body;
+    if (!closed_date) {
+      return res.status(400).json({ error: "closed_date is required" });
+    }
+    await db
+      .prepare(
+        `
+      UPDATE deals
+         SET status = 'closed',
+             closed_date = $1,
+             gci = COALESCE($2, est_gci, gci),
+             sale_price = COALESCE($3, est_value, sale_price),
+             updated_at = NOW()
+       WHERE id = $4 AND agent_id = $5
+    `,
+      )
+      .run(closed_date, gci || null, sale_price || null, dealId, id);
+
+    await db
+      .prepare(
+        `
+      UPDATE business_onboarding SET closed_ytd = (
+        SELECT COUNT(*) FROM deals
+        WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())
+      ) WHERE agent_id = $1
+    `,
+      )
+      .run(id);
+    // ── ADAPTIVE LOOP ──
+    try {
+      const { output } = await runCoachingPipeline(db, id);
+      const a = await db
+        .prepare("SELECT email FROM agents WHERE id = $1")
+        .get(id);
+      if (a?.email) await syncCoachingToFub(id, a.email, output);
+    } catch (loopErr) {
+      console.error("Adaptive loop (close) non-fatal:", loopErr.message);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/agents/:id/deals/:dealId/lost ───────────────────────────────────
+// Drag-to-Lost: flips a deal to 'failed'.
+app.post("/api/agents/:id/deals/:dealId/lost", async (req, res) => {
+  try {
+    const { id, dealId } = req.params;
+    await db
+      .prepare(
+        `UPDATE deals SET status = 'failed', updated_at = NOW()
+          WHERE id = $1 AND agent_id = $2`,
+      )
+      .run(dealId, id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/agents/:id/deals/:dealId/funded ─────────────────────────────────
+// Toggles the funded flag on a closed deal (firm → actually in the bank).
+app.post("/api/agents/:id/deals/:dealId/funded", async (req, res) => {
+  try {
+    const { id, dealId } = req.params;
+    const { funded } = req.body;
+    await db
+      .prepare(
+        `UPDATE deals SET funded = $1, updated_at = NOW()
+          WHERE id = $2 AND agent_id = $3`,
+      )
+      .run(funded === true || funded === "true", dealId, id);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
