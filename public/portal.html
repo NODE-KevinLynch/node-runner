@@ -1436,23 +1436,36 @@
 
       <!-- ═══ CONTRACTS WRITTEN GRID ═══ -->
       <button onclick="openContractModal()" style="display:block;margin:0 0 16px;padding:12px 24px;border-radius:8px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer">+ Log a Contract (Listing or Accepted Offer)</button>
+      <div class="section-label">Pipeline — Potential</div>
+      <div style="background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:20px;margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Pipeline Value</div>
+          <div id="pipeline-value" style="font-size:22px;font-weight:700;color:var(--gold)">$0</div>
+        </div>
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Potential GCI</div>
+          <div id="pipeline-gci" style="font-size:22px;font-weight:700;color:var(--gold)">$0</div>
+        </div>
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Open Deals</div>
+          <div id="pipeline-count" style="font-size:22px;font-weight:700;color:var(--text)">0</div>
+        </div>
+      </div>
+
       <div class="section-label">Contracts Written — Goal vs Actual</div>
       <div style="background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
         <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--gold)"></div>
         <div style="padding-left:16px">
           <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Mid-funnel wins. Listings taken and buyer contracts signed, by month.</div>
           <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">
               <thead>
                 <tr>
-                  <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Listings</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">CPS</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>
+                  <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Listings</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">CPS</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Total</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Listing $</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Sale $</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Potential GCI</th>
                 </tr>
               </thead>
               <tbody id="contracts-grid-body">
-                <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -2242,6 +2255,12 @@
               }
               actBody.innerHTML = actHtml;
             }
+            // ── Pipeline Tile ──
+            var fmt$ = function (n) { return '$' + Math.round(n || 0).toLocaleString(); };
+            var pv = document.getElementById("pipeline-value"); if (pv) pv.textContent = fmt$(data.pipelineValue);
+            var pg = document.getElementById("pipeline-gci"); if (pg) pg.textContent = fmt$(data.pipelineGci);
+            var pc = document.getElementById("pipeline-count"); if (pc) pc.textContent = (data.pipelineCount || 0);
+
             // ── Contracts Written Grid ──
             var ctMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             var ctData = {};
@@ -2249,16 +2268,21 @@
             var ctBody = document.getElementById("contracts-grid-body");
             var ctTotal = (data.monthlyContracts || []).reduce(function (s, r) { return s + (parseInt(r.total) || 0); }, 0);
             if (ctBody && ctTotal === 0) {
-              ctBody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6">No contracts logged yet.<br>Use <strong style="color:var(--gold)">+ Log a Contract</strong> when you take a listing or sign a buyer — your pipeline builds here.</td></tr>';
+              ctBody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6">No contracts logged yet.<br>Use <strong style="color:var(--gold)">+ Log a Contract</strong> when you take a listing or sign a buyer — your pipeline builds here.</td></tr>';
               ctBody = null;
             }
             if (ctBody) {
               var ctHtml = "";
+              var sumList = 0, sumCps = 0, sumTot = 0, sumLV = 0, sumSV = 0, sumGci = 0;
               for (var tm = 1; tm <= 12; tm++) {
-                var trow = ctData[tm] || { listings:0, cps:0, total:0 };
+                var trow = ctData[tm] || { listings:0, cps:0, total:0, listing_value:0, sale_value:0, potential_gci:0 };
                 var tList = parseInt(trow.listings) || 0;
                 var tCps = parseInt(trow.cps) || 0;
                 var tTot = parseInt(trow.total) || 0;
+                var tLV = parseFloat(trow.listing_value) || 0;
+                var tSV = parseFloat(trow.sale_value) || 0;
+                var tGci = parseFloat(trow.potential_gci) || 0;
+                sumList += tList; sumCps += tCps; sumTot += tTot; sumLV += tLV; sumSV += tSV; sumGci += tGci;
                 var tIsCur = tm === (now.getMonth() + 1);
                 ctHtml +=
                   '<tr style="' + (tIsCur ? "background:rgba(234,179,8,0.06)" : "") + '">' +
@@ -2266,8 +2290,22 @@
                   '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;color:' + (tList > 0 ? "var(--gold)" : "var(--muted)") + '">' + tList + '</td>' +
                   '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;color:' + (tCps > 0 ? "var(--gold)" : "var(--muted)") + '">' + tCps + '</td>' +
                   '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:700;color:' + (tTot > 0 ? "var(--text)" : "var(--muted)") + '">' + tTot + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;color:' + (tLV > 0 ? "var(--soft)" : "var(--muted)") + '">' + fmt$(tLV) + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;color:' + (tSV > 0 ? "var(--soft)" : "var(--muted)") + '">' + fmt$(tSV) + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;color:' + (tGci > 0 ? "var(--gold)" : "var(--muted)") + '">' + fmt$(tGci) + '</td>' +
                   '</tr>';
               }
+              // Totals row
+              ctHtml +=
+                '<tr style="border-top:2px solid var(--gold);background:rgba(234,179,8,0.04)">' +
+                '<td style="padding:10px;font-weight:700;color:var(--text)">Total</td>' +
+                '<td style="padding:10px;text-align:center;font-weight:700;color:var(--text)">' + sumList + '</td>' +
+                '<td style="padding:10px;text-align:center;font-weight:700;color:var(--text)">' + sumCps + '</td>' +
+                '<td style="padding:10px;text-align:center;font-weight:700;color:var(--text)">' + sumTot + '</td>' +
+                '<td style="padding:10px;text-align:center;font-weight:700;color:var(--text)">' + fmt$(sumLV) + '</td>' +
+                '<td style="padding:10px;text-align:center;font-weight:700;color:var(--text)">' + fmt$(sumSV) + '</td>' +
+                '<td style="padding:10px;text-align:center;font-weight:700;color:var(--gold)">' + fmt$(sumGci) + '</td>' +
+                '</tr>';
               ctBody.innerHTML = ctHtml;
             }
             // ── Monthly Closings Grid ──
@@ -2644,6 +2682,10 @@
           <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Estimated Value ($, optional)</label>
           <input id="ct-value" type="number" placeholder="750000" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
         </div>
+        <div style="margin-bottom:24px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Estimated GCI ($, optional)</label>
+          <input id="ct-gci" type="number" placeholder="22500" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
+        </div>
         <div style="display:flex;gap:12px">
           <button onclick="document.getElementById('contract-modal').style.display='none'" style="flex:1;padding:12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:14px">Cancel</button>
           <button onclick="submitContract()" style="flex:1;padding:12px;border-radius:8px;border:none;background:var(--gold);color:#000;cursor:pointer;font-size:14px;font-weight:700">Log It</button>
@@ -2780,6 +2822,7 @@
       var address = document.getElementById('ct-address').value;
       var date = document.getElementById('ct-date').value;
       var value = document.getElementById('ct-value').value;
+      var estGci = document.getElementById('ct-gci').value;
       if (!address || !date) {
         document.getElementById('ct-msg').textContent = 'Please fill in address and signed date.';
         document.getElementById('ct-msg').style.color = 'red';
@@ -2788,7 +2831,7 @@
       fetch('/api/agents/' + agentId + '/contracts?token=' + token, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({property_address: address, type: type, signed_date: date, est_value: value})
+        body: JSON.stringify({property_address: address, type: type, signed_date: date, est_value: value, est_gci: estGci})
       })
       .then(r => r.json())
       .then(data => {
