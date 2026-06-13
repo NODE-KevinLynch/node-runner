@@ -2883,14 +2883,16 @@
       Sortable.create(closeZone, Object.assign({}, shared, {
         onAdd: function (evt) {
           var dealId = evt.item.getAttribute('data-deal-id');
+          evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
           // STUB (layer 4 next session): open confirm modal → enter close month + actual GCI → POST status flip.
           alert('Close flow coming next session.\nDeal: ' + dealId);
-          renderBoardCards(); // snap card back to Working for now
+          renderBoardCards();
         }
       }));
       Sortable.create(lostZone, Object.assign({}, shared, {
         onAdd: function (evt) {
           var dealId = evt.item.getAttribute('data-deal-id');
+          evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
           // STUB (layer 4 next session): POST status='failed'.
           alert('Lost flow coming next session.\nDeal: ' + dealId);
           renderBoardCards();
