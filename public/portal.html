@@ -1463,6 +1463,11 @@
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);font-weight:700;margin-bottom:8px">Working</div>
             <div id="board-working" style="min-height:120px;background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px"></div>
           </div>
+          <!-- Closed column -->
+          <div style="flex:1;min-width:260px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);font-weight:700;margin-bottom:8px">Closed / Coming</div>
+            <div id="board-closed" style="min-height:120px;background:var(--surface);border:1px solid var(--green);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px"></div>
+          </div>
           <!-- Drop targets -->
           <div style="flex:0 0 200px;display:flex;flex-direction:column;gap:14px">
             <div>
@@ -2288,7 +2293,9 @@
 
             // ── Pipeline Board: render Working cards from pending deals ──
             window.__pendingDeals = data.pendingDeals || [];
+            window.__closedDeals = data.closedDeals || [];
             renderBoardCards();
+            renderClosedCards();
 
             // ── Contracts Written Grid ──
             var ctMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -2688,6 +2695,31 @@
       })();
     </script>
   
+    <!-- Close Deal Modal -->
+    <div id="close-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+      <div style="background:var(--card);border-radius:12px;padding:32px;width:90%;max-width:440px;">
+        <h3 style="margin:0 0 6px;color:var(--text)">Close This Deal</h3>
+        <p id="cm-address" style="margin:0 0 20px;font-size:13px;color:var(--muted)"></p>
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Expected Close Date</label>
+          <input id="cm-date" type="date" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Sale Price ($)</label>
+          <input id="cm-price" type="number" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
+        </div>
+        <div style="margin-bottom:24px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">GCI ($)</label>
+          <input id="cm-gci" type="number" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
+        </div>
+        <div style="display:flex;gap:12px">
+          <button onclick="cancelClose()" style="flex:1;padding:12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:14px">Cancel</button>
+          <button onclick="submitClose()" style="flex:1;padding:12px;border-radius:8px;border:none;background:var(--green);color:#000;cursor:pointer;font-size:14px;font-weight:700">Confirm Close</button>
+        </div>
+        <p id="cm-msg" style="margin:12px 0 0;font-size:13px;color:var(--green);text-align:center"></p>
+      </div>
+    </div>
+
     <!-- Log a Contract Modal -->
     <div id="contract-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
       <div style="background:var(--card);border-radius:12px;padding:32px;width:90%;max-width:440px;">
@@ -2871,6 +2903,76 @@
           '</div>';
       }).join('');
     }
+    function renderClosedCards() {
+      var closed = document.getElementById('board-closed');
+      if (!closed) return;
+      var deals = window.__closedDeals || [];
+      if (deals.length === 0) {
+        closed.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Closed deals appear here.</div>';
+        return;
+      }
+      closed.innerHTML = deals.map(function (d) {
+        var typeLabel = d.type === 'listing' ? 'Listing' : 'Accepted Offer';
+        var gci = d.gci ? fmtMoney(d.gci) : '—';
+        var dt = d.closed_date ? new Date(d.closed_date).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '';
+        var isFunded = (d.funded === true || d.funded === 't' || d.funded === 'true');
+        return '<div style="background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:8px;padding:12px">' +
+          '<div style="font-weight:700;color:var(--text);font-size:13px;margin-bottom:4px">' + (d.property_address || 'Untitled') + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">' + typeLabel + ' · ' + dt + '</div>' +
+          '<div style="font-size:11px;color:var(--green);margin-bottom:8px">GCI ' + gci + '</div>' +
+          '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:' + (isFunded ? 'var(--green)' : 'var(--muted)') + ';cursor:pointer">' +
+          '<input type="checkbox" ' + (isFunded ? 'checked' : '') + ' onchange="toggleFunded(\'' + d.id + '\', this.checked)"> Funded (in the bank)' +
+          '</label>' +
+          '</div>';
+      }).join('');
+    }
+    function dealApi(path, body, cb) {
+      var agentId = '__AGENT_ID__';
+      var token = new URLSearchParams(window.location.search).get('token');
+      fetch('/api/agents/' + agentId + path + '?token=' + token, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body || {})
+      }).then(function(r){return r.json();}).then(cb).catch(function(e){ alert('Error: ' + e.message); });
+    }
+    function toggleFunded(dealId, checked) {
+      dealApi('/deals/' + dealId + '/funded', { funded: checked }, function(res){
+        if (!res.success) alert('Could not update funded status.');
+      });
+    }
+    // Close modal flow
+    var __pendingCloseId = null;
+    function openCloseModal(deal) {
+      __pendingCloseId = deal.id;
+      document.getElementById('cm-address').textContent = (deal.property_address || 'Untitled') + ' · ' + (deal.type === 'listing' ? 'Listing' : 'Accepted Offer');
+      // Default close date = signed + 3 months
+      var base = deal.signed_date ? new Date(deal.signed_date) : new Date();
+      base.setMonth(base.getMonth() + 3);
+      document.getElementById('cm-date').value = base.toISOString().split('T')[0];
+      document.getElementById('cm-price').value = deal.est_value || '';
+      document.getElementById('cm-gci').value = deal.est_gci || '';
+      document.getElementById('cm-msg').textContent = '';
+      document.getElementById('close-modal').style.display = 'flex';
+    }
+    function cancelClose() {
+      document.getElementById('close-modal').style.display = 'none';
+      __pendingCloseId = null;
+      reloadBoard();
+    }
+    function submitClose() {
+      if (!__pendingCloseId) return;
+      var date = document.getElementById('cm-date').value;
+      var price = document.getElementById('cm-price').value;
+      var gci = document.getElementById('cm-gci').value;
+      if (!date) { document.getElementById('cm-msg').textContent = 'Close date required.'; document.getElementById('cm-msg').style.color = 'red'; return; }
+      dealApi('/deals/' + __pendingCloseId + '/close', { closed_date: date, gci: gci, sale_price: price }, function(res){
+        if (res.success) { document.getElementById('close-modal').style.display='none'; __pendingCloseId=null; reloadBoard(); }
+        else { document.getElementById('cm-msg').textContent = 'Error: ' + (res.error||'failed'); document.getElementById('cm-msg').style.color='red'; }
+      });
+    }
+    function reloadBoard() {
+      // Re-fetch goals so all cards, grids, tiles refresh
+      location.reload();
+    }
     var __boardInited = false;
     function initBoardSortable() {
       if (__boardInited || typeof Sortable === 'undefined') return;
@@ -2884,18 +2986,19 @@
         onAdd: function (evt) {
           var dealId = evt.item.getAttribute('data-deal-id');
           evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
-          // STUB (layer 4 next session): open confirm modal → enter close month + actual GCI → POST status flip.
-          alert('Close flow coming next session.\nDeal: ' + dealId);
-          renderBoardCards();
+          var deal = (window.__pendingDeals || []).filter(function(d){return d.id===dealId;})[0];
+          if (deal) openCloseModal(deal);
         }
       }));
       Sortable.create(lostZone, Object.assign({}, shared, {
         onAdd: function (evt) {
           var dealId = evt.item.getAttribute('data-deal-id');
           evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
-          // STUB (layer 4 next session): POST status='failed'.
-          alert('Lost flow coming next session.\nDeal: ' + dealId);
-          renderBoardCards();
+          if (confirm('Mark this deal as Lost? It will be removed from your pipeline.')) {
+            dealApi('/deals/' + dealId + '/lost', {}, function(res){ reloadBoard(); });
+          } else {
+            renderBoardCards();
+          }
         }
       }));
     }
