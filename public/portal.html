@@ -2226,6 +2226,11 @@
             var clMonthSidesGoal = clTxnGoal / 12;
             var clMonthGciGoal = clGciGoal / 12;
             var clBody = document.getElementById("closings-grid-body");
+            var clTotalSides = (data.monthlyClosings || []).reduce(function (s, r) { return s + (parseInt(r.sides) || 0); }, 0);
+            if (clBody && clTotalSides === 0) {
+              clBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6">No closings logged yet.<br>Use <strong style="color:var(--green)">+ Log a Closing</strong> to add each sale with its close date — your monthly performance will build here through the year.</td></tr>';
+              clBody = null;
+            }
             if (clBody) {
               var clHtml = "";
               for (var cm = 1; cm <= 12; cm++) {
