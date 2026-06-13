@@ -451,6 +451,7 @@
         margin-right: 6px;
       }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
   </head>
   <body>
     <div class="header">
@@ -1452,6 +1453,30 @@
         </div>
       </div>
 
+      <!-- ═══ PIPELINE BOARD (toggle) ═══ -->
+      <button id="board-toggle" onclick="togglePipelineBoard()" style="display:block;margin:0 0 16px;padding:12px 24px;border-radius:8px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-weight:700;font-size:14px;cursor:pointer">⇄ Open Pipeline Board</button>
+      <div id="pipeline-board" style="display:none;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Drag a deal from <strong style="color:var(--gold)">Working</strong> to <strong style="color:var(--green)">Close</strong> when it funds, or <strong style="color:#ef4444">Lost</strong> if it falls through.</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+          <!-- Working column -->
+          <div style="flex:1;min-width:260px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);font-weight:700;margin-bottom:8px">Working</div>
+            <div id="board-working" style="min-height:120px;background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+          <!-- Drop targets -->
+          <div style="flex:0 0 200px;display:flex;flex-direction:column;gap:14px">
+            <div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);font-weight:700;margin-bottom:8px">Close ✓</div>
+              <div id="board-close" style="min-height:90px;background:rgba(34,197,94,0.06);border:2px dashed var(--green);border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center">Drop here when it funds</div>
+            </div>
+            <div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#ef4444;font-weight:700;margin-bottom:8px">Lost</div>
+              <div id="board-lost" style="min-height:90px;background:rgba(239,68,68,0.06);border:2px dashed #ef4444;border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center">Drop here if it fell through</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="section-label">Contracts Written — Goal vs Actual</div>
       <div style="background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
         <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--gold)"></div>
@@ -2261,6 +2286,10 @@
             var pg = document.getElementById("pipeline-gci"); if (pg) pg.textContent = fmt$(data.pipelineGci);
             var pc = document.getElementById("pipeline-count"); if (pc) pc.textContent = (data.pipelineCount || 0);
 
+            // ── Pipeline Board: render Working cards from pending deals ──
+            window.__pendingDeals = data.pendingDeals || [];
+            renderBoardCards();
+
             // ── Contracts Written Grid ──
             var ctMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             var ctData = {};
@@ -2810,6 +2839,64 @@
             msg.textContent = "Something went wrong. Please try again.";
           });
       }
+      function togglePipelineBoard() {
+      var board = document.getElementById('pipeline-board');
+      var btn = document.getElementById('board-toggle');
+      if (board.style.display === 'none') {
+        board.style.display = 'block';
+        btn.textContent = '⇄ Hide Pipeline Board';
+        initBoardSortable();
+      } else {
+        board.style.display = 'none';
+        btn.textContent = '⇄ Open Pipeline Board';
+      }
+    }
+    function fmtMoney(n) { return '$' + Math.round(Number(n) || 0).toLocaleString(); }
+    function renderBoardCards() {
+      var working = document.getElementById('board-working');
+      if (!working) return;
+      var deals = window.__pendingDeals || [];
+      if (deals.length === 0) {
+        working.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No open deals. Log a contract to see cards here.</div>';
+        return;
+      }
+      working.innerHTML = deals.map(function (d) {
+        var typeLabel = d.type === 'listing' ? 'Listing' : 'Accepted Offer';
+        var val = d.est_value ? fmtMoney(d.est_value) : '—';
+        var gci = d.est_gci ? fmtMoney(d.est_gci) : '—';
+        return '<div class="board-card" data-deal-id="' + d.id + '" style="background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:8px;padding:12px;cursor:grab">' +
+          '<div style="font-weight:700;color:var(--text);font-size:13px;margin-bottom:4px">' + (d.property_address || 'Untitled') + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">' + typeLabel + '</div>' +
+          '<div style="display:flex;gap:14px;font-size:11px"><span style="color:var(--soft)">Value ' + val + '</span><span style="color:var(--gold)">GCI ' + gci + '</span></div>' +
+          '</div>';
+      }).join('');
+    }
+    var __boardInited = false;
+    function initBoardSortable() {
+      if (__boardInited || typeof Sortable === 'undefined') return;
+      __boardInited = true;
+      var working = document.getElementById('board-working');
+      var closeZone = document.getElementById('board-close');
+      var lostZone = document.getElementById('board-lost');
+      var shared = { group: 'pipeline', animation: 150, ghostClass: 'board-ghost' };
+      Sortable.create(working, shared);
+      Sortable.create(closeZone, Object.assign({}, shared, {
+        onAdd: function (evt) {
+          var dealId = evt.item.getAttribute('data-deal-id');
+          // STUB (layer 4 next session): open confirm modal → enter close month + actual GCI → POST status flip.
+          alert('Close flow coming next session.\nDeal: ' + dealId);
+          renderBoardCards(); // snap card back to Working for now
+        }
+      }));
+      Sortable.create(lostZone, Object.assign({}, shared, {
+        onAdd: function (evt) {
+          var dealId = evt.item.getAttribute('data-deal-id');
+          // STUB (layer 4 next session): POST status='failed'.
+          alert('Lost flow coming next session.\nDeal: ' + dealId);
+          renderBoardCards();
+        }
+      }));
+    }
       function openContractModal() {
       var modal = document.getElementById('contract-modal');
       modal.style.display = 'flex';
