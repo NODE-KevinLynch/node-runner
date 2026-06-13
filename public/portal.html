@@ -1434,6 +1434,31 @@
       </div>
       <button onclick="openClosingModal()" style="display:block;margin:0 0 16px;padding:12px 24px;border-radius:8px;border:none;background:var(--green);color:#000;font-weight:700;font-size:14px;cursor:pointer">+ Log a Closing</button>
 
+      <!-- ═══ CONTRACTS WRITTEN GRID ═══ -->
+      <button onclick="openContractModal()" style="display:block;margin:0 0 16px;padding:12px 24px;border-radius:8px;border:none;background:var(--gold);color:#000;font-weight:700;font-size:14px;cursor:pointer">+ Log a Contract (Listing or Accepted Offer)</button>
+      <div class="section-label">Contracts Written — Goal vs Actual</div>
+      <div style="background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--gold)"></div>
+        <div style="padding-left:16px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Mid-funnel wins. Listings taken and buyer contracts signed, by month.</div>
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Listings</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">CPS</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>
+                </tr>
+              </thead>
+              <tbody id="contracts-grid-body">
+                <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ═══ MONTHLY CLOSINGS GRID ═══ -->
       <div class="section-label">Monthly Closings — Goal vs Actual</div>
       <div style="background:var(--surface);border:1px solid var(--green);border-radius:12px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
@@ -2217,6 +2242,34 @@
               }
               actBody.innerHTML = actHtml;
             }
+            // ── Contracts Written Grid ──
+            var ctMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            var ctData = {};
+            (data.monthlyContracts || []).forEach(function (r) { ctData[r.m] = r; });
+            var ctBody = document.getElementById("contracts-grid-body");
+            var ctTotal = (data.monthlyContracts || []).reduce(function (s, r) { return s + (parseInt(r.total) || 0); }, 0);
+            if (ctBody && ctTotal === 0) {
+              ctBody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6">No contracts logged yet.<br>Use <strong style="color:var(--gold)">+ Log a Contract</strong> when you take a listing or sign a buyer — your pipeline builds here.</td></tr>';
+              ctBody = null;
+            }
+            if (ctBody) {
+              var ctHtml = "";
+              for (var tm = 1; tm <= 12; tm++) {
+                var trow = ctData[tm] || { listings:0, cps:0, total:0 };
+                var tList = parseInt(trow.listings) || 0;
+                var tCps = parseInt(trow.cps) || 0;
+                var tTot = parseInt(trow.total) || 0;
+                var tIsCur = tm === (now.getMonth() + 1);
+                ctHtml +=
+                  '<tr style="' + (tIsCur ? "background:rgba(234,179,8,0.06)" : "") + '">' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);color:' + (tIsCur ? "var(--gold)" : "var(--soft)") + ';font-weight:' + (tIsCur ? "700" : "400") + '">' + ctMonths[tm-1] + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;color:' + (tList > 0 ? "var(--gold)" : "var(--muted)") + '">' + tList + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;color:' + (tCps > 0 ? "var(--gold)" : "var(--muted)") + '">' + tCps + '</td>' +
+                  '<td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:700;color:' + (tTot > 0 ? "var(--text)" : "var(--muted)") + '">' + tTot + '</td>' +
+                  '</tr>';
+              }
+              ctBody.innerHTML = ctHtml;
+            }
             // ── Monthly Closings Grid ──
             var clMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             var clData = {};
@@ -2226,11 +2279,6 @@
             var clMonthSidesGoal = clTxnGoal / 12;
             var clMonthGciGoal = clGciGoal / 12;
             var clBody = document.getElementById("closings-grid-body");
-            var clTotalSides = (data.monthlyClosings || []).reduce(function (s, r) { return s + (parseInt(r.sides) || 0); }, 0);
-            if (clBody && clTotalSides === 0) {
-              clBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6">No closings logged yet.<br>Use <strong style="color:var(--green)">+ Log a Closing</strong> to add each sale with its close date — your monthly performance will build here through the year.</td></tr>';
-              clBody = null;
-            }
             if (clBody) {
               var clHtml = "";
               for (var cm = 1; cm <= 12; cm++) {
@@ -2573,6 +2621,37 @@
       })();
     </script>
   
+    <!-- Log a Contract Modal -->
+    <div id="contract-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+      <div style="background:var(--card);border-radius:12px;padding:32px;width:90%;max-width:440px;">
+        <h3 style="margin:0 0 20px;color:var(--text)">Log a Contract — Listing or Accepted Offer</h3>
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Contract Type</label>
+          <select id="ct-type" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
+            <option value="listing">Listing Taken</option>
+            <option value="cps">Accepted Offer (Buyer CPS)</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Property Address</label>
+          <input id="ct-address" type="text" placeholder="123 Main St" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Signed Date</label>
+          <input id="ct-date" type="date" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
+        </div>
+        <div style="margin-bottom:24px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Estimated Value ($, optional)</label>
+          <input id="ct-value" type="number" placeholder="750000" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
+        </div>
+        <div style="display:flex;gap:12px">
+          <button onclick="document.getElementById('contract-modal').style.display='none'" style="flex:1;padding:12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:14px">Cancel</button>
+          <button onclick="submitContract()" style="flex:1;padding:12px;border-radius:8px;border:none;background:var(--gold);color:#000;cursor:pointer;font-size:14px;font-weight:700">Log It</button>
+        </div>
+        <p id="ct-msg" style="margin:12px 0 0;font-size:13px;color:var(--gold);text-align:center"></p>
+      </div>
+    </div>
+
     <!-- Log a Closing Modal -->
     <div id="closing-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
       <div style="background:var(--card);border-radius:12px;padding:32px;width:90%;max-width:440px;">
@@ -2689,6 +2768,39 @@
             msg.textContent = "Something went wrong. Please try again.";
           });
       }
+      function openContractModal() {
+      var modal = document.getElementById('contract-modal');
+      modal.style.display = 'flex';
+      document.getElementById('ct-date').value = new Date().toISOString().split('T')[0];
+    }
+    function submitContract() {
+      var agentId = '__AGENT_ID__';
+      var token = new URLSearchParams(window.location.search).get('token');
+      var type = document.getElementById('ct-type').value;
+      var address = document.getElementById('ct-address').value;
+      var date = document.getElementById('ct-date').value;
+      var value = document.getElementById('ct-value').value;
+      if (!address || !date) {
+        document.getElementById('ct-msg').textContent = 'Please fill in address and signed date.';
+        document.getElementById('ct-msg').style.color = 'red';
+        return;
+      }
+      fetch('/api/agents/' + agentId + '/contracts?token=' + token, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({property_address: address, type: type, signed_date: date, est_value: value})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('ct-msg').textContent = 'Contract logged!';
+          document.getElementById('ct-msg').style.color = 'var(--gold)';
+          setTimeout(() => { document.getElementById('contract-modal').style.display='none'; location.reload(); }, 1500);
+        } else {
+          document.getElementById('ct-msg').textContent = 'Error: ' + data.error;
+        }
+      });
+    }
       function openClosingModal() {
       var modal = document.getElementById('closing-modal');
       modal.style.display = 'flex';
