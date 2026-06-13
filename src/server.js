@@ -456,6 +456,14 @@ app.get("/api/goals/:agentId", async (req, res) => {
             WHERE agent_id = $1 AND status = 'pending'`,
         )
         .get(req.params.agentId);
+      const pendingDeals = await db
+        .prepare(
+          `SELECT id, property_address, type, signed_date, est_value, est_gci
+             FROM deals
+            WHERE agent_id = $1 AND status = 'pending'
+            ORDER BY signed_date DESC`,
+        )
+        .all(req.params.agentId);
       const monthRow = await db
       .prepare("SELECT COALESCE(SUM(gci), 0) AS g, COUNT(*) AS c FROM deals WHERE agent_id = $1 AND status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM closed_date) = EXTRACT(MONTH FROM NOW())")
       .get(req.params.agentId);
@@ -473,6 +481,7 @@ app.get("/api/goals/:agentId", async (req, res) => {
         pipelineValue: pipelineRow ? Number(pipelineRow.pipeline_value) : 0,
         pipelineGci: pipelineRow ? Number(pipelineRow.pipeline_gci) : 0,
         pipelineCount: pipelineRow ? Number(pipelineRow.pipeline_count) : 0,
+        pendingDeals: pendingDeals || [],
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
