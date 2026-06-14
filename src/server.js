@@ -458,7 +458,7 @@ app.get("/api/goals/:agentId", async (req, res) => {
         .get(req.params.agentId);
       const pendingDeals = await db
         .prepare(
-          `SELECT id, property_address, type, signed_date, est_value, est_gci
+          `SELECT id, property_address, type, signed_date, est_value, est_gci, stage
              FROM deals
             WHERE agent_id = $1 AND status = 'pending'
             ORDER BY signed_date DESC`,
@@ -727,12 +727,13 @@ app.post("/api/agents/:id/contracts", async (req, res) => {
         .json({ error: "property_address, type, and signed_date are required" });
     }
     const dealType = type === "listing" ? "listing" : "cps";
+    const initialStage = type === "listing" ? "L" : "C";
     const dealId = "deal_" + id + "_" + Date.now();
     await db
       .prepare(
         `
-      INSERT INTO deals (id, agent_id, property_address, type, status, signed_date, est_value, est_gci)
-      VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7)
+      INSERT INTO deals (id, agent_id, property_address, type, status, signed_date, est_value, est_gci, stage)
+      VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8)
     `,
       )
       .run(
@@ -743,6 +744,7 @@ app.post("/api/agents/:id/contracts", async (req, res) => {
         signed_date,
         est_value || null,
         est_gci || null,
+        initialStage,
       );
     res.json({ success: true, deal_id: dealId });
   } catch (err) {
@@ -886,6 +888,27 @@ app.post("/api/agents/:id/deals/:dealId/funded", async (req, res) => {
       )
       .run(funded === true || funded === "true", dealId, id);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/agents/:id/deals/:dealId/stage ──────────────────────────────────
+// Sets the pipeline stage of a pending deal: L (Listing) | C (Conditional) | F (Firm).
+app.post("/api/agents/:id/deals/:dealId/stage", async (req, res) => {
+  try {
+    const { id, dealId } = req.params;
+    const { stage } = req.body;
+    if (!["L", "C", "F"].includes(stage)) {
+      return res.status(400).json({ error: "stage must be L, C, or F" });
+    }
+    await db
+      .prepare(
+        `UPDATE deals SET stage = $1, updated_at = NOW()
+          WHERE id = $2 AND agent_id = $3`,
+      )
+      .run(stage, dealId, id);
+    res.json({ success: true, stage });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
