@@ -1465,7 +1465,7 @@
           </div>
           <!-- Closed column -->
           <div style="flex:1;min-width:260px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);font-weight:700;margin-bottom:8px">Closed / Coming</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);font-weight:700;margin-bottom:8px">Closed</div>
             <div id="board-closed" style="min-height:120px;background:var(--surface);border:1px solid var(--green);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px"></div>
           </div>
           <!-- Drop targets -->
@@ -2701,7 +2701,7 @@
         <h3 style="margin:0 0 6px;color:var(--text)">Close This Deal</h3>
         <p id="cm-address" style="margin:0 0 20px;font-size:13px;color:var(--muted)"></p>
         <div style="margin-bottom:16px">
-          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Expected Close Date</label>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Completion Date (Paid Out)</label>
           <input id="cm-date" type="date" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px">
         </div>
         <div style="margin-bottom:16px">
@@ -2959,17 +2959,14 @@
         return;
       }
       closed.innerHTML = deals.map(function (d) {
-        var typeLabel = d.type === 'listing' ? 'Listing' : 'Accepted Offer';
         var gci = d.gci ? fmtMoney(d.gci) : '—';
         var dt = d.closed_date ? new Date(d.closed_date).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '';
-        var isFunded = (d.funded === true || d.funded === 't' || d.funded === 'true');
-        return '<div style="background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:8px;padding:12px">' +
-          '<div style="font-weight:700;color:var(--text);font-size:13px;margin-bottom:4px">' + (d.property_address || 'Untitled') + '</div>' +
-          '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">' + typeLabel + ' · ' + dt + '</div>' +
-          '<div style="font-size:11px;color:var(--green);margin-bottom:8px">GCI ' + gci + '</div>' +
-          '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:' + (isFunded ? 'var(--green)' : 'var(--muted)') + ';cursor:pointer">' +
-          '<input type="checkbox" ' + (isFunded ? 'checked' : '') + ' onchange="toggleFunded(\'' + d.id + '\', this.checked)"> Funded (in the bank)' +
-          '</label>' +
+        return '<div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);' +
+          'border-left:3px solid var(--green);border-radius:8px;padding:8px 10px">' +
+          '<span style="flex-shrink:0;width:8px;height:8px;border-radius:50%;background:var(--green)"></span>' +
+          '<span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (d.property_address || 'Untitled') + '</span>' +
+          '<span style="flex-shrink:0;font-size:11px;color:var(--muted)">' + dt + '</span>' +
+          '<span style="flex-shrink:0;font-size:11px;color:var(--green);font-weight:600">' + gci + '</span>' +
           '</div>';
       }).join('');
     }
@@ -2991,10 +2988,8 @@
     function openCloseModal(deal) {
       __pendingCloseId = deal.id;
       document.getElementById('cm-address').textContent = (deal.property_address || 'Untitled') + ' · ' + (deal.type === 'listing' ? 'Listing' : 'Accepted Offer');
-      // Default close date = signed + 3 months
-      var base = deal.signed_date ? new Date(deal.signed_date) : new Date();
-      base.setMonth(base.getMonth() + 3);
-      document.getElementById('cm-date').value = base.toISOString().split('T')[0];
+      // Closed = funded/paid out, so default to today (the completion date)
+      document.getElementById('cm-date').value = new Date().toISOString().split('T')[0];
       document.getElementById('cm-price').value = deal.est_value || '';
       document.getElementById('cm-gci').value = deal.est_gci || '';
       document.getElementById('cm-msg').textContent = '';
