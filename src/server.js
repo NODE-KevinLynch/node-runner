@@ -729,6 +729,27 @@ app.post("/api/agents/:id/contracts", async (req, res) => {
     const dealType = type === "listing" ? "listing" : "cps";
     const initialStage = type === "listing" ? "L" : "C";
     const dealId = "deal_" + id + "_" + Date.now();
+    // Auto-estimate GCI from value ONLY for BC agents (per BC graduated commission rates).
+    // Outside BC we make no assumptions — blank stays blank.
+    // Listing: 3.645% first $100K + 1.35% balance.  Buyer (CPS): 3.255% first $100K + 1.1625% balance.
+    function estimateGci(value, dType) {
+      var v = parseFloat(value);
+      if (!v || v <= 0) return null;
+      var first = Math.min(v, 100000);
+      var balance = Math.max(v - 100000, 0);
+      if (dType === "listing") return Math.round(first * 0.03645 + balance * 0.0135);
+      return Math.round(first * 0.03255 + balance * 0.011625);
+    }
+    var hasGci =
+      est_gci !== undefined && est_gci !== null && est_gci !== "";
+    var finalGci = hasGci ? est_gci : null;
+    if (!hasGci) {
+      const provRow = await db
+        .prepare("SELECT province FROM agents WHERE id = $1")
+        .get(id);
+      const prov = provRow && provRow.province ? String(provRow.province).toUpperCase() : null;
+      if (prov === "BC") finalGci = estimateGci(est_value, dealType);
+    }
     await db
       .prepare(
         `
@@ -743,7 +764,7 @@ app.post("/api/agents/:id/contracts", async (req, res) => {
         dealType,
         signed_date,
         est_value || null,
-        est_gci || null,
+        finalGci || null,
         initialStage,
       );
     res.json({ success: true, deal_id: dealId });
