@@ -1030,7 +1030,7 @@ app.listen(PORT, () => {
           `
         SELECT campaign_type, campaign_step, subject, send_status, sent_at
         FROM campaign_send_log
-        WHERE agent_id = $1
+        WHERE agent_id = $1 AND send_status = 'sent'
         ORDER BY sent_at DESC LIMIT 5
       `,
         )
