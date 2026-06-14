@@ -1456,11 +1456,11 @@
       <!-- ═══ PIPELINE BOARD (toggle) ═══ -->
       <button id="board-toggle" onclick="togglePipelineBoard()" style="display:block;margin:0 0 16px;padding:12px 24px;border-radius:8px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-weight:700;font-size:14px;cursor:pointer">⇄ Open Pipeline Board</button>
       <div id="pipeline-board" style="display:none;margin-bottom:16px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Drag a deal from <strong style="color:var(--gold)">Working</strong> to <strong style="color:var(--green)">Close</strong> when it funds, or <strong style="color:#ef4444">Lost</strong> if it falls through.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Tap the <strong>L/C/F</strong> tag on a deal to advance its stage. Drag a row from <strong style="color:var(--gold)">Active Pipeline</strong> to <strong style="color:var(--green)">Close</strong> when it funds, or <strong style="color:#ef4444">Lost</strong> if it falls through.</div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
           <!-- Working column -->
           <div style="flex:1;min-width:260px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);font-weight:700;margin-bottom:8px">Working</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);font-weight:700;margin-bottom:8px">Active Pipeline</div>
             <div id="board-working" style="min-height:120px;background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px"></div>
           </div>
           <!-- Closed column -->
@@ -2884,24 +2884,71 @@
       }
     }
     function fmtMoney(n) { return '$' + Math.round(Number(n) || 0).toLocaleString(); }
+    // Stage config: L=Listing(green), C=Conditional(orange), F=Firm/Sold(red).
+    // RED on Firm is deliberate — matches the real-estate sign-rider convention (red = SOLD).
+    var STAGE_META = {
+      L: { label: 'Listing',     color: '#22c55e' },
+      C: { label: 'Conditional', color: '#f0a500' },
+      F: { label: 'Firm',        color: '#ef4444' }
+    };
+    function nextStage(s) { return s === 'L' ? 'C' : (s === 'C' ? 'F' : 'L'); }
+    function compactRow(d) {
+      var stage = (d.stage === 'C' || d.stage === 'F') ? d.stage : 'L';
+      var meta = STAGE_META[stage];
+      var val = d.est_value ? fmtMoney(d.est_value) : '—';
+      var gci = d.est_gci ? fmtMoney(d.est_gci) : '—';
+      return '<div class="board-card" data-deal-id="' + d.id + '" data-stage="' + stage + '" ' +
+        'style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);' +
+        'border-left:3px solid ' + meta.color + ';border-radius:8px;padding:8px 10px;cursor:grab">' +
+        '<span onclick="advanceStage(event,\'' + d.id + '\',\'' + stage + '\')" title="Tap to advance stage" ' +
+        'style="flex-shrink:0;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;' +
+        'font-size:11px;font-weight:800;color:#000;background:' + meta.color + ';cursor:pointer">' + stage + '</span>' +
+        '<span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (d.property_address || 'Untitled') + '</span>' +
+        '<span style="flex-shrink:0;font-size:11px;color:var(--soft)">' + val + '</span>' +
+        '<span style="flex-shrink:0;font-size:11px;color:var(--gold);font-weight:600">' + gci + '</span>' +
+        '</div>';
+    }
     function renderBoardCards() {
       var working = document.getElementById('board-working');
       if (!working) return;
       var deals = window.__pendingDeals || [];
       if (deals.length === 0) {
-        working.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No open deals. Log a contract to see cards here.</div>';
+        working.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No open deals. Log a contract to see deals here.</div>';
         return;
       }
-      working.innerHTML = deals.map(function (d) {
-        var typeLabel = d.type === 'listing' ? 'Listing' : 'Accepted Offer';
-        var val = d.est_value ? fmtMoney(d.est_value) : '—';
-        var gci = d.est_gci ? fmtMoney(d.est_gci) : '—';
-        return '<div class="board-card" data-deal-id="' + d.id + '" style="background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:8px;padding:12px;cursor:grab">' +
-          '<div style="font-weight:700;color:var(--text);font-size:13px;margin-bottom:4px">' + (d.property_address || 'Untitled') + '</div>' +
-          '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">' + typeLabel + '</div>' +
-          '<div style="display:flex;gap:14px;font-size:11px"><span style="color:var(--soft)">Value ' + val + '</span><span style="color:var(--gold)">GCI ' + gci + '</span></div>' +
+      var groups = { L: [], C: [], F: [] };
+      deals.forEach(function (d) {
+        var s = (d.stage === 'C' || d.stage === 'F') ? d.stage : 'L';
+        groups[s].push(d);
+      });
+      var html = '';
+      ['L','C','F'].forEach(function (s) {
+        var meta = STAGE_META[s];
+        var list = groups[s];
+        var sumVal = list.reduce(function (a, d) { return a + (Number(d.est_value) || 0); }, 0);
+        html += '<div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:' + meta.color + '"></span>' +
+          '<span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:' + meta.color + '">' +
+          s + ' · ' + meta.label + '</span>' +
+          '<span style="font-size:10px;color:var(--muted);margin-left:auto">' + list.length + ' · ' + fmtMoney(sumVal) + '</span>' +
           '</div>';
-      }).join('');
+        if (list.length === 0) {
+          html += '<div style="font-size:11px;color:var(--muted);padding:4px 10px 8px">None at this stage.</div>';
+        } else {
+          html += list.map(compactRow).join('');
+        }
+      });
+      working.innerHTML = html;
+    }
+    function advanceStage(ev, dealId, current) {
+      ev.stopPropagation();
+      var ns = nextStage(current);
+      // optimistic local update
+      (window.__pendingDeals || []).forEach(function (d) { if (d.id === dealId) d.stage = ns; });
+      renderBoardCards();
+      dealApi('/deals/' + dealId + '/stage', { stage: ns }, function (res) {
+        if (!res || !res.success) { alert('Could not update stage.'); reloadBoard(); }
+      });
     }
     function renderClosedCards() {
       var closed = document.getElementById('board-closed');
