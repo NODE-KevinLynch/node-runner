@@ -20,7 +20,7 @@ function registerOnboardingRoutes(app, db) {
       if (!email) return res.json({ found: false });
       const agent = await db
         .prepare(
-          "SELECT id, name, last_name, email, phone, brokerage, region FROM agents WHERE email = $1",
+          "SELECT id, name, last_name, email, phone, brokerage, region, province FROM agents WHERE email = $1",
         )
         .get(email);
       if (agent) {
@@ -43,6 +43,7 @@ function registerOnboardingRoutes(app, db) {
       const phone = body.phone;
       const brokerage = body.brokerage;
       const region = body.region;
+      const province = (body.province || "").trim().toUpperCase().slice(0, 2) || null;
 
       // Dynamic year keys from the form
       const y1 = body.year1 || 2024;
@@ -100,8 +101,8 @@ function registerOnboardingRoutes(app, db) {
         await db
           .prepare(
             `UPDATE agents SET name = $1, last_name = $2, phone = $3,
-           brokerage = $4, region = $5, source = 'onboarding', updated_at = NOW()
-           WHERE id = $6`,
+           brokerage = $4, region = $5, province = $6, source = 'onboarding', updated_at = NOW()
+           WHERE id = $7`,
           )
           .run(
             first_name,
@@ -109,6 +110,7 @@ function registerOnboardingRoutes(app, db) {
             phone || null,
             brokerage || null,
             region || null,
+            province,
             agent_id,
           );
       } else {
@@ -121,8 +123,8 @@ function registerOnboardingRoutes(app, db) {
         try {
           await db
             .prepare(
-              `INSERT INTO agents (id, name, last_name, email, phone, brokerage, region, source, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'onboarding', NOW())`,
+              `INSERT INTO agents (id, name, last_name, email, phone, brokerage, region, province, source, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'onboarding', NOW())`,
             )
             .run(
               agent_id,
@@ -132,6 +134,7 @@ function registerOnboardingRoutes(app, db) {
               phone || null,
               brokerage || null,
               region || null,
+              province,
             );
         } catch (insertErr) {
           if (
