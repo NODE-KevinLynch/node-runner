@@ -145,6 +145,7 @@
         <div class="field-group"><label>Phone <span class="hint">(optional)</span></label><input type="tel" id="phone" placeholder="(555) 123-4567"></div>
         <div class="field-group"><label>Brokerage</label><input type="text" id="brokerage" placeholder="e.g. Sutton Group"></div>
         <div class="field-group"><label>Region / Market Area</label><input type="text" id="region" placeholder="e.g. Greater Vancouver"></div>
+        <div class="field-group"><label>Province / State <span class="hint">(optional — 2-letter, e.g. BC, AB, ON)</span></label><input type="text" id="province" maxlength="2" placeholder="BC" style="text-transform:uppercase"></div>
       </div>
       <div class="btn-row"><div></div><button class="btn btn-primary" onclick="goToStep(2)">Next — Your Business →</button></div>
     </div>
@@ -423,6 +424,7 @@
           if (a.phone) document.getElementById('phone').value = a.phone;
           if (a.brokerage) document.getElementById('brokerage').value = a.brokerage;
           if (a.region) document.getElementById('region').value = a.region;
+          if (a.province) document.getElementById('province').value = a.province;
           msg.textContent = '✓ Welcome back! We found your profile and filled in your details.';
           msg.style.display = 'block';
         } else { msg.style.display = 'none'; }
@@ -513,6 +515,7 @@
             if (a.phone) document.getElementById('phone').value = a.phone;
             if (a.brokerage) document.getElementById('brokerage').value = a.brokerage;
             if (a.region) document.getElementById('region').value = a.region;
+            if (a.province) document.getElementById('province').value = a.province;
             const msg = document.getElementById('lookup-msg');
             msg.textContent = '✓ Welcome back! We found your profile and filled in your details.';
             msg.style.display = 'block';
@@ -537,6 +540,7 @@
         phone: getVal('phone').trim(),
         brokerage: getVal('brokerage').trim(),
         region: getVal('region').trim(),
+        province: getVal('province').trim().toUpperCase(),
         ['units_' + YEAR1]: Number(getVal('units_' + YEAR1)) || 0,
         ['units_' + YEAR2]: Number(getVal('units_' + YEAR2)) || 0,
         ['units_' + YEAR3]: Number(getVal('units_' + YEAR3)) || 0,
