@@ -463,9 +463,10 @@ async function writeCoachingOutput(db, output) {
   await db
     .prepare("DELETE FROM coaching_outputs WHERE agent_id = $1")
     .run(output.agent_id);
+  var actionScriptsJson = JSON.stringify(output.action_scripts || []);
   await db
     .prepare(
-      "INSERT INTO coaching_outputs (id, agent_id, the_truth, the_strategy, rpm_plan, primary_constraint, coaching_directive, quote_of_the_day, engagement_score, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+      "INSERT INTO coaching_outputs (id, agent_id, the_truth, the_strategy, rpm_plan, primary_constraint, coaching_directive, quote_of_the_day, engagement_score, action_scripts, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
     )
     .run(
       output.id,
@@ -477,6 +478,7 @@ async function writeCoachingOutput(db, output) {
       output.coaching_directive,
       output.quote_of_the_day,
       output.engagement_score,
+      actionScriptsJson,
       output.created_at,
       output.updated_at,
     );
@@ -631,6 +633,171 @@ async function buildDataCallouts(db, agentId, stage) {
 //   RULE 1  stale 90+ day listings AND     -> 'lead_conversion'  (with stale-listing scripts)
 //           <20% of listings advanced to C/F
 // 60-90 day aging is surfaced as a softer signal carried on the override meta.
+
+// ── ACTION SCRIPT LIBRARY ────────────────────────────────────────────────────
+// Every directive/RPM that asks the agent to DO something gets backup:
+//   type "talk"  -> a talk track (what to SAY) for client-facing actions
+//   type "steps" -> execution steps (how to DO it) for internal rituals/systems
+// Matched by keyword against the directive + RPM massive_action text.
+const ACTION_SCRIPTS = {
+  five_five_four: {
+    type: "steps",
+    title: "The 5-5-4 Ritual — How To Execute",
+    body:
+      "Maher's weekly minimum for a referral business. Block 90 minutes, same day each week:\n" +
+      "• 5 HANDWRITTEN NOTES — pull 5 A-list names. One line each: \"Was thinking of you — hope [specific detail] is going well. — [you]\". Stamp, mail same day.\n" +
+      "• 5 PERSONAL CALLS — not pitches. \"Hey [name], no agenda — you crossed my mind and I wanted to see how you're doing.\" Let them talk. Reference it next time.\n" +
+      "• 4 FACE-TO-FACE COFFEES — text 4 people: \"I'd love to catch up — coffee on me this week? Tue or Thu?\" One genuine question about their life per meeting.",
+  },
+  power_note: {
+    type: "talk",
+    title: "The Handwritten Note — What To Write",
+    body:
+      "Keep it to 3 lines, specific, zero ask:\n" +
+      "\"[Name] — I saw [specific thing: your reno, your daughter's grad, the new puppy] and it made me smile. " +
+      "No reason for this note other than I'm grateful to know you. Talk soon — [You].\"\n" +
+      "Maher's rule: the note that sells is the note that asks for nothing.",
+  },
+  referral_ask: {
+    type: "talk",
+    title: "The Referral Ask — What To Say",
+    body:
+      "At a natural high point (post-close, a thank-you, a happy check-in):\n" +
+      "\"Can I ask you something? I've built my business almost entirely on referrals from people like you, rather than chasing strangers online. " +
+      "Who's the next person in your life you think might be thinking about a move — even a year out?\"\n" +
+      "Then stop talking. Let the silence work.",
+  },
+  ford_conversation: {
+    type: "talk",
+    title: "The FORD Conversation — What To Ask",
+    body:
+      "FORD = Family, Occupation, Recreation, Dreams. People reveal moves through life, not real estate:\n" +
+      "• FAMILY: \"How are the kids — anyone heading off to school or moving back home?\"\n" +
+      "• OCCUPATION: \"How's work — any change on the horizon, a promotion, a relocation?\"\n" +
+      "• RECREATION: \"What are you into these days — still at the [hobby/cabin/travel]?\"\n" +
+      "• DREAMS: \"If everything went right the next couple years, what would that look like?\"\n" +
+      "Listen for the move hiding inside the answer. Note it, follow up.",
+  },
+  prospecting_call: {
+    type: "talk",
+    title: "The Prospecting Call — Opening Track",
+    body:
+      "Frame every call as a service call, not a sales call:\n" +
+      "\"Hi [name], it's [you] with [brokerage] — I'll be quick. I'm reaching out to a handful of people in [area] " +
+      "because [specific market reason: inventory's tight / a home just sold on your street]. " +
+      "Quick question — have you given any thought to what your place might be worth in today's market?\"\n" +
+      "Goal of the call is the next conversation, not the listing.",
+  },
+  follow_up_sequence: {
+    type: "steps",
+    title: "The 10-Touch Follow-Up — How To Run It",
+    body:
+      "Most agents quit at touch 2. The deal lives between touch 5 and 12. Over 10 days:\n" +
+      "Day 1 call + text. Day 2 email (value, not 'just checking in'). Day 3 call. Day 4 text. " +
+      "Day 6 video text. Day 7 call. Day 9 email. Day 10 the final-touch message:\n" +
+      "\"I don't want to be a bother, so this'll be my last note for now. If anything changes, I'm one text away. " +
+      "Either way, I'm rooting for you.\" — recovers 20-30% of silent leads.",
+  },
+  listing_presentation: {
+    type: "talk",
+    title: "The Listing Consultation — Diagnostic Open",
+    body:
+      "Win by asking, not pitching. Open with:\n" +
+      "\"Before I show you anything about me, I want to understand you. " +
+      "Walk me through why you're thinking of moving, what the ideal timeline looks like, " +
+      "and what would make this a great outcome for your family.\"\n" +
+      "Ask 10 questions before you make a single recommendation. The agent who asks most, wins most.",
+  },
+  price_reduction: {
+    type: "talk",
+    title: "The Price-Reduction Conversation — What To Say",
+    body:
+      "\"When we listed, we agreed the market would tell us if we were positioned right. " +
+      "We've now had [X] showings and [Y] weeks with no offer — that IS the market talking. " +
+      "The longer a home sits, the more buyers assume something's wrong with it, not the price. " +
+      "I'd rather adjust now from strength than chase the market down. Let's reposition to [price] this week.\"",
+  },
+  sphere_checkin: {
+    type: "talk",
+    title: "The Sphere Check-In — What To Say",
+    body:
+      "No pitch, pure relationship:\n" +
+      "\"Hey [name] — you popped into my head today and I realized it's been too long. " +
+      "No agenda at all, just wanted to say hi and see how things are with you and the family.\"\n" +
+      "If a move surfaces naturally, follow the FORD thread. If not, you've still made a deposit in the relationship.",
+  },
+  annual_review: {
+    type: "steps",
+    title: "The Annual Client Review — How To Run It",
+    body:
+      "15-minute call with each A-list past client, once a year:\n" +
+      "1) Lead with their equity: \"I ran the numbers — your home's likely worth about [range] now, up from [purchase].\"\n" +
+      "2) Ask about plans: \"Any changes on the horizon — staying put, upsizing, helping family?\"\n" +
+      "3) Offer value: a market report, a contractor referral, a tax-time reminder.\n" +
+      "4) Soft referral ask before you hang up. One call. More business than 100 cold dials.",
+  },
+  hour_of_power: {
+    type: "steps",
+    title: "The Hour of Power — How To Execute",
+    body:
+      "Robbins' state-setting ritual, before any client contact:\n" +
+      "• MOVE (20 min): walk, workout, anything that changes your physiology.\n" +
+      "• GRATITUDE (3 min): write 3 specific things you're grateful for — specificity is what shifts state.\n" +
+      "• VISUALIZE (5 min): see your top 3 outcomes for the day already done.\n" +
+      "• PRIME (2 min): one incantation, out loud, with conviction. State first, then strategy.",
+  },
+  rpm_plan: {
+    type: "steps",
+    title: "Writing Your RPM Plan — How To",
+    body:
+      "Robbins' Result-Purpose-Massive Action, on paper, posted at your desk:\n" +
+      "• RESULT: what specifically, by when. \"3 listing appointments booked by Friday.\"\n" +
+      "• PURPOSE: the why that makes it a must. \"So my pipeline is full going into spring.\"\n" +
+      "• MASSIVE ACTION: the concrete moves. \"30 calls/day to expireds + FSBOs, 9-11am, no inbox first.\"\n" +
+      "Purpose is the fuel — if the result isn't pulling you, the purpose isn't big enough.",
+  },
+};
+
+// Detect which action scripts back a given directive + RPM massive_action.
+// Keyword match against combined text; returns an array of {title, type, body}.
+function matchActionScripts(directive, rpmMassiveAction, bottleneck) {
+  var hay = ((directive || "") + " " + (rpmMassiveAction || "")).toLowerCase();
+  var hits = [];
+  var seen = {};
+  function add(key) {
+    if (ACTION_SCRIPTS[key] && !seen[key]) { seen[key] = true; hits.push(ACTION_SCRIPTS[key]); }
+  }
+  // Keyword → script mappings (order = priority).
+  if (/5-?5-?4|five.?five.?four/.test(hay)) add("five_five_four");
+  if (/handwritten|power note|note to|thank-?you note/.test(hay)) add("power_note");
+  if (/referral/.test(hay)) add("referral_ask");
+  if (/ford|family.*occupation|recreation.*dream/.test(hay)) add("ford_conversation");
+  if (/prospect|cold call|outbound|dial|fanatical/.test(hay)) add("prospecting_call");
+  if (/follow.?up|touch sequence|cadence|10.?touch|ten.?touch/.test(hay)) add("follow_up_sequence");
+  if (/listing presentation|consultation|diagnostic|first meeting/.test(hay)) add("listing_presentation");
+  if (/price reduction|reposition|stale|reduce the price|price adjustment/.test(hay)) add("price_reduction");
+  if (/sphere|check.?in|past client|database touch|reconnect/.test(hay)) add("sphere_checkin");
+  if (/annual review|equity review|home anniversary/.test(hay)) add("annual_review");
+  if (/hour of power|priming|prime|morning routine|incantation|gratitude/.test(hay)) add("hour_of_power");
+  if (/rpm|result.*purpose|massive action/.test(hay)) add("rpm_plan");
+
+  // Bottleneck fallback: if nothing matched, attach the most relevant script.
+  if (hits.length === 0) {
+    var fb = {
+      pipeline_volume: "prospecting_call", lead_volume: "prospecting_call",
+      prospecting_consistency: "prospecting_call", cold_call_aversion: "prospecting_call",
+      lead_conversion: "follow_up_sequence", follow_up: "follow_up_sequence",
+      low_conversion: "listing_presentation", speed_to_lead: "follow_up_sequence",
+      relationship_deficit: "five_five_four", referral_quality: "referral_ask",
+      database_size: "sphere_checkin", sphere_awareness: "sphere_checkin",
+      retention: "annual_review", mindset_state: "hour_of_power",
+      high_stress: "hour_of_power", personal_vision: "rpm_plan",
+    };
+    if (fb[bottleneck]) add(fb[bottleneck]);
+  }
+  // Cap at 3 so we never overwhelm.
+  return hits.slice(0, 3);
+}
 
 // Stale-listing client-conversation scripts injected when RULE 1 fires.
 const STALE_LISTING_SCRIPTS = {
@@ -816,6 +983,23 @@ async function runCoachingPipeline(db, agentId) {
         "\n\nUSE THESE SCRIPTS THIS WEEK:\n\n" +
         override.scripts.join("\n\n");
     }
+  }
+
+  // ── Attach backup ACTION SCRIPTS for the directive + RPM (talk tracks / steps) ──
+  try {
+    var rpmAction = "";
+    try {
+      var rpmObj = JSON.parse(output.rpm_plan);
+      rpmAction = rpmObj.massive_action || "";
+    } catch (e) { rpmAction = output.rpm_plan || ""; }
+    output.action_scripts = matchActionScripts(
+      output.coaching_directive,
+      rpmAction,
+      effectiveBottleneck,
+    );
+  } catch (e) {
+    console.error("matchActionScripts non-fatal:", e.message);
+    output.action_scripts = [];
   }
 
   await writeCoachingOutput(db, output);
