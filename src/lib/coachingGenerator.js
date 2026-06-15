@@ -1417,8 +1417,80 @@ const DAILY_WIN_OPTIONS = {
   ],
 };
 
-function getDailyWinOptions(bottleneck) {
-  return DAILY_WIN_OPTIONS[bottleneck] || DAILY_WIN_OPTIONS.pipeline_volume;
+// Dynamic Stage-3 wins injected from live data (live read on deals + scorecard).
+const DYNAMIC_WINS = {
+  stale_listing: [
+    { id: "dyn_stale1", text: "Call your oldest listing about a price adjustment", pts: 10 },
+    { id: "dyn_stale2", text: "Prep a CMA refresh for a stale listing", pts: 8 },
+  ],
+  prospecting: [
+    { id: "dyn_pros1", text: "Complete a 2-hour prospecting block before noon", pts: 5 },
+    { id: "dyn_pros2", text: "Make 25 outbound calls today", pts: 5 },
+  ],
+  ford_leadgen: [
+    { id: "dyn_ford1", text: "Have 3 FORD conversations with database contacts (Family, Occupation, Recreation, Dreams)", pts: 8 },
+    { id: "dyn_ford2", text: "Reconnect with 5 past clients using a FORD question to uncover a hidden move", pts: 8 },
+    { id: "dyn_ford3", text: "Generate 5 new buyer or seller leads this week", pts: 8 },
+  ],
+};
+
+// Legacy signature still works: getDailyWinOptions(bottleneck).
+// New signature: getDailyWinOptions(bottleneck, db, agentId, stage) — async, injects live wins.
+async function getDailyWinOptions(bottleneck, db, agentId, stage) {
+  var base = (DAILY_WIN_OPTIONS[bottleneck] || DAILY_WIN_OPTIONS.pipeline_volume).slice();
+
+  // Stages 1 & 2 (or no db context): bottleneck list only, unchanged.
+  if (!db || !agentId || !stage || stage < 3) {
+    return base;
+  }
+
+  try {
+    var injected = [];
+
+    // Live read: stale listings, recent contacts, closings.
+    var d = await db
+      .prepare(
+        "SELECT " +
+        "COUNT(*) FILTER (WHERE stage='L' AND status='pending' AND signed_date <= NOW() - INTERVAL '90 days') AS stale90, " +
+        "COUNT(*) FILTER (WHERE status='closed' AND EXTRACT(YEAR FROM closed_date)=EXTRACT(YEAR FROM NOW())) AS closed_ytd " +
+        "FROM deals WHERE agent_id = $1"
+      )
+      .get(agentId);
+    var stale90 = d ? Number(d.stale90) : 0;
+    var closedYtd = d ? Number(d.closed_ytd) : 0;
+
+    var sc = await db
+      .prepare(
+        "SELECT COALESCE(SUM(contacts),0) AS contacts " +
+        "FROM daily_scorecard WHERE agent_id = $1 AND log_date >= NOW() - INTERVAL '30 days'"
+      )
+      .get(agentId);
+    var contacts30 = sc ? Number(sc.contacts) : 0;
+
+    // (a) Stale 90+ listings -> price-adjustment / CMA wins.
+    if (stale90 >= 1) injected = injected.concat(DYNAMIC_WINS.stale_listing);
+
+    // (b) Low contacts -> prospecting wins float to the TOP.
+    var prospectingFirst = contacts30 < 20;
+
+    // (c) Low closings / weak conversion -> FORD lead-gen wins.
+    if (closedYtd === 0) injected = injected.concat(DYNAMIC_WINS.ford_leadgen);
+
+    // Assemble: dynamic injected wins first (most relevant), then base; prospecting on top if flagged.
+    var merged = injected.concat(base);
+    if (prospectingFirst) merged = DYNAMIC_WINS.prospecting.concat(merged);
+
+    // De-dupe by id, cap at 10 options.
+    var seen = {};
+    var result = [];
+    for (var i = 0; i < merged.length && result.length < 10; i++) {
+      if (!seen[merged[i].id]) { seen[merged[i].id] = true; result.push(merged[i]); }
+    }
+    return result;
+  } catch (e) {
+    console.error("getDailyWinOptions dynamic non-fatal:", e.message);
+    return base;
+  }
 }
 module.exports = {
   generateCoachingOutput: generateCoachingOutput,
@@ -1426,4 +1498,5 @@ module.exports = {
   runCoachingPipeline: runCoachingPipeline,
   constraintLabel: constraintLabel,
   getDailyWinOptions: getDailyWinOptions,
+  getCoachingStage: getCoachingStage,
 };
