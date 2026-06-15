@@ -64,6 +64,30 @@ function strategyBlock(strategy) {
     '</div>';
 }
 
+// Renders backup action scripts (talk tracks / execution steps) for the directive.
+function actionScriptsBlock(scriptsJson) {
+  var scripts = [];
+  try {
+    scripts = typeof scriptsJson === "string" ? JSON.parse(scriptsJson) : (scriptsJson || []);
+  } catch (e) { scripts = []; }
+  if (!scripts || !scripts.length) return "";
+  var cards = scripts.map(function (s) {
+    var label = s.type === "talk" ? "WHAT TO SAY" : "HOW TO DO IT";
+    var bodyHtml = String(s.body || "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>");
+    return '<div style="margin:0 0 14px">' +
+      '<p style="margin:0 0 4px;font-size:12px;font-weight:bold;letter-spacing:0.5px;color:#7a5c00">' + label + '</p>' +
+      '<p style="margin:0 0 4px;font-weight:bold;color:#1a2b4a">' + (s.title || "") + '</p>' +
+      '<p style="margin:0;font-size:14px;line-height:1.6;color:#333">' + bodyHtml + '</p>' +
+      '</div>';
+  }).join("");
+  return '<div style="background:#fcf9f0;border-left:4px solid #c9a050;padding:16px 20px;margin:20px 0;border-radius:4px">' +
+    '<p style="margin:0 0 12px;font-weight:bold;color:#8a6d1f">Exactly What To Do This Week</p>' +
+    cards +
+    '</div>';
+}
+
 // ── Determine behavior tone ─────────────────────────────────────────────────
 // Returns: "celebration" | "momentum" | "encouragement" | "nudge" | "wakeup" | "welcome"
 function determineTone(step, daysDark) {
@@ -159,7 +183,7 @@ async function getDynamicCoachingEmail(agentId, step, portalUrl) {
     .prepare(
       `
     SELECT the_truth, the_strategy, rpm_plan, primary_constraint,
-           coaching_directive, quote_of_the_day
+           coaching_directive, quote_of_the_day, action_scripts
     FROM coaching_outputs
     WHERE agent_id = $1
     ORDER BY created_at DESC LIMIT 1
@@ -241,6 +265,7 @@ async function getDynamicCoachingEmail(agentId, step, portalUrl) {
     "It is not what we do once in a while that shapes our lives. It is what we do consistently.";
   const truth = coaching?.the_truth || "";
   const strategy = coaching?.the_strategy || "";
+  const actionScripts = coaching?.action_scripts || "[]";
 
   // ── Format bottleneck for display ──────────────────────────────────────
   // Prefer the coaching output's primary_constraint — it already reflects any
@@ -351,6 +376,7 @@ ${portalButton(portalUrl)}
   <p style="margin:0;font-style:italic">"${quote}"</p>
 </div>
 ${strategyBlock(strategy)}
+${actionScriptsBlock(actionScripts)}
 ${goalLine}
 ${portalButton(portalUrl)}`;
   } else if (tone === "momentum") {
@@ -372,6 +398,7 @@ ${portalButton(portalUrl)}`;
   <tr><td style="padding:10px 12px;border:1px solid #ddd;border-radius:0 0 4px 4px">${rpmAction}</td></tr>
 </table>
 ${strategyBlock(strategy)}
+${actionScriptsBlock(actionScripts)}
 ${goalLine}
 ${portalButton(portalUrl)}`;
   } else if (tone === "encouragement") {
@@ -386,6 +413,7 @@ ${portalButton(portalUrl)}`;
 <p>Your bottleneck is still <strong>${bottleneckDisplay}</strong>. That does not fix itself. But 15 minutes of focused action today puts you back on track.</p>
 <p>Open your portal. Log one scorecard entry. That is the win for today.</p>
 ${strategyBlock(strategy)}
+${actionScriptsBlock(actionScripts)}
 ${goalLine}
 ${portalButton(portalUrl)}`;
   } else if (tone === "nudge") {
@@ -399,6 +427,7 @@ ${portalButton(portalUrl)}`;
 </div>
 <p>I built this plan for you because your assessment told me exactly where you are stuck. But the plan only works if you do.</p>
 ${strategyBlock(strategy)}
+${actionScriptsBlock(actionScripts)}
 ${goalLine}
 <p>Open your portal. Right now. Not later. Now.</p>
 ${portalButton(portalUrl)}`;
