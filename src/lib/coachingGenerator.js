@@ -799,6 +799,73 @@ function matchActionScripts(directive, rpmMassiveAction, bottleneck) {
   return hits.slice(0, 3);
 }
 
+// ── EVENT PLAYBOOK LAYER ─────────────────────────────────────────────────────
+// When an agent logs a LISTING or a SOLD, surface a time-boxed (7-day),
+// address-specific leverage playbook. Fades automatically after the window.
+// Reuses the action-scripts card shape {title, type, body} for rendering.
+const EVENT_PLAYBOOK_MOVES = {
+  listing: [
+    { title: "1. Coming-Soon / First-Look Outreach", type: "talk",
+      body: "Before it hits the open market, work your database:\n\"Quick heads-up before this goes public — I just took a listing at [ADDR] and wanted my people to see it first. Know anyone who'd love [neighbourhood]? Happy to arrange a private look.\"" },
+    { title: "2. Just Listed Campaign", type: "steps",
+      body: "Blanket the neighbourhood within 48 hours:\n• Just Listed postcard to 100-200 surrounding homes.\n• Social posts (feed + stories) with 3-5 strong photos and a hook.\n• Email blast to your database with the coming-soon angle." },
+    { title: "3. Door-Knock / Call the Street", type: "talk",
+      body: "Knock or call 20 homes around [ADDR]:\n\"Hi, I'm [you] — I just listed the home at [ADDR]. Two quick things: do you know anyone who'd love to live on this street, and have you ever wondered what your own home is worth today?\"" },
+    { title: "4. Open House Plan", type: "steps",
+      body: "Lock the first open house for this weekend:\n• Pick the time, order signage, line up 2 hours.\n• Pre-promote on social + to neighbours (they're your nosiest, best buyers' source).\n• Have a sign-in + a follow-up plan for every visitor." },
+    { title: "5. Agent-to-Agent Broadcast", type: "steps",
+      body: "Get it in front of the agents with the buyers:\n• Post to your office + MLS network.\n• Schedule a broker open if the price point warrants.\n• Personally text 5 agents who work [neighbourhood]." },
+  ],
+  sold: [
+    { title: "1. Referral Ask at the High Point", type: "talk",
+      body: "Emotion is highest right now — use it:\n\"I'm so happy we got this done for you. Can I ask a favour? My business runs on referrals from people like you. Who's the next person you know who might be thinking about a move?\"" },
+    { title: "2. Review / Testimonial Request", type: "talk",
+      body: "Ask while it's fresh:\n\"Would you do me one quick favour? A short review means the world to my business. I'll text you the link — even two sentences about how it felt to work together would be incredible.\"" },
+    { title: "3. Sphere Call with Social Proof", type: "talk",
+      body: "Call 10 database contacts using the sold as the reason:\n\"Hey [name] — just closed another one over at [ADDR] and it had me thinking about you. How are things? Any moves on the horizon for you or anyone you know?\"" },
+    { title: "4. Just Sold Campaign", type: "steps",
+      body: "Neighbourhood blast within 48 hours:\n• Just Sold postcard to the surrounding homes.\n• Social post: 'Another one SOLD at [ADDR] — wondering what yours is worth?'\n• Invite a free home valuation from anyone curious." },
+    { title: "5. Buyers Who Missed Out", type: "talk",
+      body: "Re-engage underbidders and similar buyers:\n\"The home at [ADDR] just closed. I know it wasn't the one for you — but it tells us a lot about this market. Want to regroup and get ahead of the next one before it hits?\"" },
+  ],
+};
+
+// Build address-specific playbooks for any listing/sold logged in the last 7 days.
+async function buildEventPlaybooks(db, agentId) {
+  var cards = [];
+  try {
+    var recent = await db
+      .prepare(
+        "SELECT property_address, type, status, signed_date, closed_date " +
+        "FROM deals WHERE agent_id = $1 AND (" +
+        "  (status = 'pending' AND signed_date >= NOW() - INTERVAL '7 days') OR " +
+        "  (status = 'closed'  AND closed_date >= NOW() - INTERVAL '7 days')) " +
+        "ORDER BY COALESCE(closed_date, signed_date) DESC LIMIT 3"
+      )
+      .all(agentId);
+
+    (recent || []).forEach(function (d) {
+      var isSold = d.status === "closed";
+      var moves = isSold ? EVENT_PLAYBOOK_MOVES.sold : EVENT_PLAYBOOK_MOVES.listing;
+      var addr = d.property_address || "your new " + (isSold ? "sale" : "listing");
+      var header = isSold
+        ? "Leverage your recent SOLD at " + addr
+        : "Leverage your new listing at " + addr;
+      // Personalize [ADDR] in each move body.
+      moves.forEach(function (m) {
+        cards.push({
+          title: header + " — " + m.title,
+          type: m.type,
+          body: m.body.replace(/\[ADDR\]/g, addr),
+        });
+      });
+    });
+  } catch (e) {
+    console.error("buildEventPlaybooks non-fatal:", e.message);
+  }
+  return cards;
+}
+
 // Stale-listing client-conversation scripts injected when RULE 1 fires.
 const STALE_LISTING_SCRIPTS = {
   price_reduction:
@@ -1000,6 +1067,16 @@ async function runCoachingPipeline(db, agentId) {
   } catch (e) {
     console.error("matchActionScripts non-fatal:", e.message);
     output.action_scripts = [];
+  }
+
+  // ── Prepend time-sensitive EVENT PLAYBOOKS (recent listing/sold, 7-day window) ──
+  try {
+    var playbooks = await buildEventPlaybooks(db, agentId);
+    if (playbooks && playbooks.length) {
+      output.action_scripts = playbooks.concat(output.action_scripts || []);
+    }
+  } catch (e) {
+    console.error("buildEventPlaybooks attach non-fatal:", e.message);
   }
 
   await writeCoachingOutput(db, output);
