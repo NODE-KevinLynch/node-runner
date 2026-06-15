@@ -483,6 +483,245 @@ async function writeCoachingOutput(db, output) {
   return output;
 }
 
+// ── STAGED COACHING ENGINE ───────────────────────────────────────────────────
+// Coaching depth scales with data maturity:
+//   STAGE 1 Foundation       (week 1 / no track record)  -> onboarding framing, no adjustments
+//   STAGE 2 Early Adjustments (weeks 2-4 / first signal)  -> frameworks + light callouts
+//   STAGE 3 Granular          (month 2+ / real history)    -> frameworks + full callouts + B2 overrides
+//
+// Detector reads days-active + logged scorecard days + deal count.
+async function getCoachingStage(db, agentId) {
+  try {
+    var a = await db
+      .prepare("SELECT created_at FROM agents WHERE id = $1")
+      .get(agentId);
+    var daysActive = 0;
+    if (a && a.created_at) {
+      daysActive = Math.floor((Date.now() - new Date(a.created_at).getTime()) / 86400000);
+    }
+    var sc = await db
+      .prepare("SELECT COUNT(*) AS days FROM daily_scorecard WHERE agent_id = $1")
+      .get(agentId);
+    var scDays = sc ? Number(sc.days) : 0;
+    var dl = await db
+      .prepare("SELECT COUNT(*) AS n FROM deals WHERE agent_id = $1")
+      .get(agentId);
+    var dealCount = dl ? Number(dl.n) : 0;
+
+    // STAGE 3: real track record — a month in AND meaningful logged history.
+    if (daysActive >= 30 && (scDays >= 8 || dealCount >= 3)) return 3;
+    // STAGE 2: some signal — past first week with at least a little data.
+    if (daysActive >= 7 && (scDays >= 2 || dealCount >= 1)) return 2;
+    // STAGE 1: foundation — brand new or no data yet.
+    return 1;
+  } catch (e) {
+    console.error("getCoachingStage non-fatal:", e.message);
+    return 1;
+  }
+}
+
+// Builds dynamic "here's what's actually happening" callouts from live data.
+// Priority order (Kevin): ACTIVITY 1) 7-day effort 2) funnel snapshot 3) wk-vs-wk
+//                         RESULTS  1) listings+advancing 2) closed vs pace 3) pipeline 4) stale
+// Returns { activity: string|null, results: string|null }.
+async function buildDataCallouts(db, agentId, stage) {
+  var out = { activity: null, results: null };
+  try {
+    // ── Last 7 days effort ──
+    var w0 = await db
+      .prepare(
+        "SELECT COALESCE(SUM(calls),0) AS calls, COALESCE(SUM(contacts),0) AS contacts, " +
+        "COALESCE(SUM(appt_set),0) AS appts " +
+        "FROM daily_scorecard WHERE agent_id = $1 AND log_date >= NOW() - INTERVAL '7 days'"
+      )
+      .get(agentId);
+    // ── Prior 7 days (for momentum) ──
+    var w1 = await db
+      .prepare(
+        "SELECT COALESCE(SUM(contacts),0) AS contacts " +
+        "FROM daily_scorecard WHERE agent_id = $1 " +
+        "AND log_date >= NOW() - INTERVAL '14 days' AND log_date < NOW() - INTERVAL '7 days'"
+      )
+      .get(agentId);
+    var calls7 = w0 ? Number(w0.calls) : 0;
+    var contacts7 = w0 ? Number(w0.contacts) : 0;
+    var appts7 = w0 ? Number(w0.appts) : 0;
+    var contactsPrev = w1 ? Number(w1.contacts) : 0;
+
+    // ── Deal funnel ──
+    var d = await db
+      .prepare(
+        "SELECT " +
+        "COUNT(*) FILTER (WHERE type='listing') AS listings, " +
+        "COUNT(*) FILTER (WHERE type='listing' AND stage IN ('C','F')) AS listings_adv, " +
+        "COUNT(*) FILTER (WHERE status='pending') AS pending, " +
+        "COALESCE(SUM(est_value) FILTER (WHERE status='pending'),0) AS pending_val, " +
+        "COALESCE(SUM(est_gci) FILTER (WHERE status='pending'),0) AS pending_gci, " +
+        "COUNT(*) FILTER (WHERE status='closed' AND EXTRACT(YEAR FROM closed_date)=EXTRACT(YEAR FROM NOW())) AS closed_ytd, " +
+        "COALESCE(SUM(gci) FILTER (WHERE status='closed' AND EXTRACT(YEAR FROM closed_date)=EXTRACT(YEAR FROM NOW())),0) AS gci_ytd, " +
+        "COUNT(*) FILTER (WHERE stage='L' AND status='pending' AND signed_date <= NOW() - INTERVAL '90 days') AS stale90 " +
+        "FROM deals WHERE agent_id = $1"
+      )
+      .get(agentId);
+    var listings = d ? Number(d.listings) : 0;
+    var listingsAdv = d ? Number(d.listings_adv) : 0;
+    var pending = d ? Number(d.pending) : 0;
+    var pendingVal = d ? Number(d.pending_val) : 0;
+    var pendingGci = d ? Number(d.pending_gci) : 0;
+    var closedYtd = d ? Number(d.closed_ytd) : 0;
+    var gciYtd = d ? Number(d.gci_ytd) : 0;
+    var stale90 = d ? Number(d.stale90) : 0;
+
+    // ── Goal pace ──
+    var g = await db
+      .prepare("SELECT gci_goal, transaction_goal FROM agent_goals WHERE agent_id = $1 AND goal_year = 2026")
+      .get(agentId);
+    var txnGoal = g ? Number(g.transaction_goal) : 0;
+
+    var money = function (n) { return "$" + Math.round(n).toLocaleString(); };
+
+    // ── ACTIVITY callout (priority 1 = 7-day effort; add momentum if stage 3) ──
+    if (calls7 + contacts7 + appts7 > 0) {
+      var act = "Last 7 days: " + calls7 + " calls, " + contacts7 + " contacts, " + appts7 + " appointments set.";
+      if (stage >= 3 && contactsPrev > 0) {
+        var delta = contacts7 - contactsPrev;
+        if (delta > 0) act += " Contacts up " + delta + " vs the week before — momentum is building.";
+        else if (delta < 0) act += " Contacts down " + Math.abs(delta) + " vs the week before — protect your prospecting block.";
+        else act += " Contacts flat vs last week — consistency is good; now push the volume.";
+      }
+      out.activity = act;
+    }
+
+    // ── RESULTS callout (priority order; richer at stage 3) ──
+    var resParts = [];
+    if (listings > 0) {
+      resParts.push(listings + " listing(s) taken, " + listingsAdv + " advancing to offer.");
+    }
+    if (stage >= 3) {
+      if (txnGoal > 0) {
+        resParts.push(closedYtd + " of " + txnGoal + " sides closed YTD (" + money(gciYtd) + " GCI).");
+      } else if (closedYtd > 0) {
+        resParts.push(closedYtd + " sides closed YTD (" + money(gciYtd) + " GCI).");
+      }
+      if (pending > 0) {
+        resParts.push(pending + " in pipeline worth " + money(pendingVal) + " (" + money(pendingGci) + " potential GCI).");
+      }
+      if (stale90 > 0) {
+        resParts.push(stale90 + " listing(s) 90+ days old — these need attention now.");
+      }
+    }
+    if (resParts.length) out.results = resParts.join(" ");
+
+    return out;
+  } catch (e) {
+    console.error("buildDataCallouts non-fatal:", e.message);
+    return out;
+  }
+}
+
+// ── PERFORMANCE OVERRIDE LAYER (B2) ──────────────────────────────────────────
+// Lets LIVE performance data override the frozen intake bottleneck when the
+// data is decisive. Reads `deals` (listing age + stage) and `daily_scorecard`
+// (recent contacts). Returns an override bottleneck string, or null to keep intake.
+//
+// Trust gate: only acts once there is enough live signal
+//   (>=3 scorecard days OR >=3 deals in the trailing 30 days).
+// Rule priority (first match wins):
+//   RULE 2  contacts < 20 / 30 days        -> 'pipeline_volume'  (empty funnel beats all)
+//   RULE 1  stale 90+ day listings AND     -> 'lead_conversion'  (with stale-listing scripts)
+//           <20% of listings advanced to C/F
+// 60-90 day aging is surfaced as a softer signal carried on the override meta.
+
+// Stale-listing client-conversation scripts injected when RULE 1 fires.
+const STALE_LISTING_SCRIPTS = {
+  price_reduction:
+    "PRICE-REDUCTION CONVERSATION: \"When we listed, we agreed the market would tell us if we were positioned right. " +
+    "We've now had [X] showings and [Y] weeks with no accepted offer — that IS the market talking. " +
+    "The longer a home sits, the more buyers assume something's wrong with it, not the price. " +
+    "I'd rather adjust now from a position of strength than chase the market down. " +
+    "Let's reposition to [new price] this week and create fresh urgency.\"",
+  stale_checkin:
+    "STALE-LISTING CHECK-IN: \"I want to be straight with you because that's what you hired me for. " +
+    "Your home has been active [N] days. Homes that sell in our market typically go in the first 21. " +
+    "We're past that window, so we have three levers: price, presentation, or promotion. " +
+    "Here's what I'm seeing and what I recommend we change this week...\"",
+  relist_refresh:
+    "RE-LIST / REFRESH TALK: \"A listing that's been on the market a while goes 'stale' in the search portals — " +
+    "it stops showing up as new and buyers scroll past it. Refreshing the listing, new photos, a price improvement, " +
+    "and a coming-soon-style relaunch puts you back in front of every active buyer as if you're brand new. " +
+    "Let's build that relaunch plan together.\"",
+};
+
+async function performanceOverride(db, agentId) {
+  try {
+    // Trailing-30-day contacts from the scorecard.
+    var sc = await db
+      .prepare(
+        "SELECT COALESCE(SUM(contacts),0) AS contacts, COUNT(*) AS days " +
+        "FROM daily_scorecard WHERE agent_id = $1 AND log_date >= NOW() - INTERVAL '30 days'"
+      )
+      .get(agentId);
+    var contacts30 = sc ? Number(sc.contacts) : 0;
+    var scDays = sc ? Number(sc.days) : 0;
+
+    // Active listings (status pending, stage L) with their age, plus advanced counts.
+    var listings = await db
+      .prepare(
+        "SELECT COUNT(*) FILTER (WHERE stage = 'L' AND status = 'pending') AS active_l, " +
+        "COUNT(*) FILTER (WHERE stage = 'L' AND status = 'pending' AND signed_date <= NOW() - INTERVAL '90 days') AS stale90, " +
+        "COUNT(*) FILTER (WHERE stage = 'L' AND status = 'pending' AND signed_date <= NOW() - INTERVAL '60 days' AND signed_date > NOW() - INTERVAL '90 days') AS aging60, " +
+        "COUNT(*) FILTER (WHERE type = 'listing' AND stage IN ('C','F')) AS advanced, " +
+        "COUNT(*) FILTER (WHERE type = 'listing') AS total_listings " +
+        "FROM deals WHERE agent_id = $1"
+      )
+      .get(agentId);
+
+    var activeL = listings ? Number(listings.active_l) : 0;
+    var stale90 = listings ? Number(listings.stale90) : 0;
+    var aging60 = listings ? Number(listings.aging60) : 0;
+    var advanced = listings ? Number(listings.advanced) : 0;
+    var totalListings = listings ? Number(listings.total_listings) : 0;
+
+    var dealCount = totalListings; // proxy for "enough deal signal"
+
+    // Trust gate — too little live signal, keep intake.
+    if (scDays < 3 && dealCount < 3) {
+      return null;
+    }
+
+    // RULE 2 — prospecting first. Empty top-of-funnel beats everything.
+    if (scDays >= 3 && contacts30 < 20) {
+      return {
+        bottleneck: "pipeline_volume",
+        reason: "Live data: only " + contacts30 + " contacts in the last 30 days. Top-of-funnel is the constraint.",
+        scripts: null,
+      };
+    }
+
+    // RULE 1 — listing aging. 90+ day stale + weak advance rate => conversion.
+    var advanceRate = totalListings > 0 ? advanced / totalListings : 0;
+    if (activeL >= 3 && stale90 >= 1 && advanceRate < 0.20) {
+      return {
+        bottleneck: "lead_conversion",
+        reason: "Live data: " + stale90 + " listing(s) 90+ days old and only " +
+          Math.round(advanceRate * 100) + "% advancing. Conversion, not lead-gen, is the constraint.",
+        scripts: [
+          STALE_LISTING_SCRIPTS.stale_checkin,
+          STALE_LISTING_SCRIPTS.price_reduction,
+          STALE_LISTING_SCRIPTS.relist_refresh,
+        ],
+        agingNote: aging60 > 0 ? (aging60 + " more listing(s) entering the 60-90 day window.") : null,
+      };
+    }
+
+    return null;
+  } catch (e) {
+    // Override is best-effort; never break the coaching pipeline.
+    console.error("performanceOverride non-fatal:", e.message);
+    return null;
+  }
+}
+
 // ── FULL PIPELINE ────────────────────────────────────────────────────────────
 
 async function runCoachingPipeline(db, agentId) {
@@ -516,14 +755,68 @@ async function runCoachingPipeline(db, agentId) {
   }
 
   var agentName = ((agent.name || "") + " " + (agent.last_name || "")).trim();
+
+  // ── STAGED COACHING: detect data maturity ──
+  var stage = await getCoachingStage(db, agentId);
+
+  // ── B2 override fires ONLY at Stage 3 (real track record).
+  //    New agents (Stage 1) get foundation coaching, never adjustments. ──
+  var effectiveBottleneck = diagnosis.bottleneck;
+  var override = null;
+  if (stage >= 3) {
+    override = await performanceOverride(db, agentId);
+    if (override && override.bottleneck) {
+      effectiveBottleneck = override.bottleneck;
+    }
+  }
+
   var output = generateCoachingOutput({
     agentId: agentId,
     agentName: agentName,
-    bottleneck: diagnosis.bottleneck,
+    bottleneck: effectiveBottleneck,
     profile: diagnosis.profile,
     signals: signals,
     engagementScore: agent.engagement_score || 0,
   });
+
+  // ── Stage-appropriate framing + dynamic data callouts ──
+  var callouts = await buildDataCallouts(db, agentId, stage);
+
+  if (stage === 1) {
+    // Foundation: welcome framing, no adjustment language.
+    output.the_strategy =
+      "FOUNDATION WEEK — Your first job is building the rhythm, not chasing results yet. " +
+      "Lock in your daily prospecting block, log your activity every day, and let the scoreboard start telling the truth. " +
+      "Adjustments come once you have a track record to adjust.\n\n" +
+      (output.the_strategy || "");
+  } else {
+    // Stage 2 & 3: layer the live read on top of the framework.
+    var liveBits = [];
+    if (callouts.activity) liveBits.push(callouts.activity);
+    if (callouts.results) liveBits.push(callouts.results);
+    if (liveBits.length) {
+      var header = stage === 3 ? "[Live read — your actual numbers]" : "[Early read]";
+      output.the_strategy =
+        (output.the_strategy || "") +
+        "\n\n" + header + " " + liveBits.join(" ");
+    }
+  }
+
+  // If the Stage-3 override carried stale-listing scripts, append them.
+  if (override) {
+    if (override.reason) {
+      output.the_strategy =
+        (output.the_strategy || "") +
+        "\n\n[Why this focus] " + override.reason +
+        (override.agingNote ? " " + override.agingNote : "");
+    }
+    if (override.scripts && override.scripts.length) {
+      output.the_strategy =
+        (output.the_strategy || "") +
+        "\n\nUSE THESE SCRIPTS THIS WEEK:\n\n" +
+        override.scripts.join("\n\n");
+    }
+  }
 
   await writeCoachingOutput(db, output);
 
