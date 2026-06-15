@@ -43,6 +43,27 @@ function bookingBlock() {
   return `<p style="margin-top:20px">Want to go deeper? <a href="https://calendar.app.google/Mvs8PimcWXHYQjY17" style="color:#1a0dab;font-weight:bold">Book a free 30-minute strategy session</a> and we will look at your numbers together.</p>`;
 }
 
+// Renders the live strategy block — the agent's actual numbers + any
+// stale-listing scripts the coaching brain generated. Only shows when present.
+function strategyBlock(strategy) {
+  if (!strategy || !strategy.trim()) return "";
+  // Convert the brain's plain-text strategy (newlines) into simple HTML.
+  var safe = String(strategy)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  var htmlified = safe
+    .split(/\n{2,}/)
+    .map(function (para) { return para.trim(); })
+    .filter(Boolean)
+    .map(function (para) {
+      return '<p style="margin:0 0 10px;white-space:pre-line">' + para + '</p>';
+    })
+    .join("");
+  return '<div style="background:#f3f6f3;border-left:4px solid #50a060;padding:16px 20px;margin:20px 0;border-radius:4px">' +
+    '<p style="margin:0 0 10px;font-weight:bold;color:#2a4a2b">Your Strategy This Week</p>' +
+    htmlified +
+    '</div>';
+}
+
 // ── Determine behavior tone ─────────────────────────────────────────────────
 // Returns: "celebration" | "momentum" | "encouragement" | "nudge" | "wakeup" | "welcome"
 function determineTone(step, daysDark) {
@@ -222,9 +243,13 @@ async function getDynamicCoachingEmail(agentId, step, portalUrl) {
   const strategy = coaching?.the_strategy || "";
 
   // ── Format bottleneck for display ──────────────────────────────────────
-  const bottleneckDisplay = bottleneck
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  // Prefer the coaching output's primary_constraint — it already reflects any
+  // live B2 override (constraintLabel of the EFFECTIVE bottleneck). Only fall
+  // back to the frozen intake bottleneck if no coaching constraint exists.
+  const bottleneckDisplay =
+    constraint && constraint !== "Performance Foundation"
+      ? constraint
+      : bottleneck.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   // ── Goal context ───────────────────────────────────────────────────────
   let goalLine = "";
@@ -325,6 +350,7 @@ ${portalButton(portalUrl)}
 <div style="background:#f8f6f0;border-left:4px solid #1a2b4a;padding:12px 16px;margin:16px 0;border-radius:4px">
   <p style="margin:0;font-style:italic">"${quote}"</p>
 </div>
+${strategyBlock(strategy)}
 ${goalLine}
 ${portalButton(portalUrl)}`;
   } else if (tone === "momentum") {
@@ -345,6 +371,7 @@ ${portalButton(portalUrl)}`;
   <tr><td style="padding:8px 12px;background:#1a2b4a;color:#fff;font-weight:bold">Massive Action</td></tr>
   <tr><td style="padding:10px 12px;border:1px solid #ddd;border-radius:0 0 4px 4px">${rpmAction}</td></tr>
 </table>
+${strategyBlock(strategy)}
 ${goalLine}
 ${portalButton(portalUrl)}`;
   } else if (tone === "encouragement") {
@@ -358,6 +385,7 @@ ${portalButton(portalUrl)}`;
 </div>
 <p>Your bottleneck is still <strong>${bottleneckDisplay}</strong>. That does not fix itself. But 15 minutes of focused action today puts you back on track.</p>
 <p>Open your portal. Log one scorecard entry. That is the win for today.</p>
+${strategyBlock(strategy)}
 ${goalLine}
 ${portalButton(portalUrl)}`;
   } else if (tone === "nudge") {
@@ -370,6 +398,7 @@ ${portalButton(portalUrl)}`;
   <p style="margin:0">${directive}</p>
 </div>
 <p>I built this plan for you because your assessment told me exactly where you are stuck. But the plan only works if you do.</p>
+${strategyBlock(strategy)}
 ${goalLine}
 <p>Open your portal. Right now. Not later. Now.</p>
 ${portalButton(portalUrl)}`;
