@@ -1418,79 +1418,168 @@ const DAILY_WIN_OPTIONS = {
 };
 
 // Dynamic Stage-3 wins injected from live data (live read on deals + scorecard).
-const DYNAMIC_WINS = {
-  stale_listing: [
-    { id: "dyn_stale1", text: "Call your oldest listing about a price adjustment", pts: 10 },
-    { id: "dyn_stale2", text: "Prep a CMA refresh for a stale listing", pts: 8 },
-  ],
+// ── DAILY WINS v2 — WEIGHTED & ROTATING COMPOSER ─────────────────────────────
+// The shown list is composed per-agent each week from a larger pool:
+//   - A couple of universal ANCHORS always present.
+//   - A WEIGHTED pool from the agent's stage + bottleneck + live data
+//     (categories most relevant to the agent appear more often).
+//   - WEEKLY rotation seeded by week_start, so it varies week-to-week
+//     and between agents, without thrashing mid-week.
+
+// Universal anchors — always available, the non-negotiable fundamentals.
+const WIN_ANCHORS = [
+  { id: "anchor_prospect", text: "Complete a 2-hour prospecting block before noon", pts: 5, cat: "anchor" },
+  { id: "anchor_log", text: "Log every conversation in your CRM today", pts: 3, cat: "anchor" },
+];
+
+// Categorized win pool. The composer weights these by the agent's live read.
+const WIN_POOL = {
   prospecting: [
-    { id: "dyn_pros1", text: "Complete a 2-hour prospecting block before noon", pts: 5 },
-    { id: "dyn_pros2", text: "Make 25 outbound calls today", pts: 5 },
+    { id: "pw_calls25", text: "Make 25 outbound calls today", pts: 5 },
+    { id: "pw_db5", text: "Add 5 new contacts to your active database", pts: 3 },
+    { id: "pw_circle", text: "Call 10 people in your sphere just to check in", pts: 4 },
+    { id: "pw_doorknock", text: "Knock 20 doors in a target neighbourhood", pts: 5 },
+    { id: "pw_video", text: "Send 5 personalized video texts to leads", pts: 3 },
   ],
-  ford_leadgen: [
-    { id: "dyn_ford1", text: "Have 3 FORD conversations with database contacts (Family, Occupation, Recreation, Dreams)", pts: 8 },
-    { id: "dyn_ford2", text: "Reconnect with 5 past clients using a FORD question to uncover a hidden move", pts: 8 },
-    { id: "dyn_ford3", text: "Generate 5 new buyer or seller leads this week", pts: 8 },
+  conversion_ford: [
+    { id: "cf_ford3", text: "Have 3 FORD conversations with your database (Family, Occupation, Recreation, Dreams)", pts: 8 },
+    { id: "cf_past5", text: "Reconnect with 5 past clients using a FORD question to uncover a hidden move", pts: 8 },
+    { id: "cf_leads5", text: "Generate 5 new buyer or seller leads this week", pts: 8 },
+    { id: "cf_script", text: "Role-play your buyer/seller consultation script out loud", pts: 4 },
+    { id: "cf_followup", text: "Follow up on every lead from the last 7 days", pts: 5 },
+  ],
+  stale_listing: [
+    { id: "sl_price", text: "Call your oldest listing about a price adjustment", pts: 10 },
+    { id: "sl_cma", text: "Prep a CMA refresh for a stale listing", pts: 8 },
+    { id: "sl_relaunch", text: "Build a relaunch plan (new photos + price) for an aging listing", pts: 8 },
+    { id: "sl_seller", text: "Hold a frank market-update conversation with a long-listed seller", pts: 7 },
+  ],
+  appointments: [
+    { id: "ap_book2", text: "Book 2 new appointments today", pts: 5 },
+    { id: "ap_confirm", text: "Confirm and prep for every appointment this week", pts: 3 },
+    { id: "ap_pitch", text: "Deliver one listing presentation this week", pts: 6 },
+  ],
+  mindset: [
+    { id: "md_review", text: "Review and update your pipeline scorecard", pts: 2 },
+    { id: "md_directive", text: "Execute your coaching directive before noon", pts: 5 },
+    { id: "md_gratitude", text: "Write down 3 wins from yesterday before starting today", pts: 2 },
   ],
 };
 
+// Map a bottleneck to which pool categories matter most (baseline weighting).
+function bottleneckWeights(bottleneck) {
+  var w = { prospecting: 1, conversion_ford: 1, stale_listing: 0, appointments: 1, mindset: 1 };
+  switch (bottleneck) {
+    case "pipeline_volume":
+    case "lead_volume":
+    case "prospecting_consistency":
+      w.prospecting = 3; w.appointments = 2; break;
+    case "lead_conversion":
+    case "conversion":
+    case "low_conversion":
+    case "online_conversion":
+      w.conversion_ford = 3; w.appointments = 2; break;
+    case "follow_up":
+    case "database_size":
+    case "referral_quality":
+    case "relationship_deficit":
+      w.conversion_ford = 3; w.prospecting = 2; break;
+    case "mindset_state":
+    case "consistency_habits":
+    case "accountability":
+    case "overwhelm":
+    case "high_stress":
+      w.mindset = 3; w.prospecting = 2; break;
+    default:
+      w.prospecting = 2;
+  }
+  return w;
+}
+
+// Deterministic weekly shuffle: seeded by week_start so it's stable all week,
+// fresh each Monday, and varied between agents (agentId mixed into the seed).
+function seededShuffle(arr, seedStr) {
+  var seed = 0;
+  for (var i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0;
+  var a = arr.slice();
+  for (var j = a.length - 1; j > 0; j--) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    var k = seed % (j + 1);
+    var t = a[j]; a[j] = a[k]; a[k] = t;
+  }
+  return a;
+}
+
+function currentWeekStart() {
+  var now = new Date();
+  var day = now.getDay();
+  var diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  var monday = new Date(new Date(now).setDate(diff));
+  return monday.toISOString().slice(0, 10);
+}
+
 // Legacy signature still works: getDailyWinOptions(bottleneck).
-// New signature: getDailyWinOptions(bottleneck, db, agentId, stage) — async, injects live wins.
+// Full signature: getDailyWinOptions(bottleneck, db, agentId, stage) — async, composed.
 async function getDailyWinOptions(bottleneck, db, agentId, stage) {
-  var base = (DAILY_WIN_OPTIONS[bottleneck] || DAILY_WIN_OPTIONS.pipeline_volume).slice();
+  var weights = bottleneckWeights(bottleneck);
 
-  // Stages 1 & 2 (or no db context): bottleneck list only, unchanged.
-  if (!db || !agentId || !stage || stage < 3) {
-    return base;
-  }
+  // ── Live read adjusts weighting toward the agent's current reality ──
+  if (db && agentId) {
+    try {
+      var d = await db
+        .prepare(
+          "SELECT " +
+          "COUNT(*) FILTER (WHERE stage='L' AND status='pending' AND signed_date <= NOW() - INTERVAL '90 days') AS stale90, " +
+          "COUNT(*) FILTER (WHERE status='closed' AND EXTRACT(YEAR FROM closed_date)=EXTRACT(YEAR FROM NOW())) AS closed_ytd " +
+          "FROM deals WHERE agent_id = $1"
+        )
+        .get(agentId);
+      var stale90 = d ? Number(d.stale90) : 0;
+      var closedYtd = d ? Number(d.closed_ytd) : 0;
 
-  try {
-    var injected = [];
+      var sc = await db
+        .prepare(
+          "SELECT COALESCE(SUM(contacts),0) AS contacts " +
+          "FROM daily_scorecard WHERE agent_id = $1 AND log_date >= NOW() - INTERVAL '30 days'"
+        )
+        .get(agentId);
+      var contacts30 = sc ? Number(sc.contacts) : 0;
 
-    // Live read: stale listings, recent contacts, closings.
-    var d = await db
-      .prepare(
-        "SELECT " +
-        "COUNT(*) FILTER (WHERE stage='L' AND status='pending' AND signed_date <= NOW() - INTERVAL '90 days') AS stale90, " +
-        "COUNT(*) FILTER (WHERE status='closed' AND EXTRACT(YEAR FROM closed_date)=EXTRACT(YEAR FROM NOW())) AS closed_ytd " +
-        "FROM deals WHERE agent_id = $1"
-      )
-      .get(agentId);
-    var stale90 = d ? Number(d.stale90) : 0;
-    var closedYtd = d ? Number(d.closed_ytd) : 0;
-
-    var sc = await db
-      .prepare(
-        "SELECT COALESCE(SUM(contacts),0) AS contacts " +
-        "FROM daily_scorecard WHERE agent_id = $1 AND log_date >= NOW() - INTERVAL '30 days'"
-      )
-      .get(agentId);
-    var contacts30 = sc ? Number(sc.contacts) : 0;
-
-    // (a) Stale 90+ listings -> price-adjustment / CMA wins.
-    if (stale90 >= 1) injected = injected.concat(DYNAMIC_WINS.stale_listing);
-
-    // (b) Low contacts -> prospecting wins float to the TOP.
-    var prospectingFirst = contacts30 < 20;
-
-    // (c) Low closings / weak conversion -> FORD lead-gen wins.
-    if (closedYtd === 0) injected = injected.concat(DYNAMIC_WINS.ford_leadgen);
-
-    // Assemble: dynamic injected wins first (most relevant), then base; prospecting on top if flagged.
-    var merged = injected.concat(base);
-    if (prospectingFirst) merged = DYNAMIC_WINS.prospecting.concat(merged);
-
-    // De-dupe by id, cap at 10 options.
-    var seen = {};
-    var result = [];
-    for (var i = 0; i < merged.length && result.length < 10; i++) {
-      if (!seen[merged[i].id]) { seen[merged[i].id] = true; result.push(merged[i]); }
+      if (stale90 >= 1) weights.stale_listing += 3;
+      if (contacts30 < 20) weights.prospecting += 3;
+      if (closedYtd === 0) weights.conversion_ford += 2;
+    } catch (e) {
+      console.error("getDailyWinOptions live read non-fatal:", e.message);
     }
-    return result;
-  } catch (e) {
-    console.error("getDailyWinOptions dynamic non-fatal:", e.message);
-    return base;
   }
+
+  // ── Build a weighted candidate list: each category contributes copies
+  //    proportional to its weight, then we shuffle and de-dupe. ──
+  var weekSeed = currentWeekStart() + "|" + (agentId || "anon");
+  var pooled = [];
+  Object.keys(WIN_POOL).forEach(function (cat) {
+    var weight = weights[cat] || 1;
+    if (weight <= 0) return;
+    // Shuffle within the category (week-seeded) and take more from heavier cats.
+    var shuffled = seededShuffle(WIN_POOL[cat], weekSeed + cat);
+    var take = Math.min(shuffled.length, Math.max(1, Math.round(weight)));
+    for (var i = 0; i < take; i++) pooled.push(shuffled[i]);
+  });
+
+  // Shuffle the pooled candidates (week-seeded) for cross-category variety.
+  pooled = seededShuffle(pooled, weekSeed + "mix");
+
+  // Assemble: anchors first, then weighted picks, de-duped, capped ~8.
+  var result = [];
+  var seen = {};
+  WIN_ANCHORS.forEach(function (a) {
+    if (!seen[a.id]) { seen[a.id] = true; result.push({ id: a.id, text: a.text, pts: a.pts }); }
+  });
+  for (var i = 0; i < pooled.length && result.length < 8; i++) {
+    var p = pooled[i];
+    if (!seen[p.id]) { seen[p.id] = true; result.push({ id: p.id, text: p.text, pts: p.pts }); }
+  }
+  return result;
 }
 module.exports = {
   generateCoachingOutput: generateCoachingOutput,
