@@ -618,8 +618,9 @@ app.get("/api/daily-wins/:agentId", async (req, res) => {
       )
       .get(req.params.agentId);
     var bottleneck = diagnosis ? diagnosis.bottleneck : "pipeline_volume";
-    var { getDailyWinOptions } = require("./lib/coachingGenerator");
-    var options = getDailyWinOptions(bottleneck);
+    var { getDailyWinOptions, getCoachingStage } = require("./lib/coachingGenerator");
+    var winStage = await getCoachingStage(db, req.params.agentId);
+    var options = await getDailyWinOptions(bottleneck, db, req.params.agentId, winStage);
     res.json({
       status: "select",
       weekStart: weekStart,
