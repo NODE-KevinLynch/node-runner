@@ -1016,6 +1016,45 @@ app.listen(PORT, () => {
         )
         .get(agentId);
 
+      // ── Build backup ACTION SCRIPTS / EVENT PLAYBOOKS html for the portal ──
+      let actionScriptsHtml = "";
+      try {
+        let scripts = [];
+        const raw = coaching?.action_scripts;
+        if (raw) {
+          scripts = typeof raw === "string" ? JSON.parse(raw) : raw;
+        }
+        if (Array.isArray(scripts) && scripts.length) {
+          const esc = (s) =>
+            String(s || "")
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+          const cards = scripts
+            .map((s) => {
+              const label =
+                s.type === "talk" ? "WHAT TO SAY" : "HOW TO DO IT";
+              const body = esc(s.body).replace(/\n/g, "<br>");
+              return (
+                '<div class="action-script-card">' +
+                '<div class="action-script-label">' + label + "</div>" +
+                '<div class="action-script-name">' + esc(s.title) + "</div>" +
+                '<div class="action-script-body">' + body + "</div>" +
+                "</div>"
+              );
+            })
+            .join("");
+          actionScriptsHtml =
+            '<div class="action-scripts-wrap">' +
+            '<div class="action-scripts-title">Exactly What To Do This Week</div>' +
+            cards +
+            "</div>";
+        }
+      } catch (e) {
+        console.error("portal actionScriptsHtml non-fatal:", e.message);
+        actionScriptsHtml = "";
+      }
+
       const diagnosis = await db
         .prepare(
           `
@@ -1272,6 +1311,7 @@ app.listen(PORT, () => {
           coaching?.coaching_directive ||
             "Execute your #1 priority action before anything else today.",
         )
+        .replace(/__ACTION_SCRIPTS__/g, actionScriptsHtml)
         .replace(
           /__QUOTE__/g,
           coaching?.quote_of_the_day ||
