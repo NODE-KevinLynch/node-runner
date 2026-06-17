@@ -26,13 +26,14 @@ function logSend({
   subject,
   sendStatus,
   sendMode,
+  emailHtml,
 }) {
   try {
     db.prepare(
       `
       INSERT INTO campaign_send_log
-        (id, agent_id, campaign_type, campaign_step, subject, send_status, send_mode, sent_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        (id, agent_id, campaign_type, campaign_step, subject, send_status, send_mode, email_html, sent_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `,
     ).run(
       generateId(),
@@ -42,6 +43,7 @@ function logSend({
       subject,
       sendStatus,
       sendMode,
+      emailHtml || null,
       new Date().toISOString(),
     );
   } catch (err) {
@@ -290,7 +292,7 @@ async function dispatch(agentId) {
         ? "blocked"
         : "failed";
 
-    // Step 2 — Log send
+    // Step 2 — Log send (store the rendered HTML so it can be viewed from the portal)
     logSend({
       agentId,
       campaignType: campaignState,
@@ -298,6 +300,7 @@ async function dispatch(agentId) {
       subject: emailContent.subject,
       sendStatus,
       sendMode,
+      emailHtml: sendStatus === "sent" ? emailContent.html : null,
     });
 
     // Track engagement on successful send
