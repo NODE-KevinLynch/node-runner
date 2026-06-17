@@ -279,6 +279,55 @@
         color: #333;
         margin: 0;
       }
+      .action-script-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+        margin: 0 0 6px;
+      }
+      .action-script-checkbox {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .action-script-checkmark {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #c9a050;
+        border-radius: 5px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        transition: all 0.15s ease;
+        background: #fff;
+      }
+      .action-script-checkbox:checked + .action-script-checkmark {
+        background: #2ecc71;
+        border-color: #2ecc71;
+      }
+      .action-script-checkbox:checked + .action-script-checkmark::after {
+        content: "\2713";
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .action-script-checklabel {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        color: #7a5c00;
+      }
+      .action-script-done {
+        opacity: 0.72;
+      }
+      .action-script-done .action-script-name {
+        text-decoration: line-through;
+        text-decoration-color: rgba(0,0,0,0.35);
+      }
       .directive-text {
         font-size: 15px;
         line-height: 1.7;
@@ -3152,6 +3201,45 @@
         }
       });
     }
+
+    // ── Action script / playbook checkbox handler ──
+    (function () {
+      function agentIdFromPath() {
+        var parts = window.location.pathname.split("/");
+        return parts[parts.indexOf("portal") + 1];
+      }
+      document.addEventListener("change", function (e) {
+        var cb = e.target;
+        if (!cb || !cb.classList || !cb.classList.contains("action-script-checkbox")) return;
+        var card = cb.closest(".action-script-card");
+        var done = cb.checked;
+        if (card) card.classList.toggle("action-script-done", done);
+        var payload = {
+          script_id: cb.getAttribute("data-sid"),
+          card_type: cb.getAttribute("data-cardtype"),
+          card_title: cb.getAttribute("data-title"),
+          property_address: cb.getAttribute("data-address") || null,
+          points: parseInt(cb.getAttribute("data-points"), 10) || 3,
+          done: done
+        };
+        fetch("/api/agents/" + agentIdFromPath() + "/scripts/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            // Completion saved; checkbox state is the feedback. Score updates
+            // server-side and reflects on next portal load.
+          })
+          .catch(function (err) {
+            // Revert UI on failure.
+            cb.checked = !done;
+            if (card) card.classList.toggle("action-script-done", !done);
+            console.error("script completion failed:", err);
+          });
+      });
+    })();
     </script>
 
 </body>
