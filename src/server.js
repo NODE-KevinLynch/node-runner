@@ -668,6 +668,100 @@ app.post("/api/daily-wins", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── SCRIPT COMPLETIONS ───────────────────────────────────────────────────────
+// Helper: Monday-based week start (YYYY-MM-DD), matches daily-wins logic.
+function scWeekStart() {
+  var now = new Date();
+  var day = now.getDay();
+  var diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  var monday = new Date(new Date(now).setDate(diff));
+  return monday.toISOString().slice(0, 10);
+}
+
+// period_key drives reset behavior:
+//   playbook cards -> 'persistent' (one-and-done per property, until they fade)
+//   script cards   -> the week_start (re-checkable each new week)
+function periodKeyForCard(cardType) {
+  return cardType === "playbook" ? "persistent" : scWeekStart();
+}
+
+// Read an agent's *currently active* completions, returned as a set of script_ids.
+// Active = persistent completions (always) + this-week's script completions.
+async function getActiveCompletions(db, agentId) {
+  try {
+    var rows = await db
+      .prepare(
+        "SELECT script_id, card_type, points FROM script_completions " +
+        "WHERE agent_id = $1 AND (period_key = 'persistent' OR period_key = $2)"
+      )
+      .all(agentId, scWeekStart());
+    var ids = {};
+    (rows || []).forEach(function (r) { ids[r.script_id] = true; });
+    return ids;
+  } catch (e) {
+    console.error("getActiveCompletions non-fatal:", e.message);
+    return {};
+  }
+}
+
+// POST /api/agents/:agentId/scripts/complete
+// body: { script_id, card_type, card_title, property_address, points, done }
+// done=true records the completion; done=false removes it (uncheck).
+app.post("/api/agents/:agentId/scripts/complete", async (req, res) => {
+  try {
+    var agentId = req.params.agentId;
+    var b = req.body || {};
+    if (!agentId || !b.script_id) {
+      return res.status(400).json({ error: "agentId and script_id required" });
+    }
+    var cardType = b.card_type === "playbook" ? "playbook" : "script";
+    var periodKey = periodKeyForCard(cardType);
+    var points = Number.isFinite(b.points) ? b.points : 3;
+
+    if (b.done === false) {
+      // Uncheck — remove the completion for this period.
+      await db
+        .prepare(
+          "DELETE FROM script_completions WHERE agent_id = $1 AND script_id = $2 AND period_key = $3"
+        )
+        .run(agentId, b.script_id, periodKey);
+    } else {
+      // Check — record it (idempotent on the unique key).
+      await db
+        .prepare(
+          "INSERT INTO script_completions (agent_id, script_id, card_type, card_title, property_address, period_key, points) " +
+          "VALUES ($1, $2, $3, $4, $5, $6, $7) " +
+          "ON CONFLICT (agent_id, script_id, period_key) DO NOTHING"
+        )
+        .run(
+          agentId, b.script_id, cardType,
+          b.card_title || null, b.property_address || null,
+          periodKey, points
+        );
+    }
+
+    // Recompute engagement_score: scorecard points + active script-completion points.
+    var scPts = await db
+      .prepare("SELECT COALESCE(SUM(points_earned),0) AS pts FROM daily_scorecard WHERE agent_id = $1")
+      .get(agentId);
+    var compPts = await db
+      .prepare(
+        "SELECT COALESCE(SUM(points),0) AS pts FROM script_completions " +
+        "WHERE agent_id = $1 AND (period_key = 'persistent' OR period_key = $2)"
+      )
+      .get(agentId, scWeekStart());
+    var total = (scPts ? Number(scPts.pts) : 0) + (compPts ? Number(compPts.pts) : 0);
+    await db
+      .prepare("UPDATE agent_lifecycle SET engagement_score = $1, updated_at = NOW() WHERE agent_id = $2")
+      .run(Math.min(total, 100), agentId);
+
+    res.json({ status: b.done === false ? "removed" : "completed", script_id: b.script_id, engagement_score: Math.min(total, 100) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Error log endpoint
 app.get("/api/errors", async (req, res) => {
   try {
@@ -1030,14 +1124,44 @@ app.listen(PORT, () => {
               .replace(/&/g, "&amp;")
               .replace(/</g, "&lt;")
               .replace(/>/g, "&gt;");
+          // Stable id from title text (so a checked card stays checked across regen).
+          const idOf = (title) => {
+            let h = 0;
+            const t = String(title || "");
+            for (let i = 0; i < t.length; i++) { h = (h * 31 + t.charCodeAt(i)) >>> 0; }
+            return "sc_" + h.toString(36);
+          };
+          // Which completions are currently active for this agent?
+          const activeIds = await getActiveCompletions(db, agentId);
           const cards = scripts
             .map((s) => {
               const label =
                 s.type === "talk" ? "WHAT TO SAY" : "HOW TO DO IT";
               const body = esc(s.body).replace(/\n/g, "<br>");
+              // Playbook cards are the address-specific event cards (prepended by the
+              // pipeline); their titles start with "Leverage your". Everything else is
+              // a recurring action script.
+              const isPlaybook = /^Leverage your/i.test(String(s.title || ""));
+              const cardType = isPlaybook ? "playbook" : "script";
+              const sid = idOf(s.title);
+              const points = isPlaybook ? 5 : 3;
+              const checked = activeIds[sid] ? " checked" : "";
+              const doneClass = activeIds[sid] ? " action-script-done" : "";
+              const addr = isPlaybook && s.title.indexOf(" at ") > -1
+                ? esc(s.title.split(" at ")[1].split(" \u2014 ")[0])
+                : "";
               return (
-                '<div class="action-script-card">' +
-                '<div class="action-script-label">' + label + "</div>" +
+                '<div class="action-script-card' + doneClass + '" data-sid="' + sid + '">' +
+                '<label class="action-script-check">' +
+                '<input type="checkbox" class="action-script-checkbox"' + checked +
+                ' data-sid="' + sid + '"' +
+                ' data-cardtype="' + cardType + '"' +
+                ' data-points="' + points + '"' +
+                ' data-title="' + esc(s.title) + '"' +
+                ' data-address="' + addr + '">' +
+                '<span class="action-script-checkmark"></span>' +
+                '<span class="action-script-checklabel">' + label + "</span>" +
+                "</label>" +
                 '<div class="action-script-name">' + esc(s.title) + "</div>" +
                 '<div class="action-script-body">' + body + "</div>" +
                 "</div>"
