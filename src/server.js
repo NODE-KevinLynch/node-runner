@@ -1031,6 +1031,39 @@ app.post("/api/agents/:id/deals/:dealId/stage", async (req, res) => {
 });
 
 app.listen(PORT, () => {
+  // ── GET /portal/:agentId/email/:logId ───────────────────────────────────────
+  // Renders a previously-sent coaching email from its stored HTML.
+  // Only emails sent after the email_html column shipped will have content.
+  app.get("/portal/:agentId/email/:logId", async (req, res) => {
+    try {
+      const { agentId, logId } = req.params;
+      const row = await db
+        .prepare(
+          "SELECT subject, email_html, sent_at FROM campaign_send_log WHERE id = $1 AND agent_id = $2",
+        )
+        .get(logId, agentId);
+      if (!row) {
+        return res.status(404).send("<h2>Email not found</h2>");
+      }
+      if (!row.email_html) {
+        return res.send(
+          `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Email unavailable</title></head>` +
+          `<body style="font-family:system-ui;max-width:600px;margin:60px auto;padding:24px;text-align:center;color:#444">` +
+          `<h2 style="color:#1a2b4a">This email isn't viewable</h2>` +
+          `<p>A copy of this message wasn't archived. Emails sent from now on can be viewed here.</p>` +
+          `<p style="color:#888;font-size:13px">${row.subject || ""}</p>` +
+          `</body></html>`,
+        );
+      }
+      // Stored HTML is a complete email document — serve as-is.
+      res.set("Content-Type", "text/html; charset=utf-8");
+      return res.send(row.email_html);
+    } catch (err) {
+      console.error("email view error:", err.message);
+      return res.status(500).send("<h2>Could not load email</h2>");
+    }
+  });
+
   // ── GET /portal/:agentId ─────────────────────────────────────────────────────
   // Real coaching_outputs columns: id, agent_id, the_truth, the_strategy, rpm_plan,
   //   primary_constraint, coaching_directive, quote_of_the_day, engagement_score, created_at, updated_at
@@ -1171,6 +1204,7 @@ app.listen(PORT, () => {
           actionScriptsHtml =
             '<div class="action-scripts-wrap">' +
             '<div class="action-scripts-title">Exactly What To Do This Week</div>' +
+            '<div class="action-scripts-note">Your working checklist \u2014 check off each play as you complete it. Your coach sees your progress.</div>' +
             cards +
             "</div>";
         }
@@ -1192,7 +1226,8 @@ app.listen(PORT, () => {
       const recentEmails = await db
         .prepare(
           `
-        SELECT campaign_type, campaign_step, subject, send_status, sent_at
+        SELECT id, campaign_type, campaign_step, subject, send_status, sent_at,
+               (email_html IS NOT NULL) AS has_html
         FROM campaign_send_log
         WHERE agent_id = $1 AND send_status = 'sent'
         ORDER BY sent_at DESC LIMIT 5
@@ -1235,14 +1270,19 @@ app.listen(PORT, () => {
       const emailRows = recentEmails.length
         ? recentEmails
             .map(
-              (e) => `
+              (e) => {
+                const subjCell = e.has_html
+                  ? `<a href="/portal/${agentId}/email/${e.id}" target="_blank" rel="noopener" style="color:#1a2b4a;font-weight:600;text-decoration:underline">${e.subject || "—"}</a>`
+                  : `${e.subject || "—"} <span style="color:#aaa;font-size:11px">(view unavailable)</span>`;
+                return `
             <tr>
               <td>${e.campaign_type || "—"}</td>
               <td style="text-align:center">${e.campaign_step || "—"}</td>
-              <td>${e.subject || "—"}</td>
+              <td>${subjCell}</td>
               <td style="text-align:center">${e.send_status || "—"}</td>
               <td>${e.sent_at ? new Date(e.sent_at).toLocaleDateString("en-CA") : "—"}</td>
-            </tr>`,
+            </tr>`;
+              },
             )
             .join("")
         : "<tr><td colspan='5' style='text-align:center;color:#888'>No emails sent yet</td></tr>";
