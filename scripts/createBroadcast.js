@@ -1,16 +1,16 @@
-// src/scripts/createBroadcast.js
+// scripts/createBroadcast.js
 // One-time helper: inserts a single broadcast email into the `broadcasts` table.
 // The stored html_body is the EMAIL BODY ONLY — the sender (runBroadcast.js)
 // appends node-runner's own buildLegalFooter(agentId) per recipient, exactly
 // like the daily sequence does. Do NOT put unsubscribe links or Resend tokens
 // in here.
 //
-// Run once:  node src/scripts/createBroadcast.js
+// Run once:  node scripts/createBroadcast.js
 // Prints the new broadcast id. Safe to re-run: it will refuse to create a
 // duplicate of the same subject and instead report the existing id.
 
 try { require("dotenv").config(); } catch (e) {}
-const db = require("../db/db");
+const db = require("../src/db/db");
 
 const SUBJECT = "One 30-second video can outperform months of marketing";
 const FROM_ADDRESS = "Kevin Lynch <kevin@kevinlynch.ca>";
