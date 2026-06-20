@@ -34,6 +34,10 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function generateId() {
+  return "log_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+}
+
 async function loadBroadcast(argId) {
   if (argId) {
     return await db
@@ -150,10 +154,11 @@ async function main() {
     await db
       .prepare(
         `INSERT INTO campaign_send_log
-           (agent_id, campaign_type, campaign_step, subject, send_status, send_mode, email_html, sent_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`
+           (id, agent_id, campaign_type, campaign_step, subject, send_status, send_mode, email_html, sent_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`
       )
       .run(
+        generateId(),
         agent.id,
         campaignType,
         0,
