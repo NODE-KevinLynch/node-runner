@@ -1,4 +1,4 @@
-// src/scripts/runBroadcast.js
+// scripts/runBroadcast.js
 // Sends ONE broadcast (from the `broadcasts` table) to the full agents list,
 // reusing node-runner's existing send path and safety gates.
 //
@@ -17,16 +17,16 @@
 //   • Prints sent / failed / remaining each run
 //
 // Usage:
-//   node src/scripts/runBroadcast.js            # uses lowest-id non-complete broadcast
-//   node src/scripts/runBroadcast.js 3          # target broadcast id=3
+//   node scripts/runBroadcast.js            # uses lowest-id non-complete broadcast
+//   node scripts/runBroadcast.js 3          # target broadcast id=3
 //
 // Re-run daily (or whenever) until "remaining = 0". Pause the daily-sequence
 // cron while this runs so total domain volume stays flat (Option 2).
 
 try { require("dotenv").config(); } catch (e) {}
-const db = require("../db/db");
-const { sendEmail } = require("../services/notificationService");
-const { buildLegalFooter } = require("../utils/emailFooter");
+const db = require("../src/db/db");
+const { sendEmail } = require("../src/services/notificationService");
+const { buildLegalFooter } = require("../src/utils/emailFooter");
 
 const SEND_DELAY_MS = 400; // gentle pacing between individual sends
 
