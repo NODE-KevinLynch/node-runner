@@ -119,7 +119,7 @@ async function dispatch(agentId) {
 
     // Campaign step limits per type
     const maxSteps = {
-      pre_activation: 26,
+      pre_activation: 999999,
       post_analysis: 21,
       coaching_active: 999999,
     };
@@ -209,22 +209,9 @@ async function dispatch(agentId) {
     let emailContent = null;
 
     if (campaignState === "pre_activation") {
-      // Route by source: Sutton agents get the Sutton-branded sequence
-      // Everyone else (cold imports, agent_analysis) gets the standard sequence
-      const agentRow = await db
-        .prepare("SELECT source, name FROM agents WHERE id = $1")
-        .get(agentId);
-      if (agentRow && agentRow.source === "sutton_import") {
-        // Pass agentId so the Sutton email includes its unsubscribe footer
-        emailContent = getSuttonPreActivationEmail(
-          nextStep,
-          agentRow.name,
-          agentId,
-        );
-      } else {
-        // Pass agentId so the cold email includes its unsubscribe footer
-        emailContent = getPreActivationEmail(nextStep, agentId);
-      }
+      // Unified sequence for ALL pre-activation agents (no source split).
+      // Loops indefinitely via modulo inside getPreActivationEmail.
+      emailContent = getPreActivationEmail(nextStep, agentId);
     } else if (campaignState === "post_analysis") {
       emailContent = getPostAnalysisEmail(agentId, row.first_name, nextStep);
     } else if (campaignState === "coaching_active") {
