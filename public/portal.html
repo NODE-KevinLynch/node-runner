@@ -1505,8 +1505,8 @@
           <div id="activity-kpi-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px">
             <div style="text-align:center;color:var(--muted);font-size:12px;padding:12px">Loading…</div>
           </div>
-          <div onclick="toggleGridExpand('activity')" style="font-size:11px;color:var(--accent);cursor:pointer;user-select:none">
-            <span id="activity-expand-label">View full year ▾</span>
+          <div onclick="toggleGridExpand('activity')" id="activity-toggle-btn" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;user-select:none;padding:8px 14px;border:1px solid var(--accent);border-radius:99px;background:rgba(0,255,204,0.06)">
+            <span id="activity-expand-label">View full year</span><span id="activity-expand-arrow" style="display:inline-block;transition:transform .2s">▾</span>
           </div>
           <div id="activity-expand-body" style="display:none;margin-top:14px">
             <div style="height:170px;margin-bottom:14px"><canvas id="activity-chart"></canvas></div>
@@ -1586,8 +1586,8 @@
           <div id="contracts-kpi-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px">
             <div style="text-align:center;color:var(--muted);font-size:12px;padding:12px">Loading…</div>
           </div>
-          <div onclick="toggleGridExpand('contracts')" style="font-size:11px;color:var(--gold);cursor:pointer;user-select:none">
-            <span id="contracts-expand-label">View full year ▾</span>
+          <div onclick="toggleGridExpand('contracts')" id="contracts-toggle-btn" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--gold);cursor:pointer;user-select:none;padding:8px 14px;border:1px solid var(--gold);border-radius:99px;background:rgba(240,165,0,0.06)">
+            <span id="contracts-expand-label">View full year</span><span id="contracts-expand-arrow" style="display:inline-block;transition:transform .2s">▾</span>
           </div>
           <div id="contracts-expand-body" style="display:none;margin-top:14px">
             <div style="height:170px;margin-bottom:14px"><canvas id="contracts-chart"></canvas></div>
@@ -1616,8 +1616,10 @@
           <div id="closings-rings" style="display:flex;gap:28px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">
             <div style="text-align:center;color:var(--muted);font-size:12px;padding:12px">Loading…</div>
           </div>
-          <div onclick="toggleGridExpand('closings')" style="font-size:11px;color:var(--green);cursor:pointer;user-select:none;text-align:center">
-            <span id="closings-expand-label">View 12-month history ▾</span>
+          <div style="text-align:center">
+            <div onclick="toggleGridExpand('closings')" id="closings-toggle-btn" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--green);cursor:pointer;user-select:none;padding:8px 14px;border:1px solid var(--green);border-radius:99px;background:rgba(34,197,94,0.06)">
+              <span id="closings-expand-label">View 12-month history</span><span id="closings-expand-arrow" style="display:inline-block;transition:transform .2s">▾</span>
+            </div>
           </div>
           <div id="closings-expand-body" style="display:none;margin-top:14px">
             <div style="height:170px;margin-bottom:14px"><canvas id="closings-chart"></canvas></div>
@@ -2068,8 +2070,8 @@
   <button onclick="openFordModal()" style="font-size:12px;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer">Edit</button>
 </div>
     <div class="card" style="padding: 20px 28px">
-      <div onclick="toggleGridExpand('ford')" style="font-size:11px;color:var(--accent);cursor:pointer;user-select:none;margin-bottom:4px">
-        <span id="ford-expand-label">View dream board ▾</span>
+      <div onclick="toggleGridExpand('ford')" id="ford-toggle-btn" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;user-select:none;margin-bottom:8px;padding:8px 14px;border:1px solid var(--accent);border-radius:99px;background:rgba(0,255,204,0.06)">
+        <span id="ford-expand-label">View dream board</span><span id="ford-expand-arrow" style="display:inline-block;transition:transform .2s">▾</span>
       </div>
       <div id="ford-expand-body" style="display:none;margin-top:10px">
         <p style="color: var(--grey-warm); font-size: 14px; margin-bottom: 16px">
@@ -3102,23 +3104,23 @@
     }
     function fmtMoney(n) { return '$' + Math.round(Number(n) || 0).toLocaleString(); }
     var __gridExpandLabels = {
-      activity: ['View full year ▾', 'Hide full year ▴'],
-      contracts: ['View full year ▾', 'Hide full year ▴'],
-      closings: ['View 12-month history ▾', 'Hide 12-month history ▴'],
-      ford: ['View dream board ▾', 'Hide dream board ▴']
+      activity: ['View full year', 'Hide full year'],
+      contracts: ['View full year', 'Hide full year'],
+      closings: ['View 12-month history', 'Hide 12-month history'],
+      ford: ['View dream board', 'Hide dream board']
     };
     function toggleGridExpand(key) {
       var body = document.getElementById(key + '-expand-body');
       var label = document.getElementById(key + '-expand-label');
+      var arrow = document.getElementById(key + '-expand-arrow');
+      var btn = document.getElementById(key + '-toggle-btn');
       if (!body || !label) return;
-      var opts = __gridExpandLabels[key] || ['View ▾', 'Hide ▴'];
-      if (body.style.display === 'none' || !body.style.display) {
-        body.style.display = 'block';
-        label.textContent = opts[1];
-      } else {
-        body.style.display = 'none';
-        label.textContent = opts[0];
-      }
+      var opts = __gridExpandLabels[key] || ['View', 'Hide'];
+      var expanding = (body.style.display === 'none' || !body.style.display);
+      body.style.display = expanding ? 'block' : 'none';
+      label.textContent = expanding ? opts[1] : opts[0];
+      if (arrow) arrow.style.transform = expanding ? 'rotate(180deg)' : 'rotate(0deg)';
+      if (btn) btn.style.opacity = expanding ? '1' : '0.85';
     }
     // Stage config: L=Listing(green), C=Conditional(orange), F=Firm/Sold(red).
     // RED on Firm is deliberate — matches the real-estate sign-rider convention (red = SOLD).
