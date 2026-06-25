@@ -1272,7 +1272,7 @@ app.listen(PORT, () => {
             .map(
               (e) => {
                 const subjCell = e.has_html
-                  ? `<a href="/portal/${agentId}/email/${e.id}" target="_blank" rel="noopener" style="color:#1a2b4a;font-weight:600;text-decoration:underline">${e.subject || "—"}</a>`
+                  ? `<a href="/portal/${agentId}/email/${e.id}" target="_blank" rel="noopener" style="color:#00ffcc;font-weight:600;text-decoration:underline">${e.subject || "—"}</a>`
                   : `${e.subject || "—"} <span style="color:#aaa;font-size:11px">(view unavailable)</span>`;
                 return `
             <tr>
