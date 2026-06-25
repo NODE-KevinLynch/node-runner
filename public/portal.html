@@ -538,6 +538,7 @@
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   </head>
   <body>
     <div class="header">
@@ -1500,22 +1501,31 @@
       <div style="background:var(--surface);border:1px solid var(--accent);border-radius:12px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
         <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--accent)"></div>
         <div style="padding-left:16px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Leading indicators. What you control daily, tracked by month.</div>
-          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px">
-              <thead>
-                <tr>
-                  <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Calls</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Contacts</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Appts Set</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Appts Held</th>
-                </tr>
-              </thead>
-              <tbody id="activity-grid-body">
-                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
-              </tbody>
-            </table>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Leading indicators. What you control daily, tracked this month.</div>
+          <div id="activity-kpi-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px">
+            <div style="text-align:center;color:var(--muted);font-size:12px;padding:12px">Loading…</div>
+          </div>
+          <div onclick="toggleGridExpand('activity')" style="font-size:11px;color:var(--accent);cursor:pointer;user-select:none">
+            <span id="activity-expand-label">View full year ▾</span>
+          </div>
+          <div id="activity-expand-body" style="display:none;margin-top:14px">
+            <div style="height:170px;margin-bottom:14px"><canvas id="activity-chart"></canvas></div>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th>
+                    <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Calls</th>
+                    <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Contacts</th>
+                    <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Appts Set</th>
+                    <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Appts Held</th>
+                  </tr>
+                </thead>
+                <tbody id="activity-grid-body">
+                  <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -1573,17 +1583,26 @@
         <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--gold)"></div>
         <div style="padding-left:16px">
           <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Mid-funnel wins. Listings taken and buyer contracts signed, by month.</div>
-          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">
-              <thead>
-                <tr>
-                  <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Listings</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">CPS</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Total</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Listing $</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Sale $</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Potential GCI</th>
-                </tr>
-              </thead>
-              <tbody id="contracts-grid-body">
-                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
-              </tbody>
-            </table>
+          <div id="contracts-kpi-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px">
+            <div style="text-align:center;color:var(--muted);font-size:12px;padding:12px">Loading…</div>
+          </div>
+          <div onclick="toggleGridExpand('contracts')" style="font-size:11px;color:var(--gold);cursor:pointer;user-select:none">
+            <span id="contracts-expand-label">View full year ▾</span>
+          </div>
+          <div id="contracts-expand-body" style="display:none;margin-top:14px">
+            <div style="height:170px;margin-bottom:14px"><canvas id="contracts-chart"></canvas></div>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Listings</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">CPS</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Total</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Listing $</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Sale $</th><th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Potential GCI</th>
+                  </tr>
+                </thead>
+                <tbody id="contracts-grid-body">
+                  <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -1593,22 +1612,31 @@
       <div style="background:var(--surface);border:1px solid var(--green);border-radius:12px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
         <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green)"></div>
         <div style="padding-left:16px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Final outcomes. Sides closed and GCI earned, by month.</div>
-          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
-              <thead>
-                <tr>
-                  <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Sides</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Goal</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">GCI</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Goal</th>
-                </tr>
-              </thead>
-              <tbody id="closings-grid-body">
-                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
-              </tbody>
-            </table>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Final outcomes. Sides closed and GCI earned, this month.</div>
+          <div id="closings-rings" style="display:flex;gap:28px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">
+            <div style="text-align:center;color:var(--muted);font-size:12px;padding:12px">Loading…</div>
+          </div>
+          <div onclick="toggleGridExpand('closings')" style="font-size:11px;color:var(--green);cursor:pointer;user-select:none;text-align:center">
+            <span id="closings-expand-label">View 12-month history ▾</span>
+          </div>
+          <div id="closings-expand-body" style="display:none;margin-top:14px">
+            <div style="height:170px;margin-bottom:14px"><canvas id="closings-chart"></canvas></div>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Month</th>
+                    <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Sides</th>
+                    <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Goal</th>
+                    <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">GCI</th>
+                    <th style="text-align:center;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">Goal</th>
+                  </tr>
+                </thead>
+                <tbody id="closings-grid-body">
+                  <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -2040,11 +2068,16 @@
   <button onclick="openFordModal()" style="font-size:12px;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer">Edit</button>
 </div>
     <div class="card" style="padding: 20px 28px">
-      <p style="color: var(--grey-warm); font-size: 14px; margin-bottom: 16px">
-        Business is a vehicle, not a destination. These are the targets that
-        keep you focused, inspired, and motivated.
-      </p>
-      <div class="ford-grid">__FORD_SECTION__</div>
+      <div onclick="toggleGridExpand('ford')" style="font-size:11px;color:var(--accent);cursor:pointer;user-select:none;margin-bottom:4px">
+        <span id="ford-expand-label">View dream board ▾</span>
+      </div>
+      <div id="ford-expand-body" style="display:none;margin-top:10px">
+        <p style="color: var(--grey-warm); font-size: 14px; margin-bottom: 16px">
+          Business is a vehicle, not a destination. These are the targets that
+          keep you focused, inspired, and motivated.
+        </p>
+        <div class="ford-grid">__FORD_SECTION__</div>
+      </div>
     </div>
     <!-- FORD Edit Modal -->
     <div id="ford-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;overflow-y:auto;padding:40px 16px">
@@ -2357,12 +2390,31 @@
               actData[r.m] = r;
             });
             var actGoalCalls = Math.round((parseInt((data.goals||{}).transaction_goal) || 24) * 20 / 12);
+            var curM = now.getMonth() + 1;
+            var curActRow = actData[curM] || { calls:0, contacts:0, appt_set:0, appt_held:0 };
+            var actTargets = { calls: 25, contacts: 10, appt_set: 2, appt_held: 3 };
+            var actLabels = { calls: "Calls", contacts: "Contacts", appt_set: "Appts set", appt_held: "Appts held" };
+            var actKpiHtml = "";
+            ["calls","contacts","appt_set","appt_held"].forEach(function (k) {
+              var v = parseInt(curActRow[k]) || 0;
+              var t = actTargets[k];
+              var pct = Math.min(Math.round((v / t) * 100), 100);
+              var barColor = pct >= 90 ? "var(--green)" : pct >= 50 ? "var(--accent)" : "var(--gold)";
+              actKpiHtml +=
+                '<div style="background:var(--card);border-radius:8px;padding:12px">' +
+                '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">' + actLabels[k] + '</div>' +
+                '<div style="font-size:20px;font-weight:700;margin:4px 0;color:var(--text)">' + v + '<span style="font-size:12px;color:var(--muted)"> / ' + t + '</span></div>' +
+                '<div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + barColor + '"></div></div>' +
+                '</div>';
+            });
+            var actKpiEl = document.getElementById("activity-kpi-cards");
+            if (actKpiEl) actKpiEl.innerHTML = actKpiHtml;
             var actBody = document.getElementById("activity-grid-body");
             if (actBody) {
               var actHtml = "";
               for (var am = 1; am <= 12; am++) {
                 var row = actData[am] || { calls:0, contacts:0, appt_set:0, appt_held:0 };
-                var isCur = am === (now.getMonth() + 1);
+                var isCur = am === curM;
                 actHtml +=
                   '<tr style="' + (isCur ? "background:rgba(0,255,204,0.04)" : "") + '">' +
                   '<td style="padding:8px 10px;border-bottom:1px solid var(--border);color:' + (isCur ? "var(--accent)" : "var(--soft)") + ';font-weight:' + (isCur ? "700" : "400") + '">' + actMonths[am-1] + '</td>' +
@@ -2373,6 +2425,24 @@
                   '</tr>';
               }
               actBody.innerHTML = actHtml;
+            }
+            var actChartEl = document.getElementById("activity-chart");
+            if (actChartEl && window.Chart) {
+              if (window.__activityChart) window.__activityChart.destroy();
+              window.__activityChart = new Chart(actChartEl, {
+                type: "bar",
+                data: {
+                  labels: actMonths,
+                  datasets: [
+                    { label: "Calls", data: actMonths.map(function (_, i) { return (actData[i+1] || {}).calls || 0; }), backgroundColor: "#00ffcc" },
+                    { label: "Goal", type: "line", data: actMonths.map(function () { return actTargets.calls; }), borderColor: "#7b7f96", pointRadius: 0, borderDash: [4,3] }
+                  ]
+                },
+                options: { responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { labels: { color: "#a8b4c8", font: { size: 10 } } } },
+                  scales: { x: { ticks: { color: "#7b7f96", font: { size: 10 } }, grid: { display: false } },
+                            y: { ticks: { color: "#7b7f96", font: { size: 10 } }, grid: { color: "#2a2d3a" } } } }
+              });
             }
             // ── Pipeline Tile ──
             var fmt$ = function (n) { return '$' + Math.round(n || 0).toLocaleString(); };
@@ -2392,6 +2462,15 @@
             (data.monthlyContracts || []).forEach(function (r) { ctData[r.m] = r; });
             var ctBody = document.getElementById("contracts-grid-body");
             var ctTotal = (data.monthlyContracts || []).reduce(function (s, r) { return s + (parseInt(r.total) || 0); }, 0);
+            var curCtRow = ctData[curM] || { listings:0, cps:0, total:0, potential_gci:0 };
+            var ctKpiEl = document.getElementById("contracts-kpi-cards");
+            if (ctKpiEl) {
+              ctKpiEl.innerHTML =
+                '<div style="background:var(--card);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Listings</div><div style="font-size:20px;font-weight:700;margin:4px 0;color:var(--gold)">' + (parseInt(curCtRow.listings)||0) + '</div></div>' +
+                '<div style="background:var(--card);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">CPS</div><div style="font-size:20px;font-weight:700;margin:4px 0;color:var(--gold)">' + (parseInt(curCtRow.cps)||0) + '</div></div>' +
+                '<div style="background:var(--card);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total contracts</div><div style="font-size:20px;font-weight:700;margin:4px 0;color:var(--text)">' + (parseInt(curCtRow.total)||0) + '</div></div>' +
+                '<div style="background:var(--card);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Potential GCI</div><div style="font-size:20px;font-weight:700;margin:4px 0;color:var(--gold)">$' + Math.round(parseFloat(curCtRow.potential_gci)||0).toLocaleString() + '</div></div>';
+            }
             if (ctBody && ctTotal === 0) {
               ctBody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6">No contracts logged yet.<br>Use <strong style="color:var(--gold)">+ Log a Contract</strong> when you take a listing or sign a buyer — your pipeline builds here.</td></tr>';
               ctBody = null;
@@ -2433,6 +2512,20 @@
                 '</tr>';
               ctBody.innerHTML = ctHtml;
             }
+            var ctChartEl = document.getElementById("contracts-chart");
+            if (ctChartEl && window.Chart) {
+              if (window.__contractsChart) window.__contractsChart.destroy();
+              window.__contractsChart = new Chart(ctChartEl, {
+                type: "bar",
+                data: { labels: ctMonths, datasets: [
+                  { label: "Total contracts", data: ctMonths.map(function (_, i) { return parseInt((ctData[i+1]||{}).total) || 0; }), backgroundColor: "#f0a500" }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { labels: { color: "#a8b4c8", font: { size: 10 } } } },
+                  scales: { x: { ticks: { color: "#7b7f96", font: { size: 10 } }, grid: { display: false } },
+                            y: { ticks: { color: "#7b7f96", font: { size: 10 } }, grid: { color: "#2a2d3a" } } } }
+              });
+            }
             // ── Monthly Closings Grid ──
             var clMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             var clData = {};
@@ -2441,6 +2534,26 @@
             var clGciGoal = parseFloat((data.goals||{}).gci_goal) || 250000;
             var clMonthSidesGoal = clTxnGoal / 12;
             var clMonthGciGoal = clGciGoal / 12;
+            var curClRow = clData[curM] || { sides:0, gci:0 };
+            var curSides = parseInt(curClRow.sides) || 0;
+            var curGci = parseFloat(curClRow.gci) || 0;
+            var sidesPct = Math.min((curSides / clMonthSidesGoal) * 100, 100) || 0;
+            var gciPct = Math.min((curGci / clMonthGciGoal) * 100, 100) || 0;
+            function ringSvg(pct, value, sublabel, color) {
+              var c = 2 * Math.PI * 34;
+              var offset = c - (pct / 100) * c;
+              return '<svg width="80" height="80" viewBox="0 0 80 80">' +
+                '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="8"/>' +
+                '<circle cx="40" cy="40" r="34" fill="none" stroke="' + color + '" stroke-width="8" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) + '" stroke-linecap="round" transform="rotate(-90 40 40)"/>' +
+                '<text x="40" y="44" text-anchor="middle" font-size="14" fill="var(--text)" font-weight="700">' + value + '</text>' +
+                '</svg><div style="font-size:11px;color:var(--muted);margin-top:4px">' + sublabel + '</div>';
+            }
+            var clRingsEl = document.getElementById("closings-rings");
+            if (clRingsEl) {
+              clRingsEl.innerHTML =
+                '<div style="text-align:center">' + ringSvg(sidesPct, curSides + "/" + clMonthSidesGoal.toFixed(1), "Sides closed", "var(--green)") + '</div>' +
+                '<div style="text-align:center">' + ringSvg(gciPct, "$" + Math.round(curGci/1000) + "k", "GCI · goal $" + Math.round(clMonthGciGoal/1000) + "k", "var(--gold)") + '</div>';
+            }
             var clBody = document.getElementById("closings-grid-body");
             if (clBody) {
               var clHtml = "";
@@ -2461,6 +2574,21 @@
                   '</tr>';
               }
               clBody.innerHTML = clHtml;
+            }
+            var clChartEl = document.getElementById("closings-chart");
+            if (clChartEl && window.Chart) {
+              if (window.__closingsChart) window.__closingsChart.destroy();
+              window.__closingsChart = new Chart(clChartEl, {
+                type: "bar",
+                data: { labels: clMonths, datasets: [
+                  { label: "Sides", data: clMonths.map(function (_, i) { return parseInt((clData[i+1]||{}).sides) || 0; }), backgroundColor: "#22c55e" },
+                  { label: "Goal", type: "line", data: clMonths.map(function () { return clMonthSidesGoal; }), borderColor: "#7b7f96", pointRadius: 0, borderDash: [4,3] }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { labels: { color: "#a8b4c8", font: { size: 10 } } } },
+                  scales: { x: { ticks: { color: "#7b7f96", font: { size: 10 } }, grid: { display: false } },
+                            y: { ticks: { color: "#7b7f96", font: { size: 10 } }, grid: { color: "#2a2d3a" } } } }
+              });
             }
           })
           .catch(function () {});
@@ -2973,6 +3101,25 @@
       }
     }
     function fmtMoney(n) { return '$' + Math.round(Number(n) || 0).toLocaleString(); }
+    var __gridExpandLabels = {
+      activity: ['View full year ▾', 'Hide full year ▴'],
+      contracts: ['View full year ▾', 'Hide full year ▴'],
+      closings: ['View 12-month history ▾', 'Hide 12-month history ▴'],
+      ford: ['View dream board ▾', 'Hide dream board ▴']
+    };
+    function toggleGridExpand(key) {
+      var body = document.getElementById(key + '-expand-body');
+      var label = document.getElementById(key + '-expand-label');
+      if (!body || !label) return;
+      var opts = __gridExpandLabels[key] || ['View ▾', 'Hide ▴'];
+      if (body.style.display === 'none' || !body.style.display) {
+        body.style.display = 'block';
+        label.textContent = opts[1];
+      } else {
+        body.style.display = 'none';
+        label.textContent = opts[0];
+      }
+    }
     // Stage config: L=Listing(green), C=Conditional(orange), F=Firm/Sold(red).
     // RED on Firm is deliberate — matches the real-estate sign-rider convention (red = SOLD).
     var STAGE_META = {
