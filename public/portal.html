@@ -2409,10 +2409,27 @@
             (data.monthlyActivity || []).forEach(function (r) {
               actData[r.m] = r;
             });
-            var actGoalCalls = Math.round((parseInt((data.goals||{}).transaction_goal) || 24) * 20 / 12);
             var curM = now.getMonth() + 1;
             var curActRow = actData[curM] || { calls:0, contacts:0, appt_set:0, appt_held:0 };
-            var actTargets = { calls: 25, contacts: 10, appt_set: 2, appt_held: 3 };
+            // ── Derive Monthly Activity targets from this agent's real funnel ──
+            var monthlyClosingsGoal = txnGoal / 12;
+            var apptsNeededMonthly = monthlyClosingsGoal / (closeRate || 0.5);
+            var contactsNeededMonthly = apptsNeededMonthly / (apptRate || 0.1);
+            // call→contact rate from agent's own historical scorecard (sum across all months)
+            var histCalls = 0, histContacts = 0;
+            (data.monthlyActivity || []).forEach(function (r) {
+              histCalls += parseInt(r.calls) || 0;
+              histContacts += parseInt(r.contacts) || 0;
+            });
+            var callContactRate = (histCalls > 0) ? (histContacts / histCalls) : 0.2;
+            if (callContactRate <= 0) callContactRate = 0.2;
+            var callsNeededMonthly = contactsNeededMonthly / callContactRate;
+            var actTargets = {
+              calls: Math.max(1, Math.round(callsNeededMonthly)),
+              contacts: Math.max(1, Math.round(contactsNeededMonthly)),
+              appt_set: Math.max(1, Math.round(apptsNeededMonthly)),
+              appt_held: Math.max(1, Math.round(monthlyClosingsGoal / (closeRate || 0.5)))
+            };
             var actLabels = { calls: "Calls", contacts: "Contacts", appt_set: "Appts set", appt_held: "Appts held" };
             var actKpiHtml = "";
             ["calls","contacts","appt_set","appt_held"].forEach(function (k) {
@@ -2477,7 +2494,16 @@
             renderBoardCards();
             renderClosedCards();
 
-            // ── Contracts Written Grid ──
+            // ── Re-open Pipeline Board after a reload if it was open ──
+            if (sessionStorage.getItem('nr_board_open') === '1') {
+              var __pb = document.getElementById('pipeline-board');
+              var __pbBtn = document.getElementById('board-toggle');
+              if (__pb && __pb.style.display === 'none') {
+                __pb.style.display = 'block';
+                if (__pbBtn) __pbBtn.textContent = '⇄ Hide Pipeline Board';
+                initBoardSortable();
+              }
+            }
             var ctMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             var ctData = {};
             (data.monthlyContracts || []).forEach(function (r) { ctData[r.m] = r; });
@@ -3115,10 +3141,12 @@
       if (board.style.display === 'none') {
         board.style.display = 'block';
         btn.textContent = '⇄ Hide Pipeline Board';
+        sessionStorage.setItem('nr_board_open', '1');
         initBoardSortable();
       } else {
         board.style.display = 'none';
         btn.textContent = '⇄ Open Pipeline Board';
+        sessionStorage.removeItem('nr_board_open');
       }
     }
     function fmtMoney(n) { return '$' + Math.round(Number(n) || 0).toLocaleString(); }
