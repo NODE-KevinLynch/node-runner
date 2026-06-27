@@ -3218,8 +3218,8 @@
       closed.innerHTML = deals.map(function (d) {
         var gci = d.gci ? fmtMoney(d.gci) : '—';
         var dt = d.closed_date ? new Date(d.closed_date).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '';
-        return '<div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);' +
-          'border-left:3px solid var(--green);border-radius:8px;padding:8px 10px">' +
+        return '<div data-deal-id="' + d.id + '" style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);' +
+          'border-left:3px solid var(--green);border-radius:8px;padding:8px 10px;cursor:grab">' +
           '<span style="flex-shrink:0;width:8px;height:8px;border-radius:50%;background:var(--green)"></span>' +
           '<span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (d.property_address || 'Untitled') + '</span>' +
           '<span style="flex-shrink:0;font-size:11px;color:var(--muted)">' + dt + '</span>' +
@@ -3286,17 +3286,24 @@
           var dealId = evt.item.getAttribute('data-deal-id');
           evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
           var deal = (window.__pendingDeals || []).filter(function(d){return d.id===dealId;})[0];
-          if (deal) openCloseModal(deal);
+          if (deal) { openCloseModal(deal); } else { reloadBoard(); }
         }
       }));
+      var closedColumn = document.getElementById('board-closed');
+      if (closedColumn) Sortable.create(closedColumn, Object.assign({}, shared, { sort: false }));
       Sortable.create(lostZone, Object.assign({}, shared, {
         onAdd: function (evt) {
           var dealId = evt.item.getAttribute('data-deal-id');
+          var fromClosed = evt.from && evt.from.id === 'board-closed';
           evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
-          if (confirm('Mark this deal as Lost? It will be removed from your pipeline.')) {
+          var msg = fromClosed
+            ? 'This deal already closed. Reclassify it as Lost? This reverses the close.'
+            : 'Mark this deal as Lost? It will be removed from your pipeline.';
+          if (confirm(msg)) {
             dealApi('/deals/' + dealId + '/lost', {}, function(res){ reloadBoard(); });
           } else {
             renderBoardCards();
+            renderClosedCards();
           }
         }
       }));
