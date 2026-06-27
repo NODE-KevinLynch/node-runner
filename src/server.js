@@ -1242,15 +1242,19 @@ app.listen(PORT, () => {
         .get(agentId);
       const gciGoal = agentGoals?.gci_goal || 0;
       const txnGoal = agentGoals?.transaction_goal || 0;
-      // Fetch pipeline snapshot from business_onboarding
+      // Live pipeline aggregate from deals table (Option B: deals is canonical)
       const pipelineData = await db
         .prepare(
-          "SELECT active_listings, pending_sales, closed_ytd, avg_sale_price, avg_list_price, list_to_sale_ratio FROM business_onboarding WHERE agent_id = $1",
+          `SELECT
+             COUNT(*) FILTER (WHERE status = 'pending' AND type = 'listing') AS active_listings,
+             COUNT(*) FILTER (WHERE status = 'pending' AND type <> 'listing') AS pending_sales,
+             COUNT(*) FILTER (WHERE status = 'closed' AND EXTRACT(YEAR FROM closed_date) = EXTRACT(YEAR FROM NOW())) AS closed_ytd_count
+           FROM deals WHERE agent_id = $1`,
         )
         .get(agentId);
-      const activeLst = pipelineData?.active_listings || 0;
-      const pendingSls = pipelineData?.pending_sales || 0;
-      const closedYtd = pipelineData?.closed_ytd || 0;
+      const activeLst = Number(pipelineData?.active_listings) || 0;
+      const pendingSls = Number(pipelineData?.pending_sales) || 0;
+      const closedYtd = Number(pipelineData?.closed_ytd_count) || 0;
       const remaining = Math.max(0, txnGoal - closedYtd);
 
       // No supporting_actions_json column exists — use empty array
