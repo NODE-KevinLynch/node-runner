@@ -443,6 +443,7 @@ app.get("/api/goals/:agentId", async (req, res) => {
                   COALESCE(SUM(est_gci), 0) AS potential_gci
              FROM deals
             WHERE agent_id = $1 AND signed_date IS NOT NULL
+              AND status <> 'failed'
               AND EXTRACT(YEAR FROM signed_date) = 2026
             GROUP BY m ORDER BY m`,
         )
