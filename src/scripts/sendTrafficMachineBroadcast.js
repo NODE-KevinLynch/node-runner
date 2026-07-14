@@ -146,14 +146,8 @@ async function main() {
        WHERE a.email IS NOT NULL
          AND a.email <> ''
          AND a.email LIKE '%@%.%'
-         AND a.email NOT LIKE '%@test.%'
-         AND a.email NOT LIKE '%@testing%'
-         AND a.email NOT LIKE '%@kevinsbot.%'
-         AND a.email NOT LIKE '%thelynchteam%'
-         AND a.email NOT LIKE '%example.%'
          AND a.unsubscribed_at IS NULL
-         AND LOWER(a.id) NOT LIKE '%demo%'
-         AND LOWER(a.id) NOT LIKE '%test%'
+         AND DATE(a.created_at) = '2026-05-13'
          AND NOT EXISTS (
            SELECT 1 FROM campaign_send_log csl
            WHERE csl.agent_id = a.id
