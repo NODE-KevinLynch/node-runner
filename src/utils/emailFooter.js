@@ -36,7 +36,7 @@ function buildLegalFooter(agentId) {
     <a href="${unsubUrl}" style="color:#1a0dab">Unsubscribe with one click</a>
   </td></tr>
   <tr><td style="padding-top:12px;color:#888">
-    Kevin Lynch · Sutton Business Solution | Co.Pilot<br>
+    Kevin Lynch · Sutton Business Solution | Lynch Performance Systems<br>
     Sutton Centre Realty · 3010 Boundary Road, Burnaby BC V5M 4A1
   </td></tr>
 </table>
